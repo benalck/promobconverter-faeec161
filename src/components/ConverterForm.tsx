@@ -93,6 +93,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               .edge-color {
                 background-color: #F7CAAC;
               }
+              .sheet-color {
+                background-color: #FFFFFF;
+              }
+              .thickness {
+                background-color: #FFFFFF;
+              }
             </style>
           </head>
           <body>
@@ -145,7 +151,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
 
-      // Simplified header with only the required columns
+      // Complete header with all required columns
       let csvContent = `<tr>
           <th>NUM.</th>
           <th>MÓDULO</th>
@@ -156,6 +162,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th class="comp">COMP</th>
           <th class="larg">LARG</th>
           <th>QUANT</th>
+          <th class="borda-inf">BORDA INF</th>
+          <th class="borda-sup">BORDA SUP</th>
+          <th class="borda-dir">BORDA DIR</th>
+          <th class="borda-esq">BORDA ESQ</th>
+          <th class="edge-color">COR FITA DE BORDA</th>
+          <th class="sheet-color">CHAPA</th>
+          <th class="thickness">ESP.</th>
         </tr>`;
 
       // Extrair o nome do ambiente da descrição da guia (modelcategory)
@@ -236,6 +249,78 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             const quantity = item.getAttribute("QUANTITY") || "1";
             const repetition = item.getAttribute("REPETITION") || "1";
             
+            // Extrair informações de material, espessura e cor
+            const reference = item.getAttribute("REFERENCE") || "";
+            const references = item.querySelectorAll("REFERENCES");
+            
+            // Extração de informações de materiais
+            let materialName = "";
+            let materialColor = "Branco"; // Valor padrão
+            let materialThickness = "15"; // Valor padrão
+            let materialType = "MDF"; // Valor padrão
+            
+            // Tentar extrair do atributo REFERENCE
+            if (reference) {
+              const referenceParts = reference.split('.');
+              if (referenceParts.length > 0) {
+                materialColor = referenceParts[0] || materialColor;
+              }
+            }
+            
+            // Ou tentar extrair de REFERENCES/MODEL_EXT e REFERENCES/MATERIAL
+            if (references && references.length > 0) {
+              const modelExt = item.querySelector("REFERENCES MODEL_EXT, REFERENCES MATERIAL, REFERENCES THICKNESS");
+              if (modelExt) {
+                // Se encontrou elementos MODEL_EXT ou MATERIAL
+                const modelExtRef = item.querySelector("REFERENCES MODEL_EXT");
+                const materialRef = item.querySelector("REFERENCES MATERIAL");
+                const thicknessRef = item.querySelector("REFERENCES THICKNESS");
+                
+                if (modelExtRef) {
+                  materialColor = modelExtRef.getAttribute("REFERENCE") || materialColor;
+                }
+                
+                if (materialRef) {
+                  const materialRefValue = materialRef.getAttribute("REFERENCE") || "";
+                  if (materialRefValue.includes("MDF") || materialRefValue.includes("Esp")) {
+                    materialType = "MDF";
+                  }
+                }
+                
+                if (thicknessRef) {
+                  materialThickness = thicknessRef.getAttribute("REFERENCE") || materialThickness;
+                }
+              }
+            }
+            
+            // Verificar se é espessura de 6mm com base na descrição
+            if (description.toLowerCase().includes("fundo") || description.toLowerCase().includes("6")) {
+              materialThickness = "6";
+            }
+            
+            // Formar o nome completo do material
+            const isGuararapes = materialColor.toLowerCase() === "areia";
+            const chapaMaterial = isGuararapes 
+              ? `MDF ${materialThickness} Guararapes ${materialColor}`
+              : `MDF ${materialThickness} ${materialColor}`;
+            
+            // Determinar bordas com base em regras específicas
+            // Se "Frente Reta" ou um item de face visível, terá bordas em todos os lados
+            const isFrontPanel = description.toLowerCase().includes("frente") || 
+                               description.toLowerCase().includes("porta");
+            
+            const bordaInf = isFrontPanel || description.toLowerCase().includes("base") ||
+                           description.toLowerCase().includes("tamponamento") ||
+                           description.toLowerCase().includes("lateral 15") ? "X" : "";
+            
+            const bordaSup = isFrontPanel ? "X" : "";
+            const bordaDir = isFrontPanel ? "X" : "";
+            const bordaEsq = isFrontPanel || description.toLowerCase().includes("lateral") || 
+                          description.toLowerCase().includes("fundo travessa") ? "X" : "";
+            
+            // Cor da fita de borda baseada na cor do material
+            const corFitaBorda = materialColor;
+            
             // Calcular quantidade total (QUANTITY * REPETITION)
             const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
             
@@ -255,6 +340,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 <td class="comp">${depth}</td>
                 <td class="larg">${width}</td>
                 <td>${totalQuantity}</td>
+                <td class="borda-inf">${bordaInf}</td>
+                <td class="borda-sup">${bordaSup}</td>
+                <td class="borda-dir">${bordaDir}</td>
+                <td class="borda-esq">${bordaEsq}</td>
+                <td class="edge-color">${corFitaBorda}</td>
+                <td class="sheet-color">${chapaMaterial}</td>
+                <td class="thickness">${materialThickness}</td>
               </tr>`;
             
             rowCount++;
@@ -272,6 +364,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 <td class="comp"></td>
                 <td class="larg"></td>
                 <td></td>
+                <td class="borda-inf"></td>
+                <td class="borda-sup"></td>
+                <td class="borda-dir"></td>
+                <td class="borda-esq"></td>
+                <td class="edge-color"></td>
+                <td class="sheet-color"></td>
+                <td class="thickness"></td>
               </tr>`;
             
             rowCount++;
@@ -300,6 +399,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="comp">470</td>
             <td class="larg">500</td>
             <td>1</td>
+            <td class="borda-inf">X</td>
+            <td class="borda-sup"></td>
+            <td class="borda-dir"></td>
+            <td class="borda-esq"></td>
+            <td class="edge-color">Branco</td>
+            <td class="sheet-color">MDF 15 Branco</td>
+            <td class="thickness">15</td>
           </tr>`;
         return csvContent;
       }
@@ -339,6 +445,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="comp">470</td>
               <td class="larg">500</td>
               <td>1</td>
+              <td class="borda-inf">X</td>
+              <td class="borda-sup"></td>
+              <td class="borda-dir"></td>
+              <td class="borda-esq"></td>
+              <td class="edge-color">Branco</td>
+              <td class="sheet-color">MDF 15 Branco</td>
+              <td class="thickness">15</td>
             </tr>`;
           rowCount++;
         });
@@ -356,6 +469,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="comp">470</td>
             <td class="larg">500</td>
             <td>1</td>
+            <td class="borda-inf">X</td>
+            <td class="borda-sup"></td>
+            <td class="borda-dir"></td>
+            <td class="borda-esq"></td>
+            <td class="edge-color">Branco</td>
+            <td class="sheet-color">MDF 15 Branco</td>
+            <td class="thickness">15</td>
           </tr>`;
       }
 
@@ -372,6 +492,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th class="comp">COMP</th>
         <th class="larg">LARG</th>
         <th>QUANT</th>
+        <th class="borda-inf">BORDA INF</th>
+        <th class="borda-sup">BORDA SUP</th>
+        <th class="borda-dir">BORDA DIR</th>
+        <th class="borda-esq">BORDA ESQ</th>
+        <th class="edge-color">COR FITA DE BORDA</th>
+        <th class="sheet-color">CHAPA</th>
+        <th class="thickness">ESP.</th>
       </tr>`;
     }
   };
