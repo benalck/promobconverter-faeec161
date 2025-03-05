@@ -164,11 +164,64 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th class="material">ESP.</th>
         </tr>`;
 
+      // Extrair o nome do ambiente da descrição da guia (modelcategory)
+      const modelCategory = xmlDoc.querySelector(
+        "MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation"
+      );
+      
+      let ambiente = "Ambiente";
+      if (modelCategory) {
+        const categoryDesc = 
+          modelCategory.getAttribute("DESCRIPTION") || 
+          modelCategory.getAttribute("Description") || "";
+        
+        // Exemplo: "Cozinhas - Ambiente 3D" -> extrair "Ambiente 3D"
+        const ambienteMatch = categoryDesc.match(/\s*-\s*(.+)/);
+        ambiente = ambienteMatch ? ambienteMatch[1].trim() : categoryDesc;
+      }
+
       const itemElements = xmlDoc.querySelectorAll("ITEM");
 
       if (itemElements.length > 0) {
         let rowCount = 1;
+        // Criar um mapa para agrupar peças do mesmo tipo para o plano de corte
+        const pecasPorTipo = new Map();
 
+        // Primeiro passo: contar as peças por tipo (mesmas dimensões)
+        itemElements.forEach((item) => {
+          const family = item.getAttribute("FAMILY") || "";
+          
+          // Skip accessories, hardware, production processes, and handles
+          if (
+            family.toLowerCase().includes("acessório") ||
+            family.toLowerCase().includes("acessorios") ||
+            family.toLowerCase().includes("ferragem") ||
+            family.toLowerCase().includes("processo") ||
+            family.toLowerCase().includes("puxador")
+          ) {
+            return; // Skip this item
+          }
+          
+          const width = item.getAttribute("WIDTH") || "";
+          const depth = item.getAttribute("DEPTH") || "";
+          const description = item.getAttribute("DESCRIPTION") || "";
+          const quantity = item.getAttribute("QUANTITY") || "1";
+          const repetition = item.getAttribute("REPETITION") || "1";
+          
+          // Chave única para cada tipo de peça (dimensões+descrição)
+          const pecaKey = `${width}x${depth}-${description}`;
+          
+          // Calcular quantidade total
+          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
+          
+          if (pecasPorTipo.has(pecaKey)) {
+            pecasPorTipo.set(pecaKey, pecasPorTipo.get(pecaKey) + totalQuantity);
+          } else {
+            pecasPorTipo.set(pecaKey, totalQuantity);
+          }
+        });
+
+        // Segundo passo: processar cada item
         itemElements.forEach((item) => {
           const id = item.getAttribute("ID") || "";
           const description = item.getAttribute("DESCRIPTION") || "";
@@ -199,12 +252,14 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               ? `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`
               : family;
 
+          // Obter informações de material, cor e espessura
           let material = "";
           let color = "";
           let thickness = "";
+          let modelExt = "";
 
           const referencesElements = item.querySelectorAll(
-            "REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > THICKNESS"
+            "REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > MODEL_EXT, REFERENCES > THICKNESS"
           );
 
           referencesElements.forEach((ref) => {
@@ -215,10 +270,22 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               material = referenceValue;
             } else if (tagName === "MODEL" || tagName === "MODEL_DESCRIPTION") {
               color = referenceValue;
+            } else if (tagName === "MODEL_EXT") {
+              modelExt = referenceValue;
             } else if (tagName === "THICKNESS") {
               thickness = referenceValue;
             }
           });
+
+          // Usar MODEL_EXT se estiver disponível, senão usar color
+          const finalColor = modelExt || color;
+
+          // Formatar a informação da chapa: "Cor (Material)"
+          const chapaMaterial = finalColor && material ? 
+            `${escapeHtml(finalColor)} (${escapeHtml(material)})` : 
+            (finalColor || material) ? 
+              `${escapeHtml(finalColor || material)}` : 
+              "N/A";
 
           let edgeBottom = "";
           let edgeTop = "";
@@ -244,24 +311,33 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
           });
 
-          let edgeColor = color;
+          let edgeColor = finalColor || color;
           const edgeColorElement = item.querySelector(
             "REFERENCES > MODEL_DESCRIPTION_FITA"
           );
           if (edgeColorElement) {
-            edgeColor = edgeColorElement.getAttribute("REFERENCE") || color;
+            edgeColor = edgeColorElement.getAttribute("REFERENCE") || edgeColor;
           }
 
           // Calculate total quantity (QUANTITY * REPETITION)
-          const totalQuantity =
-            parseInt(quantity, 10) * parseInt(repetition, 10);
+          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
+
+          // Gerar plano de corte na descrição da peça
+          const pecaKey = `${width}x${depth}-${description}`;
+          const totalPecasDesseTipo = pecasPorTipo.get(pecaKey) || 0;
+          
+          // Formar a descrição com o plano de corte
+          let descricaoComPlano = escapeHtml(description);
+          if (totalPecasDesseTipo > 1) {
+            descricaoComPlano += ` <strong>(Plano de corte: ${totalPecasDesseTipo} peças)</strong>`;
+          }
 
           csvContent += `<tr>
               <td>${rowCount}</td>
               <td>${escapeHtml(moduleInfo)}</td>
               <td>Cliente</td>
-              <td>Ambiente</td>
-              <td class="piece-desc">${escapeHtml(description)}</td>
+              <td>${escapeHtml(ambiente)}</td>
+              <td class="piece-desc">${descricaoComPlano}</td>
               <td class="piece-desc">${escapeHtml(observations)}</td>
               <td class="comp">${depth}</td>
               <td class="larg">${width}</td>
@@ -271,7 +347,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="borda-dir">${edgeRight}</td>
               <td class="borda-esq">${edgeLeft}</td>
               <td class="edge-color">${escapeHtml(edgeColor)}</td>
-              <td class="material">${escapeHtml(material)}</td>
+              <td class="material">${chapaMaterial}</td>
               <td class="material">${thickness}</td>
             </tr>`;
 
@@ -292,8 +368,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td>1</td>
             <td>Cozinhas</td>
             <td>Cliente Exemplo</td>
-            <td>Exemplo</td>
-            <td class="piece-desc">Exemplo Peça</td>
+            <td>${escapeHtml(ambiente)}</td>
+            <td class="piece-desc">Exemplo Peça <strong>(Plano de corte: 2 peças)</strong></td>
             <td class="piece-desc">Observações Exemplo</td>
             <td class="comp">100</td>
             <td class="larg">50</td>
@@ -303,8 +379,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="borda-dir">X</td>
             <td class="borda-esq"></td>
             <td class="edge-color">Branco</td>
-            <td class="material">Chapa Exemplo</td>
-            <td class="material">Espessura Exemplo</td>
+            <td class="material">Branco (MDF)</td>
+            <td class="material">15</td>
           </tr>`;
         return csvContent;
       }
@@ -316,6 +392,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           category.getAttribute("DESCRIPTION") ||
           category.getAttribute("Description") ||
           "Unknown Category";
+          
+        // Extrair ambiente da descrição da categoria
+        const ambienteMatch = categoryDesc.match(/\s*-\s*(.+)/);
+        const categoriaAmbiente = ambienteMatch ? ambienteMatch[1].trim() : categoryDesc;
 
         const modelInfos = Array.from(
           category.querySelectorAll(
@@ -333,8 +413,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td>${rowCount}</td>
               <td>Cozinhas</td>
               <td>Cliente Exemplo</td>
-              <td>${escapeHtml(categoryDesc)}</td>
-              <td class="piece-desc">${escapeHtml(modelDesc)}</td>
+              <td>${escapeHtml(categoriaAmbiente)}</td>
+              <td class="piece-desc">${escapeHtml(modelDesc)} <strong>(Plano de corte: 2 peças)</strong></td>
               <td class="piece-desc">Observações Exemplo</td>
               <td class="comp">100</td>
               <td class="larg">50</td>
@@ -344,8 +424,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="borda-dir">X</td>
               <td class="borda-esq"></td>
               <td class="edge-color">Branco</td>
-              <td class="material">Chapa Exemplo</td>
-              <td class="material">Espessura Exemplo</td>
+              <td class="material">Branco (MDF)</td>
+              <td class="material">15</td>
             </tr>`;
           rowCount++;
         });
@@ -356,8 +436,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td>1</td>
             <td>Cozinhas</td>
             <td>Cliente Exemplo</td>
-            <td>Exemplo</td>
-            <td class="piece-desc">Exemplo Peça</td>
+            <td>${escapeHtml(ambiente)}</td>
+            <td class="piece-desc">Exemplo Peça <strong>(Plano de corte: 2 peças)</strong></td>
             <td class="piece-desc">Observações Exemplo</td>
             <td class="comp">100</td>
             <td class="larg">50</td>
@@ -367,8 +447,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="borda-dir">X</td>
             <td class="borda-esq"></td>
             <td class="edge-color">Branco</td>
-            <td class="material">Chapa Exemplo</td>
-            <td class="material">Espessura Exemplo</td>
+            <td class="material">Branco (MDF)</td>
+            <td class="material">15</td>
           </tr>`;
       }
 
