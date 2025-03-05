@@ -145,6 +145,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
 
+      // Simplified header with only the required columns
       let csvContent = `<tr>
           <th>NUM.</th>
           <th>MÓDULO</th>
@@ -152,16 +153,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th>AMBIENTE</th>
           <th class="piece-desc">DESC. DA PEÇA</th>
           <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-          <th style="background-color: #F7CAAC;" class="comp">COMP</th>
-          <th style="background-color: #BDD6EE;" class="larg">LARG</th>
+          <th class="comp">COMP</th>
+          <th class="larg">LARG</th>
           <th>QUANT</th>
-          <th style="background-color: #F7CAAC;" class="borda-inf">BORDA INF</th>
-          <th style="background-color: #F7CAAC;" class="borda-sup">BORDA SUP</th>
-          <th style="background-color: #BDD6EE;" class="borda-dir">BORDA DIR</th>
-          <th style="background-color: #BDD6EE;" class="borda-esq">BORDA ESQ</th>
-          <th class="edge-color">COR FITA DE BORDA</th>
-          <th class="material">CHAPA</th>
-          <th class="material">ESP.</th>
         </tr>`;
 
       // Extrair o nome do ambiente da descrição da guia (modelcategory)
@@ -169,7 +163,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         "MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation"
       );
       
-      let ambiente = "Ambiente";
+      let ambiente = "Ambiente 3D"; // Valor padrão conforme solicitado
       if (modelCategory) {
         const categoryDesc = 
           modelCategory.getAttribute("DESCRIPTION") || 
@@ -180,20 +174,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         ambiente = ambienteMatch ? ambienteMatch[1].trim() : categoryDesc;
       }
 
+      // Organizar itens por módulo
+      const moduleMap = new Map();
+      
       const itemElements = xmlDoc.querySelectorAll("ITEM");
-
       if (itemElements.length > 0) {
-        let rowCount = 1;
-        
-        // Criar um mapa para agrupar peças do mesmo tipo para o plano de corte
-        // Chave será dimensões + material + espessura
-        const pecasPorTipo = new Map();
-
-        // Primeiro passo: contar as peças por tipo (mesmas dimensões, mesmo material e espessura)
+        // Primeiro, agrupar itens por moduleId (UNIQUEPARENTID)
         itemElements.forEach((item) => {
           const family = item.getAttribute("FAMILY") || "";
           
-          // Skip accessories, hardware, production processes, and handles
+          // Skip acessórios, ferragens, processos de produção e puxadores
           if (
             family.toLowerCase().includes("acessório") ||
             family.toLowerCase().includes("acessorios") ||
@@ -201,203 +191,97 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             family.toLowerCase().includes("processo") ||
             family.toLowerCase().includes("puxador")
           ) {
-            return; // Skip this item
+            return; // Pular este item
           }
           
-          const width = item.getAttribute("WIDTH") || "";
-          const depth = item.getAttribute("DEPTH") || "";
+          const uniqueId = item.getAttribute("UNIQUEID") || "";
+          const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || uniqueId;
           const description = item.getAttribute("DESCRIPTION") || "";
-          const quantity = item.getAttribute("QUANTITY") || "1";
-          const repetition = item.getAttribute("REPETITION") || "1";
-          
-          // Obter material e espessura
-          let material = "";
-          let thickness = "";
-          
-          const referencesElements = item.querySelectorAll(
-            "REFERENCES > MATERIAL, REFERENCES > THICKNESS"
-          );
-          
-          referencesElements.forEach((ref) => {
-            const tagName = ref.tagName;
-            const referenceValue = ref.getAttribute("REFERENCE") || "";
-            
-            if (tagName === "MATERIAL") {
-              material = referenceValue;
-            } else if (tagName === "THICKNESS") {
-              thickness = referenceValue;
-            }
-          });
-          
-          // Chave única para cada tipo de peça (dimensões+descrição+material+espessura)
-          const pecaKey = `${width}x${depth}-${description}-${material}-${thickness}`;
-          
-          // Calcular quantidade total
-          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
-          
-          if (pecasPorTipo.has(pecaKey)) {
-            pecasPorTipo.set(pecaKey, {
-              count: pecasPorTipo.get(pecaKey).count + totalQuantity,
-              description,
-              width,
-              depth,
-              material,
-              thickness
-            });
-          } else {
-            pecasPorTipo.set(pecaKey, {
-              count: totalQuantity,
-              description,
-              width,
-              depth,
-              material,
-              thickness
-            });
-          }
-        });
-
-        // Segundo passo: processar cada item
-        itemElements.forEach((item) => {
-          const id = item.getAttribute("ID") || "";
-          const description = item.getAttribute("DESCRIPTION") || "";
-          const observations = item.getAttribute("OBSERVATIONS") || "";
           const width = item.getAttribute("WIDTH") || "";
           const height = item.getAttribute("HEIGHT") || "";
           const depth = item.getAttribute("DEPTH") || "";
-          const quantity = item.getAttribute("QUANTITY") || "1";
-          const repetition = item.getAttribute("REPETITION") || "1";
-          const family = item.getAttribute("FAMILY") || "";
-          const reference = item.getAttribute("REFERENCE") || "";
-          const uniqueId = item.getAttribute("UNIQUEID") || "";
-
-          // Skip accessories, hardware, production processes, and handles
-          if (
-            family.toLowerCase().includes("acessório") ||
-            family.toLowerCase().includes("acessorios") ||
-            family.toLowerCase().includes("ferragem") ||
-            family.toLowerCase().includes("processo") ||
-            family.toLowerCase().includes("puxador")
-          ) {
-            return; // Skip this item
-          }
-
-          // Format module information in the required format: (ID) - Description - LxAxP
+          
+          // Informações do módulo
           const moduleInfo =
             uniqueId && description
               ? `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`
               : family;
-
-          // Obter informações de material, cor e espessura
-          let material = "";
-          let color = "";
-          let thickness = "";
-          let modelExt = "";
-
-          const referencesElements = item.querySelectorAll(
-            "REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > MODEL_EXT, REFERENCES > THICKNESS"
-          );
-
-          referencesElements.forEach((ref) => {
-            const tagName = ref.tagName;
-            const referenceValue = ref.getAttribute("REFERENCE") || "";
-
-            if (tagName === "MATERIAL") {
-              material = referenceValue;
-            } else if (tagName === "MODEL" || tagName === "MODEL_DESCRIPTION") {
-              color = referenceValue;
-            } else if (tagName === "MODEL_EXT") {
-              modelExt = referenceValue;
-            } else if (tagName === "THICKNESS") {
-              thickness = referenceValue;
-            }
-          });
-
-          // Usar MODEL_EXT se estiver disponível, senão usar color
-          const finalColor = modelExt || color;
-
-          // Formatar a informação da chapa: "Cor (Material)"
-          const chapaMaterial = finalColor && material ? 
-            `${escapeHtml(finalColor)} (${escapeHtml(material)})` : 
-            (finalColor || material) ? 
-              `${escapeHtml(finalColor || material)}` : 
-              "N/A";
-
-          let edgeBottom = "";
-          let edgeTop = "";
-          let edgeRight = "";
-          let edgeLeft = "";
-
-          const edgeElements = item.querySelectorAll(
-            "REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4"
-          );
-
-          edgeElements.forEach((edge) => {
-            const tagName = edge.tagName;
-            const value = edge.getAttribute("REFERENCE") || "0";
-
-            if (tagName === "FITA_BORDA_1") {
-              edgeBottom = value === "1" ? "X" : "";
-            } else if (tagName === "FITA_BORDA_2") {
-              edgeTop = value === "1" ? "X" : "";
-            } else if (tagName === "FITA_BORDA_3") {
-              edgeRight = value === "1" ? "X" : "";
-            } else if (tagName === "FITA_BORDA_4") {
-              edgeLeft = value === "1" ? "X" : "";
-            }
-          });
-
-          let edgeColor = finalColor || color;
-          const edgeColorElement = item.querySelector(
-            "REFERENCES > MODEL_DESCRIPTION_FITA"
-          );
-          if (edgeColorElement) {
-            edgeColor = edgeColorElement.getAttribute("REFERENCE") || edgeColor;
-          }
-
-          // Calculate total quantity (QUANTITY * REPETITION)
-          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
-
-          // Gerar plano de corte na descrição da peça
-          const pecaKey = `${width}x${depth}-${description}-${material}-${thickness}`;
-          const pecaInfo = pecasPorTipo.get(pecaKey);
-          const totalPecasDesseTipo = pecaInfo ? pecaInfo.count : 0;
           
-          // Formar a descrição com o plano de corte
-          let descricaoComPlano = escapeHtml(description);
-          if (totalPecasDesseTipo > 1) {
-            descricaoComPlano += ` <strong>(Plano de corte: ${totalPecasDesseTipo} peças)</strong>`;
+          // Agrupar pelo ID pai (módulo)
+          if (!moduleMap.has(uniqueParentId)) {
+            moduleMap.set(uniqueParentId, {
+              moduleInfo: moduleInfo,
+              items: []
+            });
           }
-
-          // Destacar a quantidade no plano de corte (conforme imagem de referência)
-          const quantidadeFormatada = totalPecasDesseTipo > 1 ? 
-            `<strong>${totalQuantity}</strong> <em>(Total: ${totalPecasDesseTipo})</em>` : 
-            `${totalQuantity}`;
-
-          csvContent += `<tr>
-              <td>${rowCount}</td>
-              <td>${escapeHtml(moduleInfo)}</td>
-              <td>Cliente</td>
-              <td>${escapeHtml(ambiente)}</td>
-              <td class="piece-desc">${descricaoComPlano}</td>
-              <td class="piece-desc">${escapeHtml(observations)}</td>
-              <td class="comp">${depth}</td>
-              <td class="larg">${width}</td>
-              <td>${quantidadeFormatada}</td>
-              <td class="borda-inf">${edgeBottom}</td>
-              <td class="borda-sup">${edgeTop}</td>
-              <td class="borda-dir">${edgeRight}</td>
-              <td class="borda-esq">${edgeLeft}</td>
-              <td class="edge-color">${escapeHtml(edgeColor)}</td>
-              <td class="material">${chapaMaterial}</td>
-              <td class="material">${thickness}</td>
-            </tr>`;
-
-          rowCount++;
+          
+          // Adicionar este item ao seu módulo
+          moduleMap.get(uniqueParentId).items.push(item);
         });
-
+        
+        // Agora, gerar as linhas da tabela, agrupando por módulo
+        let rowCount = 1;
+        
+        // Para cada módulo
+        moduleMap.forEach((moduleData, moduleId) => {
+          const { moduleInfo, items } = moduleData;
+          
+          // Processar itens deste módulo
+          items.forEach((item, itemIndex) => {
+            const description = item.getAttribute("DESCRIPTION") || "";
+            const observations = item.getAttribute("OBSERVATIONS") || "";
+            const width = item.getAttribute("WIDTH") || "";
+            const depth = item.getAttribute("DEPTH") || "";
+            const uniqueId = item.getAttribute("UNIQUEID") || "";
+            const quantity = item.getAttribute("QUANTITY") || "1";
+            const repetition = item.getAttribute("REPETITION") || "1";
+            
+            // Calcular quantidade total (QUANTITY * REPETITION)
+            const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
+            
+            // Formatar a descrição da peça: uniqueId - description
+            const pieceDesc = uniqueId ? `${uniqueId} - ${description}` : description;
+            
+            // Apenas mostrar o módulo no primeiro item do grupo
+            const displayModuleInfo = itemIndex === 0 ? moduleInfo : "";
+            
+            csvContent += `<tr>
+                <td>${rowCount}</td>
+                <td>${escapeHtml(displayModuleInfo)}</td>
+                <td></td>
+                <td>${escapeHtml(ambiente)}</td>
+                <td class="piece-desc">${escapeHtml(pieceDesc)}</td>
+                <td class="piece-desc">${escapeHtml(observations)}</td>
+                <td class="comp">${depth}</td>
+                <td class="larg">${width}</td>
+                <td>${totalQuantity}</td>
+              </tr>`;
+            
+            rowCount++;
+          });
+          
+          // Adicionar linha em branco entre módulos (exceto após o último módulo)
+          if (rowCount > 1 && Array.from(moduleMap.keys()).indexOf(moduleId) < moduleMap.size - 1) {
+            csvContent += `<tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="piece-desc"></td>
+                <td class="piece-desc"></td>
+                <td class="comp"></td>
+                <td class="larg"></td>
+                <td></td>
+              </tr>`;
+            
+            rowCount++;
+          }
+        });
+        
         return csvContent;
       }
 
+      // Se não houver ITEM, tentar ler informações diretas do modelCategory
       const modelCategories = Array.from(
         xmlDoc.querySelectorAll(
           "MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation"
@@ -405,27 +289,22 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       );
 
       if (modelCategories.length === 0) {
+        // Dados de exemplo básicos se não encontrarmos itens
         csvContent += `<tr>
             <td>1</td>
-            <td>Cozinhas</td>
-            <td>Cliente Exemplo</td>
+            <td>(1) - Exemplo - L.500mm x A.650mm x P.500mm</td>
+            <td></td>
             <td>${escapeHtml(ambiente)}</td>
-            <td class="piece-desc">Exemplo Peça <strong>(Plano de corte: 2 peças)</strong></td>
-            <td class="piece-desc">Observações Exemplo</td>
-            <td class="comp">100</td>
-            <td class="larg">50</td>
-            <td><strong>2</strong> <em>(Total: 2)</em></td>
-            <td class="borda-inf">X</td>
-            <td class="borda-sup"></td>
-            <td class="borda-dir">X</td>
-            <td class="borda-esq"></td>
-            <td class="edge-color">Branco</td>
-            <td class="material">Branco (MDF)</td>
-            <td class="material">15</td>
+            <td class="piece-desc">1 - Base 15</td>
+            <td class="piece-desc"></td>
+            <td class="comp">470</td>
+            <td class="larg">500</td>
+            <td>1</td>
           </tr>`;
         return csvContent;
       }
 
+      // Se chegarmos aqui, temos categorias de modelo, mas não itens individuais
       let rowCount = 1;
 
       modelCategories.forEach((category) => {
@@ -452,44 +331,31 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
           csvContent += `<tr>
               <td>${rowCount}</td>
-              <td>Cozinhas</td>
-              <td>Cliente Exemplo</td>
+              <td>(${rowCount}) - ${escapeHtml(modelDesc)} - L.500mm x A.650mm x P.500mm</td>
+              <td></td>
               <td>${escapeHtml(categoriaAmbiente)}</td>
-              <td class="piece-desc">${escapeHtml(modelDesc)} <strong>(Plano de corte: 2 peças)</strong></td>
-              <td class="piece-desc">Observações Exemplo</td>
-              <td class="comp">100</td>
-              <td class="larg">50</td>
-              <td><strong>2</strong> <em>(Total: 2)</em></td>
-              <td class="borda-inf">X</td>
-              <td class="borda-sup"></td>
-              <td class="borda-dir">X</td>
-              <td class="borda-esq"></td>
-              <td class="edge-color">Branco</td>
-              <td class="material">Branco (MDF)</td>
-              <td class="material">15</td>
+              <td class="piece-desc">${rowCount} - Base 15</td>
+              <td class="piece-desc"></td>
+              <td class="comp">470</td>
+              <td class="larg">500</td>
+              <td>1</td>
             </tr>`;
           rowCount++;
         });
       });
 
+      // Se não encontramos nenhum modelInfo, adicionar uma linha de exemplo
       if (rowCount === 1) {
         csvContent += `<tr>
             <td>1</td>
-            <td>Cozinhas</td>
-            <td>Cliente Exemplo</td>
+            <td>(1) - Exemplo - L.500mm x A.650mm x P.500mm</td>
+            <td></td>
             <td>${escapeHtml(ambiente)}</td>
-            <td class="piece-desc">Exemplo Peça <strong>(Plano de corte: 2 peças)</strong></td>
-            <td class="piece-desc">Observações Exemplo</td>
-            <td class="comp">100</td>
-            <td class="larg">50</td>
-            <td><strong>2</strong> <em>(Total: 2)</em></td>
-            <td class="borda-inf">X</td>
-            <td class="borda-sup"></td>
-            <td class="borda-dir">X</td>
-            <td class="borda-esq"></td>
-            <td class="edge-color">Branco</td>
-            <td class="material">Branco (MDF)</td>
-            <td class="material">15</td>
+            <td class="piece-desc">1 - Base 15</td>
+            <td class="piece-desc"></td>
+            <td class="comp">470</td>
+            <td class="larg">500</td>
+            <td>1</td>
           </tr>`;
       }
 
@@ -503,16 +369,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th>AMBIENTE</th>
         <th class="piece-desc">DESC. DA PEÇA</th>
         <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-        <th style="background-color: #FDE1D3;" class="comp">COMP</th>
-        <th style="background-color: #D3E4FD;" class="larg">LARG</th>
+        <th class="comp">COMP</th>
+        <th class="larg">LARG</th>
         <th>QUANT</th>
-        <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
-        <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
-        <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
-        <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
-        <th class="edge-color">COR FITA DE BORDA</th>
-        <th class="material">CHAPA</th>
-        <th class="material">ESP.</th>
       </tr>`;
     }
   };
