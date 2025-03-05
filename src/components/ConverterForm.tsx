@@ -184,10 +184,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
       if (itemElements.length > 0) {
         let rowCount = 1;
+        
         // Criar um mapa para agrupar peças do mesmo tipo para o plano de corte
+        // Chave será dimensões + material + espessura
         const pecasPorTipo = new Map();
 
-        // Primeiro passo: contar as peças por tipo (mesmas dimensões)
+        // Primeiro passo: contar as peças por tipo (mesmas dimensões, mesmo material e espessura)
         itemElements.forEach((item) => {
           const family = item.getAttribute("FAMILY") || "";
           
@@ -208,16 +210,49 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const quantity = item.getAttribute("QUANTITY") || "1";
           const repetition = item.getAttribute("REPETITION") || "1";
           
-          // Chave única para cada tipo de peça (dimensões+descrição)
-          const pecaKey = `${width}x${depth}-${description}`;
+          // Obter material e espessura
+          let material = "";
+          let thickness = "";
+          
+          const referencesElements = item.querySelectorAll(
+            "REFERENCES > MATERIAL, REFERENCES > THICKNESS"
+          );
+          
+          referencesElements.forEach((ref) => {
+            const tagName = ref.tagName;
+            const referenceValue = ref.getAttribute("REFERENCE") || "";
+            
+            if (tagName === "MATERIAL") {
+              material = referenceValue;
+            } else if (tagName === "THICKNESS") {
+              thickness = referenceValue;
+            }
+          });
+          
+          // Chave única para cada tipo de peça (dimensões+descrição+material+espessura)
+          const pecaKey = `${width}x${depth}-${description}-${material}-${thickness}`;
           
           // Calcular quantidade total
           const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
           
           if (pecasPorTipo.has(pecaKey)) {
-            pecasPorTipo.set(pecaKey, pecasPorTipo.get(pecaKey) + totalQuantity);
+            pecasPorTipo.set(pecaKey, {
+              count: pecasPorTipo.get(pecaKey).count + totalQuantity,
+              description,
+              width,
+              depth,
+              material,
+              thickness
+            });
           } else {
-            pecasPorTipo.set(pecaKey, totalQuantity);
+            pecasPorTipo.set(pecaKey, {
+              count: totalQuantity,
+              description,
+              width,
+              depth,
+              material,
+              thickness
+            });
           }
         });
 
@@ -323,14 +358,20 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
 
           // Gerar plano de corte na descrição da peça
-          const pecaKey = `${width}x${depth}-${description}`;
-          const totalPecasDesseTipo = pecasPorTipo.get(pecaKey) || 0;
+          const pecaKey = `${width}x${depth}-${description}-${material}-${thickness}`;
+          const pecaInfo = pecasPorTipo.get(pecaKey);
+          const totalPecasDesseTipo = pecaInfo ? pecaInfo.count : 0;
           
           // Formar a descrição com o plano de corte
           let descricaoComPlano = escapeHtml(description);
           if (totalPecasDesseTipo > 1) {
             descricaoComPlano += ` <strong>(Plano de corte: ${totalPecasDesseTipo} peças)</strong>`;
           }
+
+          // Destacar a quantidade no plano de corte (conforme imagem de referência)
+          const quantidadeFormatada = totalPecasDesseTipo > 1 ? 
+            `<strong>${totalQuantity}</strong> <em>(Total: ${totalPecasDesseTipo})</em>` : 
+            `${totalQuantity}`;
 
           csvContent += `<tr>
               <td>${rowCount}</td>
@@ -341,7 +382,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="piece-desc">${escapeHtml(observations)}</td>
               <td class="comp">${depth}</td>
               <td class="larg">${width}</td>
-              <td>${totalQuantity}</td>
+              <td>${quantidadeFormatada}</td>
               <td class="borda-inf">${edgeBottom}</td>
               <td class="borda-sup">${edgeTop}</td>
               <td class="borda-dir">${edgeRight}</td>
@@ -373,7 +414,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="piece-desc">Observações Exemplo</td>
             <td class="comp">100</td>
             <td class="larg">50</td>
-            <td>2</td>
+            <td><strong>2</strong> <em>(Total: 2)</em></td>
             <td class="borda-inf">X</td>
             <td class="borda-sup"></td>
             <td class="borda-dir">X</td>
@@ -418,7 +459,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="piece-desc">Observações Exemplo</td>
               <td class="comp">100</td>
               <td class="larg">50</td>
-              <td>2</td>
+              <td><strong>2</strong> <em>(Total: 2)</em></td>
               <td class="borda-inf">X</td>
               <td class="borda-sup"></td>
               <td class="borda-dir">X</td>
@@ -441,7 +482,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="piece-desc">Observações Exemplo</td>
             <td class="comp">100</td>
             <td class="larg">50</td>
-            <td>2</td>
+            <td><strong>2</strong> <em>(Total: 2)</em></td>
             <td class="borda-inf">X</td>
             <td class="borda-sup"></td>
             <td class="borda-dir">X</td>
