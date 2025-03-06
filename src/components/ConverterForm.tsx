@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -24,6 +23,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [outputFileName, setOutputFileName] = useState("modelos_converted");
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
+
+  const handleFileSelect = (file: File) => {
+    setXmlFile(file);
+    const fileName = file.name.replace(/\.[^/.]+$/, "");
+    setOutputFileName(fileName);
+  };
 
   const handleConvert = () => {
     if (!xmlFile) {
@@ -550,7 +555,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       <CardContent className="space-y-8 pb-8">
         <div className="space-y-6">
           <FileUpload
-            onFileSelect={(file) => setXmlFile(file)}
+            onFileSelect={handleFileSelect}
             acceptedFileTypes=".xml"
             fileType="XML"
             className="animate-scale-in"
