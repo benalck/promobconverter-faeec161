@@ -169,7 +169,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         "MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation"
       );
       
-      let ambiente = "Ambiente";
+      let ambiente = "Ambiente 3D";
       if (modelCategory) {
         const categoryDesc = 
           modelCategory.getAttribute("DESCRIPTION") || 
@@ -221,6 +221,11 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           }
         });
 
+        // Para rastrear módulos já processados e evitar repetição
+        const modulosProcessados = new Set();
+        let currentModuleId = "";
+        let lastUniqueParentId = "";
+        
         // Segundo passo: processar cada item
         itemElements.forEach((item) => {
           const id = item.getAttribute("ID") || "";
@@ -234,6 +239,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const family = item.getAttribute("FAMILY") || "";
           const reference = item.getAttribute("REFERENCE") || "";
           const uniqueId = item.getAttribute("UNIQUEID") || "";
+          const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
+          const component = item.getAttribute("COMPONENT") || "N";
 
           // Skip accessories, hardware, production processes, and handles
           if (
@@ -246,11 +253,46 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             return; // Skip this item
           }
 
+          // Determinar o ID do módulo atual
+          if (component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2") {
+            // Este é um módulo principal
+            currentModuleId = uniqueId;
+            
+            // Adicionar uma linha em branco entre módulos diferentes, exceto para o primeiro
+            if (lastUniqueParentId !== "" && lastUniqueParentId !== uniqueParentId) {
+              csvContent += `<tr><td colspan="16">&nbsp;</td></tr>`;
+            }
+            
+            lastUniqueParentId = uniqueParentId;
+          }
+
           // Format module information in the required format: (ID) - Description - LxAxP
-          const moduleInfo =
-            uniqueId && description
-              ? `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`
-              : family;
+          const moduleInfo = (() => {
+            // Se for um componente, mostrar info do módulo apenas na primeira linha do módulo
+            if (component === "Y" && currentModuleId && modulosProcessados.has(currentModuleId)) {
+              return "";
+            }
+            
+            // Para módulos principais ou primeira linha de componentes
+            if (uniqueId) {
+              const moduleItem = Array.from(itemElements).find(
+                el => el.getAttribute("UNIQUEID") === currentModuleId
+              );
+              
+              if (moduleItem) {
+                const moduleDesc = moduleItem.getAttribute("DESCRIPTION") || "";
+                const moduleWidth = moduleItem.getAttribute("WIDTH") || "";
+                const moduleHeight = moduleItem.getAttribute("HEIGHT") || "";
+                const moduleDepth = moduleItem.getAttribute("DEPTH") || "";
+                
+                modulosProcessados.add(currentModuleId);
+                
+                return `(${currentModuleId}) - ${moduleDesc} - L.${moduleWidth}mm x A.${moduleHeight}mm x P.${moduleDepth}mm`;
+              }
+            }
+            
+            return family || "";
+          })();
 
           // Obter informações de material, cor e espessura
           let material = "";
@@ -281,11 +323,17 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const finalColor = modelExt || color;
 
           // Formatar a informação da chapa: "Cor (Material)"
-          const chapaMaterial = finalColor && material ? 
-            `${escapeHtml(finalColor)} (${escapeHtml(material)})` : 
-            (finalColor || material) ? 
-              `${escapeHtml(finalColor || material)}` : 
-              "N/A";
+          const chapaMaterial = (() => {
+            if (finalColor && material && thickness) {
+              return `${escapeHtml(material)} ${escapeHtml(thickness)} ${escapeHtml(finalColor)}`;
+            } else if (finalColor && material) {
+              return `${escapeHtml(material)} ${escapeHtml(finalColor)}`;
+            } else if (finalColor || material) {
+              return `${escapeHtml(finalColor || material)}`;
+            } else {
+              return "N/A";
+            }
+          })();
 
           let edgeBottom = "";
           let edgeTop = "";
@@ -326,18 +374,15 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const pecaKey = `${width}x${depth}-${description}`;
           const totalPecasDesseTipo = pecasPorTipo.get(pecaKey) || 0;
           
-          // Formar a descrição com o plano de corte
-          let descricaoComPlano = escapeHtml(description);
-          if (totalPecasDesseTipo > 1) {
-            descricaoComPlano += ` <strong>(Plano de corte: ${totalPecasDesseTipo} peças)</strong>`;
-          }
+          // Formar a descrição da peça usando o UNIQUEID
+          let descricaoPeca = `${uniqueId ? uniqueId + " - " : ""}${escapeHtml(description)}`;
 
           csvContent += `<tr>
               <td>${rowCount}</td>
               <td>${escapeHtml(moduleInfo)}</td>
               <td>Cliente</td>
               <td>${escapeHtml(ambiente)}</td>
-              <td class="piece-desc">${descricaoComPlano}</td>
+              <td class="piece-desc">${descricaoPeca}</td>
               <td class="piece-desc">${escapeHtml(observations)}</td>
               <td class="comp">${depth}</td>
               <td class="larg">${width}</td>
