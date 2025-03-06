@@ -93,12 +93,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               .edge-color {
                 background-color: #F7CAAC;
               }
-              .sheet-color {
-                background-color: #FFFFFF;
-              }
-              .thickness {
-                background-color: #FFFFFF;
-              }
             </style>
           </head>
           <body>
@@ -151,7 +145,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
 
-      // Complete header with all required columns
       let csvContent = `<tr>
           <th>NUM.</th>
           <th>MÓDULO</th>
@@ -159,16 +152,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th>AMBIENTE</th>
           <th class="piece-desc">DESC. DA PEÇA</th>
           <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-          <th class="comp">COMP</th>
-          <th class="larg">LARG</th>
+          <th style="background-color: #F7CAAC;" class="comp">COMP</th>
+          <th style="background-color: #BDD6EE;" class="larg">LARG</th>
           <th>QUANT</th>
-          <th class="borda-inf">BORDA INF</th>
-          <th class="borda-sup">BORDA SUP</th>
-          <th class="borda-dir">BORDA DIR</th>
-          <th class="borda-esq">BORDA ESQ</th>
+          <th style="background-color: #F7CAAC;" class="borda-inf">BORDA INF</th>
+          <th style="background-color: #F7CAAC;" class="borda-sup">BORDA SUP</th>
+          <th style="background-color: #BDD6EE;" class="borda-dir">BORDA DIR</th>
+          <th style="background-color: #BDD6EE;" class="borda-esq">BORDA ESQ</th>
           <th class="edge-color">COR FITA DE BORDA</th>
-          <th class="sheet-color">CHAPA</th>
-          <th class="thickness">ESP.</th>
+          <th class="material">CHAPA</th>
+          <th class="material">ESP.</th>
         </tr>`;
 
       // Extrair o nome do ambiente da descrição da guia (modelcategory)
@@ -176,7 +169,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         "MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation"
       );
       
-      let ambiente = "Ambiente 3D"; // Valor padrão conforme solicitado
+      let ambiente = "Ambiente";
       if (modelCategory) {
         const categoryDesc = 
           modelCategory.getAttribute("DESCRIPTION") || 
@@ -187,16 +180,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         ambiente = ambienteMatch ? ambienteMatch[1].trim() : categoryDesc;
       }
 
-      // Organizar itens por módulo
-      const moduleMap = new Map();
-      
       const itemElements = xmlDoc.querySelectorAll("ITEM");
+
       if (itemElements.length > 0) {
-        // Primeiro, agrupar itens por moduleId (UNIQUEPARENTID)
+        let rowCount = 1;
+        // Criar um mapa para agrupar peças do mesmo tipo para o plano de corte
+        const pecasPorTipo = new Map();
+
+        // Primeiro passo: contar as peças por tipo (mesmas dimensões)
         itemElements.forEach((item) => {
           const family = item.getAttribute("FAMILY") || "";
           
-          // Skip acessórios, ferragens, processos de produção e puxadores
+          // Skip accessories, hardware, production processes, and handles
           if (
             family.toLowerCase().includes("acessório") ||
             family.toLowerCase().includes("acessorios") ||
@@ -204,183 +199,164 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             family.toLowerCase().includes("processo") ||
             family.toLowerCase().includes("puxador")
           ) {
-            return; // Pular este item
+            return; // Skip this item
           }
           
-          const uniqueId = item.getAttribute("UNIQUEID") || "";
-          const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || uniqueId;
+          const width = item.getAttribute("WIDTH") || "";
+          const depth = item.getAttribute("DEPTH") || "";
           const description = item.getAttribute("DESCRIPTION") || "";
+          const quantity = item.getAttribute("QUANTITY") || "1";
+          const repetition = item.getAttribute("REPETITION") || "1";
+          
+          // Chave única para cada tipo de peça (dimensões+descrição)
+          const pecaKey = `${width}x${depth}-${description}`;
+          
+          // Calcular quantidade total
+          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
+          
+          if (pecasPorTipo.has(pecaKey)) {
+            pecasPorTipo.set(pecaKey, pecasPorTipo.get(pecaKey) + totalQuantity);
+          } else {
+            pecasPorTipo.set(pecaKey, totalQuantity);
+          }
+        });
+
+        // Segundo passo: processar cada item
+        itemElements.forEach((item) => {
+          const id = item.getAttribute("ID") || "";
+          const description = item.getAttribute("DESCRIPTION") || "";
+          const observations = item.getAttribute("OBSERVATIONS") || "";
           const width = item.getAttribute("WIDTH") || "";
           const height = item.getAttribute("HEIGHT") || "";
           const depth = item.getAttribute("DEPTH") || "";
-          
-          // Informações do módulo
+          const quantity = item.getAttribute("QUANTITY") || "1";
+          const repetition = item.getAttribute("REPETITION") || "1";
+          const family = item.getAttribute("FAMILY") || "";
+          const reference = item.getAttribute("REFERENCE") || "";
+          const uniqueId = item.getAttribute("UNIQUEID") || "";
+
+          // Skip accessories, hardware, production processes, and handles
+          if (
+            family.toLowerCase().includes("acessório") ||
+            family.toLowerCase().includes("acessorios") ||
+            family.toLowerCase().includes("ferragem") ||
+            family.toLowerCase().includes("processo") ||
+            family.toLowerCase().includes("puxador")
+          ) {
+            return; // Skip this item
+          }
+
+          // Format module information in the required format: (ID) - Description - LxAxP
           const moduleInfo =
             uniqueId && description
               ? `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`
               : family;
-          
-          // Agrupar pelo ID pai (módulo)
-          if (!moduleMap.has(uniqueParentId)) {
-            moduleMap.set(uniqueParentId, {
-              moduleInfo: moduleInfo,
-              items: []
-            });
-          }
-          
-          // Adicionar este item ao seu módulo
-          moduleMap.get(uniqueParentId).items.push(item);
-        });
-        
-        // Agora, gerar as linhas da tabela, agrupando por módulo
-        let rowCount = 1;
-        
-        // Para cada módulo
-        moduleMap.forEach((moduleData, moduleId) => {
-          const { moduleInfo, items } = moduleData;
-          
-          // Processar itens deste módulo
-          items.forEach((item, itemIndex) => {
-            const description = item.getAttribute("DESCRIPTION") || "";
-            const observations = item.getAttribute("OBSERVATIONS") || "";
-            const width = item.getAttribute("WIDTH") || "";
-            const depth = item.getAttribute("DEPTH") || "";
-            const uniqueId = item.getAttribute("UNIQUEID") || "";
-            const quantity = item.getAttribute("QUANTITY") || "1";
-            const repetition = item.getAttribute("REPETITION") || "1";
-            
-            // Extrair informações de material, espessura e cor
-            const reference = item.getAttribute("REFERENCE") || "";
-            const references = item.querySelectorAll("REFERENCES");
-            
-            // Extração de informações de materiais
-            let materialName = "";
-            let materialColor = "Branco"; // Valor padrão
-            let materialThickness = "15"; // Valor padrão
-            let materialType = "MDF"; // Valor padrão
-            
-            // Tentar extrair do atributo REFERENCE
-            if (reference) {
-              const referenceParts = reference.split('.');
-              if (referenceParts.length > 0) {
-                materialColor = referenceParts[0] || materialColor;
-              }
+
+          // Obter informações de material, cor e espessura
+          let material = "";
+          let color = "";
+          let thickness = "";
+          let modelExt = "";
+
+          const referencesElements = item.querySelectorAll(
+            "REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > MODEL_EXT, REFERENCES > THICKNESS"
+          );
+
+          referencesElements.forEach((ref) => {
+            const tagName = ref.tagName;
+            const referenceValue = ref.getAttribute("REFERENCE") || "";
+
+            if (tagName === "MATERIAL") {
+              material = referenceValue;
+            } else if (tagName === "MODEL" || tagName === "MODEL_DESCRIPTION") {
+              color = referenceValue;
+            } else if (tagName === "MODEL_EXT") {
+              modelExt = referenceValue;
+            } else if (tagName === "THICKNESS") {
+              thickness = referenceValue;
             }
-            
-            // Ou tentar extrair de REFERENCES/MODEL_EXT e REFERENCES/MATERIAL
-            if (references && references.length > 0) {
-              const modelExt = item.querySelector("REFERENCES MODEL_EXT, REFERENCES MATERIAL, REFERENCES THICKNESS");
-              if (modelExt) {
-                // Se encontrou elementos MODEL_EXT ou MATERIAL
-                const modelExtRef = item.querySelector("REFERENCES MODEL_EXT");
-                const materialRef = item.querySelector("REFERENCES MATERIAL");
-                const thicknessRef = item.querySelector("REFERENCES THICKNESS");
-                
-                if (modelExtRef) {
-                  materialColor = modelExtRef.getAttribute("REFERENCE") || materialColor;
-                }
-                
-                if (materialRef) {
-                  const materialRefValue = materialRef.getAttribute("REFERENCE") || "";
-                  if (materialRefValue.includes("MDF") || materialRefValue.includes("Esp")) {
-                    materialType = "MDF";
-                  }
-                }
-                
-                if (thicknessRef) {
-                  materialThickness = thicknessRef.getAttribute("REFERENCE") || materialThickness;
-                }
-              }
-            }
-            
-            // Verificar se é espessura de 6mm com base na descrição
-            if (description.toLowerCase().includes("fundo") || description.toLowerCase().includes("6")) {
-              materialThickness = "6";
-            }
-            
-            // Formar o nome completo do material
-            const isGuararapes = materialColor.toLowerCase() === "areia";
-            const chapaMaterial = isGuararapes 
-              ? `MDF ${materialThickness} Guararapes ${materialColor}`
-              : `MDF ${materialThickness} ${materialColor}`;
-            
-            // Determinar bordas com base em regras específicas
-            // Se "Frente Reta" ou um item de face visível, terá bordas em todos os lados
-            const isFrontPanel = description.toLowerCase().includes("frente") || 
-                               description.toLowerCase().includes("porta");
-            
-            const bordaInf = isFrontPanel || description.toLowerCase().includes("base") ||
-                           description.toLowerCase().includes("tamponamento") ||
-                           description.toLowerCase().includes("lateral 15") ? "X" : "";
-            
-            const bordaSup = isFrontPanel ? "X" : "";
-            const bordaDir = isFrontPanel ? "X" : "";
-            const bordaEsq = isFrontPanel || description.toLowerCase().includes("lateral") || 
-                          description.toLowerCase().includes("fundo travessa") ? "X" : "";
-            
-            // Cor da fita de borda baseada na cor do material
-            const corFitaBorda = materialColor;
-            
-            // Calcular quantidade total (QUANTITY * REPETITION)
-            const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
-            
-            // Formatar a descrição da peça: uniqueId - description
-            const pieceDesc = uniqueId ? `${uniqueId} - ${description}` : description;
-            
-            // Apenas mostrar o módulo no primeiro item do grupo
-            const displayModuleInfo = itemIndex === 0 ? moduleInfo : "";
-            
-            csvContent += `<tr>
-                <td>${rowCount}</td>
-                <td>${escapeHtml(displayModuleInfo)}</td>
-                <td></td>
-                <td>${escapeHtml(ambiente)}</td>
-                <td class="piece-desc">${escapeHtml(pieceDesc)}</td>
-                <td class="piece-desc">${escapeHtml(observations)}</td>
-                <td class="comp">${depth}</td>
-                <td class="larg">${width}</td>
-                <td>${totalQuantity}</td>
-                <td class="borda-inf">${bordaInf}</td>
-                <td class="borda-sup">${bordaSup}</td>
-                <td class="borda-dir">${bordaDir}</td>
-                <td class="borda-esq">${bordaEsq}</td>
-                <td class="edge-color">${corFitaBorda}</td>
-                <td class="sheet-color">${chapaMaterial}</td>
-                <td class="thickness">${materialThickness}</td>
-              </tr>`;
-            
-            rowCount++;
           });
-          
-          // Adicionar linha em branco entre módulos (exceto após o último módulo)
-          if (rowCount > 1 && Array.from(moduleMap.keys()).indexOf(moduleId) < moduleMap.size - 1) {
-            csvContent += `<tr>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td class="piece-desc"></td>
-                <td class="piece-desc"></td>
-                <td class="comp"></td>
-                <td class="larg"></td>
-                <td></td>
-                <td class="borda-inf"></td>
-                <td class="borda-sup"></td>
-                <td class="borda-dir"></td>
-                <td class="borda-esq"></td>
-                <td class="edge-color"></td>
-                <td class="sheet-color"></td>
-                <td class="thickness"></td>
-              </tr>`;
-            
-            rowCount++;
+
+          // Usar MODEL_EXT se estiver disponível, senão usar color
+          const finalColor = modelExt || color;
+
+          // Formatar a informação da chapa: "Cor (Material)"
+          const chapaMaterial = finalColor && material ? 
+            `${escapeHtml(finalColor)} (${escapeHtml(material)})` : 
+            (finalColor || material) ? 
+              `${escapeHtml(finalColor || material)}` : 
+              "N/A";
+
+          let edgeBottom = "";
+          let edgeTop = "";
+          let edgeRight = "";
+          let edgeLeft = "";
+
+          const edgeElements = item.querySelectorAll(
+            "REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4"
+          );
+
+          edgeElements.forEach((edge) => {
+            const tagName = edge.tagName;
+            const value = edge.getAttribute("REFERENCE") || "0";
+
+            if (tagName === "FITA_BORDA_1") {
+              edgeBottom = value === "1" ? "X" : "";
+            } else if (tagName === "FITA_BORDA_2") {
+              edgeTop = value === "1" ? "X" : "";
+            } else if (tagName === "FITA_BORDA_3") {
+              edgeRight = value === "1" ? "X" : "";
+            } else if (tagName === "FITA_BORDA_4") {
+              edgeLeft = value === "1" ? "X" : "";
+            }
+          });
+
+          let edgeColor = finalColor || color;
+          const edgeColorElement = item.querySelector(
+            "REFERENCES > MODEL_DESCRIPTION_FITA"
+          );
+          if (edgeColorElement) {
+            edgeColor = edgeColorElement.getAttribute("REFERENCE") || edgeColor;
           }
+
+          // Calculate total quantity (QUANTITY * REPETITION)
+          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
+
+          // Gerar plano de corte na descrição da peça
+          const pecaKey = `${width}x${depth}-${description}`;
+          const totalPecasDesseTipo = pecasPorTipo.get(pecaKey) || 0;
+          
+          // Formar a descrição com o plano de corte
+          let descricaoComPlano = escapeHtml(description);
+          if (totalPecasDesseTipo > 1) {
+            descricaoComPlano += ` <strong>(Plano de corte: ${totalPecasDesseTipo} peças)</strong>`;
+          }
+
+          csvContent += `<tr>
+              <td>${rowCount}</td>
+              <td>${escapeHtml(moduleInfo)}</td>
+              <td>Cliente</td>
+              <td>${escapeHtml(ambiente)}</td>
+              <td class="piece-desc">${descricaoComPlano}</td>
+              <td class="piece-desc">${escapeHtml(observations)}</td>
+              <td class="comp">${depth}</td>
+              <td class="larg">${width}</td>
+              <td>${totalQuantity}</td>
+              <td class="borda-inf">${edgeBottom}</td>
+              <td class="borda-sup">${edgeTop}</td>
+              <td class="borda-dir">${edgeRight}</td>
+              <td class="borda-esq">${edgeLeft}</td>
+              <td class="edge-color">${escapeHtml(edgeColor)}</td>
+              <td class="material">${chapaMaterial}</td>
+              <td class="material">${thickness}</td>
+            </tr>`;
+
+          rowCount++;
         });
-        
+
         return csvContent;
       }
 
-      // Se não houver ITEM, tentar ler informações diretas do modelCategory
       const modelCategories = Array.from(
         xmlDoc.querySelectorAll(
           "MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation"
@@ -388,29 +364,27 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       );
 
       if (modelCategories.length === 0) {
-        // Dados de exemplo básicos se não encontrarmos itens
         csvContent += `<tr>
             <td>1</td>
-            <td>(1) - Exemplo - L.500mm x A.650mm x P.500mm</td>
-            <td></td>
+            <td>Cozinhas</td>
+            <td>Cliente Exemplo</td>
             <td>${escapeHtml(ambiente)}</td>
-            <td class="piece-desc">1 - Base 15</td>
-            <td class="piece-desc"></td>
-            <td class="comp">470</td>
-            <td class="larg">500</td>
-            <td>1</td>
+            <td class="piece-desc">Exemplo Peça <strong>(Plano de corte: 2 peças)</strong></td>
+            <td class="piece-desc">Observações Exemplo</td>
+            <td class="comp">100</td>
+            <td class="larg">50</td>
+            <td>2</td>
             <td class="borda-inf">X</td>
             <td class="borda-sup"></td>
-            <td class="borda-dir"></td>
+            <td class="borda-dir">X</td>
             <td class="borda-esq"></td>
             <td class="edge-color">Branco</td>
-            <td class="sheet-color">MDF 15 Branco</td>
-            <td class="thickness">15</td>
+            <td class="material">Branco (MDF)</td>
+            <td class="material">15</td>
           </tr>`;
         return csvContent;
       }
 
-      // Se chegarmos aqui, temos categorias de modelo, mas não itens individuais
       let rowCount = 1;
 
       modelCategories.forEach((category) => {
@@ -437,45 +411,44 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
           csvContent += `<tr>
               <td>${rowCount}</td>
-              <td>(${rowCount}) - ${escapeHtml(modelDesc)} - L.500mm x A.650mm x P.500mm</td>
-              <td></td>
+              <td>Cozinhas</td>
+              <td>Cliente Exemplo</td>
               <td>${escapeHtml(categoriaAmbiente)}</td>
-              <td class="piece-desc">${rowCount} - Base 15</td>
-              <td class="piece-desc"></td>
-              <td class="comp">470</td>
-              <td class="larg">500</td>
-              <td>1</td>
+              <td class="piece-desc">${escapeHtml(modelDesc)} <strong>(Plano de corte: 2 peças)</strong></td>
+              <td class="piece-desc">Observações Exemplo</td>
+              <td class="comp">100</td>
+              <td class="larg">50</td>
+              <td>2</td>
               <td class="borda-inf">X</td>
               <td class="borda-sup"></td>
-              <td class="borda-dir"></td>
+              <td class="borda-dir">X</td>
               <td class="borda-esq"></td>
               <td class="edge-color">Branco</td>
-              <td class="sheet-color">MDF 15 Branco</td>
-              <td class="thickness">15</td>
+              <td class="material">Branco (MDF)</td>
+              <td class="material">15</td>
             </tr>`;
           rowCount++;
         });
       });
 
-      // Se não encontramos nenhum modelInfo, adicionar uma linha de exemplo
       if (rowCount === 1) {
         csvContent += `<tr>
             <td>1</td>
-            <td>(1) - Exemplo - L.500mm x A.650mm x P.500mm</td>
-            <td></td>
+            <td>Cozinhas</td>
+            <td>Cliente Exemplo</td>
             <td>${escapeHtml(ambiente)}</td>
-            <td class="piece-desc">1 - Base 15</td>
-            <td class="piece-desc"></td>
-            <td class="comp">470</td>
-            <td class="larg">500</td>
-            <td>1</td>
+            <td class="piece-desc">Exemplo Peça <strong>(Plano de corte: 2 peças)</strong></td>
+            <td class="piece-desc">Observações Exemplo</td>
+            <td class="comp">100</td>
+            <td class="larg">50</td>
+            <td>2</td>
             <td class="borda-inf">X</td>
             <td class="borda-sup"></td>
-            <td class="borda-dir"></td>
+            <td class="borda-dir">X</td>
             <td class="borda-esq"></td>
             <td class="edge-color">Branco</td>
-            <td class="sheet-color">MDF 15 Branco</td>
-            <td class="thickness">15</td>
+            <td class="material">Branco (MDF)</td>
+            <td class="material">15</td>
           </tr>`;
       }
 
@@ -489,16 +462,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th>AMBIENTE</th>
         <th class="piece-desc">DESC. DA PEÇA</th>
         <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-        <th class="comp">COMP</th>
-        <th class="larg">LARG</th>
+        <th style="background-color: #FDE1D3;" class="comp">COMP</th>
+        <th style="background-color: #D3E4FD;" class="larg">LARG</th>
         <th>QUANT</th>
-        <th class="borda-inf">BORDA INF</th>
-        <th class="borda-sup">BORDA SUP</th>
-        <th class="borda-dir">BORDA DIR</th>
-        <th class="borda-esq">BORDA ESQ</th>
+        <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
+        <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
+        <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
+        <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
         <th class="edge-color">COR FITA DE BORDA</th>
-        <th class="sheet-color">CHAPA</th>
-        <th class="thickness">ESP.</th>
+        <th class="material">CHAPA</th>
+        <th class="material">ESP.</th>
       </tr>`;
     }
   };
