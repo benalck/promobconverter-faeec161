@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -49,7 +50,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
         const csvString = convertXMLToCSV(xmlContent);
 
-        const htmlPrefix = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        const htmlPrefix = `<html xmlns:o="urn:schemas-microsoft-com:office:excel" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
           <head>
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
             <!--[if gte mso 9]>
@@ -71,15 +72,22 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 border: 1px solid #000000;
                 border-collapse: collapse;
                 padding: 5px;
-                text-align: center;
               }
               th {
                 background-color: #f0f0f0;
                 font-weight: bold;
+                text-align: center;
+              }
+              td {
+                text-align: center;
               }
               .piece-desc {
                 background-color: #FFFFFF;
                 text-align: left;
+              }
+              .module-cell {
+                font-weight: bold;
+                text-align: center;
               }
               .material {
                 background-color: #FFFFFF;
@@ -353,10 +361,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           // Obter as observações (se houver)
           const observations = mainItem.getAttribute("OBSERVATIONS") || "";
           
-          // Adicionar linha para o módulo com os componentes listados na descrição
+          // Adicionar linha para o módulo com os componentes listados na descrição - Note a classe "module-cell" adicionada
           csvContent += `<tr>
               <td>${rowCount}</td>
-              <td>${moduleDescription}</td>
+              <td class="module-cell">${moduleDescription}</td>
               <td>Cliente</td>
               <td>${escapeHtml(ambiente)}</td>
               <td class="piece-desc">${piecesText}</td>
