@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -178,55 +177,33 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th class="material">ESP.</th>
         </tr>`;
 
-      // Extrair o nome do ambiente da descrição da guia (modelcategory)
-      const modelCategory = xmlDoc.querySelector(
-        "MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation"
-      );
-      
-      let ambiente = "Ambiente 3D";
-      if (modelCategory) {
-        const categoryDesc = 
-          modelCategory.getAttribute("DESCRIPTION") || 
-          modelCategory.getAttribute("Description") || "";
-        
-        // Exemplo: "Cozinhas - Ambiente 3D" -> extrair "Ambiente 3D"
-        const ambienteMatch = categoryDesc.match(/\s*-\s*(.+)/);
-        ambiente = ambienteMatch ? ambienteMatch[1].trim() : categoryDesc;
-      }
-
       const itemElements = xmlDoc.querySelectorAll("ITEM");
 
       if (itemElements.length > 0) {
         let rowCount = 1;
         
-        // Primeiro passo: agrupar os itens por módulo (uniqueParentId)
         const moduleMap = new Map();
         
-        // Identificar todos os módulos principais (COMPONENT="N" ou uniqueParentId="-1" ou "-2")
         const mainModules = Array.from(itemElements).filter(item => {
           const component = item.getAttribute("COMPONENT") || "N";
           const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
           return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2";
         });
         
-        // Para cada módulo principal, encontrar todos os seus componentes
         mainModules.forEach(mainModule => {
           const uniqueId = mainModule.getAttribute("UNIQUEID") || "";
           if (!uniqueId) return;
           
-          // Adicionar o módulo principal ao mapa
           moduleMap.set(uniqueId, {
             mainModule,
             components: []
           });
           
-          // Encontrar todos os componentes deste módulo
           Array.from(itemElements).forEach(item => {
             const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
             const component = item.getAttribute("COMPONENT") || "N";
             
             if (component === "Y" && uniqueParentId === uniqueId) {
-              // Este é um componente do módulo atual
               const moduleInfo = moduleMap.get(uniqueId);
               if (moduleInfo) {
                 moduleInfo.components.push(item);
@@ -235,24 +212,21 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           });
         });
         
-        // Agora, processamos cada módulo e seus componentes
         moduleMap.forEach((moduleInfo, uniqueId) => {
           const mainModule = moduleInfo.mainModule;
           const components = moduleInfo.components;
           
-          // Obter informações do módulo principal
           const description = mainModule.getAttribute("DESCRIPTION") || "";
           const width = mainModule.getAttribute("WIDTH") || "";
           const height = mainModule.getAttribute("HEIGHT") || "";
           const depth = mainModule.getAttribute("DEPTH") || "";
           
-          // Formar a descrição do módulo
+          const family = mainModule.getAttribute("FAMILY") || "Ambiente";
+          
           const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
           
-          // Listar todas as peças deste módulo
           const piecesList = [];
           
-          // Adicionar o módulo principal à lista se necessário
           if (shouldIncludeItemInOutput(mainModule)) {
             piecesList.push({
               item: mainModule,
@@ -260,7 +234,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             });
           }
           
-          // Adicionar todos os componentes à lista
           components.forEach(component => {
             if (shouldIncludeItemInOutput(component)) {
               piecesList.push({
@@ -270,44 +243,50 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
           });
           
-          // Se não houver peças, pular este módulo
           if (piecesList.length === 0) return;
           
-          // Criar uma string com todas as peças para mostrar no plano de corte
           const piecesText = piecesList.map(piece => piece.description).join("<br>");
           
-          // Adicionar linha para o módulo principal com todas as peças listadas
           const mainItem = piecesList[0].item;
           
-          // Obter informações de material, cor e espessura do módulo principal
           let material = "";
           let color = "";
           let thickness = "";
           let modelExt = "";
+          let edgeColor = "";
           
-          const referencesElements = mainItem.querySelectorAll(
-            "REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > MODEL_EXT, REFERENCES > THICKNESS"
-          );
+          const referencesElement = mainItem.querySelector("REFERENCES");
           
-          referencesElements.forEach((ref) => {
-            const tagName = ref.tagName;
-            const referenceValue = ref.getAttribute("REFERENCE") || "";
+          if (referencesElement) {
+            const materialElement = referencesElement.querySelector("MATERIAL");
+            const modelExtElement = referencesElement.querySelector("MODEL_EXT");
+            const modelElement = referencesElement.querySelector("MODEL");
+            const thicknessElement = referencesElement.querySelector("THICKNESS");
+            const fitaBordaElement = referencesElement.querySelector("MODEL_DESCRIPTION_FITA");
             
-            if (tagName === "MATERIAL") {
-              material = referenceValue;
-            } else if (tagName === "MODEL" || tagName === "MODEL_DESCRIPTION") {
-              color = referenceValue;
-            } else if (tagName === "MODEL_EXT") {
-              modelExt = referenceValue;
-            } else if (tagName === "THICKNESS") {
-              thickness = referenceValue;
+            if (materialElement) {
+              material = materialElement.getAttribute("REFERENCE") || "";
             }
-          });
+            
+            if (modelExtElement) {
+              modelExt = modelExtElement.getAttribute("REFERENCE") || "";
+            } else if (modelElement) {
+              color = modelElement.getAttribute("REFERENCE") || "";
+            }
+            
+            if (thicknessElement) {
+              thickness = thicknessElement.getAttribute("REFERENCE") || "";
+            }
+            
+            if (fitaBordaElement) {
+              edgeColor = fitaBordaElement.getAttribute("REFERENCE") || "";
+            } else {
+              edgeColor = modelExt || color;
+            }
+          }
           
-          // Usar MODEL_EXT se estiver disponível, senão usar color
           const finalColor = modelExt || color;
           
-          // Formatar a informação da chapa: "Material Thickness Color"
           const chapaMaterial = (() => {
             if (finalColor && material && thickness) {
               return `${escapeHtml(material)} ${escapeHtml(thickness)} ${escapeHtml(finalColor)}`;
@@ -320,53 +299,45 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
           })();
           
-          // Verificar bordas
           let edgeBottom = "";
           let edgeTop = "";
           let edgeRight = "";
           let edgeLeft = "";
           
-          const edgeElements = mainItem.querySelectorAll(
-            "REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4"
-          );
-          
-          edgeElements.forEach((edge) => {
-            const tagName = edge.tagName;
-            const value = edge.getAttribute("REFERENCE") || "0";
+          if (referencesElement) {
+            const edgeBottom1 = referencesElement.querySelector("FITA_BORDA_1");
+            const edgeTop2 = referencesElement.querySelector("FITA_BORDA_2");
+            const edgeRight3 = referencesElement.querySelector("FITA_BORDA_3");
+            const edgeLeft4 = referencesElement.querySelector("FITA_BORDA_4");
             
-            if (tagName === "FITA_BORDA_1") {
-              edgeBottom = value === "1" ? "X" : "";
-            } else if (tagName === "FITA_BORDA_2") {
-              edgeTop = value === "1" ? "X" : "";
-            } else if (tagName === "FITA_BORDA_3") {
-              edgeRight = value === "1" ? "X" : "";
-            } else if (tagName === "FITA_BORDA_4") {
-              edgeLeft = value === "1" ? "X" : "";
+            if (edgeBottom1 && edgeBottom1.getAttribute("REFERENCE") === "1") {
+              edgeBottom = "X";
             }
-          });
-          
-          let edgeColor = finalColor || color;
-          const edgeColorElement = mainItem.querySelector(
-            "REFERENCES > MODEL_DESCRIPTION_FITA"
-          );
-          if (edgeColorElement) {
-            edgeColor = edgeColorElement.getAttribute("REFERENCE") || edgeColor;
+            
+            if (edgeTop2 && edgeTop2.getAttribute("REFERENCE") === "1") {
+              edgeTop = "X";
+            }
+            
+            if (edgeRight3 && edgeRight3.getAttribute("REFERENCE") === "1") {
+              edgeRight = "X";
+            }
+            
+            if (edgeLeft4 && edgeLeft4.getAttribute("REFERENCE") === "1") {
+              edgeLeft = "X";
+            }
           }
           
-          // Calcular a quantidade total de componentes neste módulo
           const quantity = mainItem.getAttribute("QUANTITY") || "1";
           const repetition = mainItem.getAttribute("REPETITION") || "1";
           const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
           
-          // Obter as observações (se houver)
           const observations = mainItem.getAttribute("OBSERVATIONS") || "";
           
-          // Adicionar linha para o módulo com os componentes listados na descrição - Note a classe "module-cell" adicionada
           csvContent += `<tr>
               <td>${rowCount}</td>
               <td class="module-cell">${moduleDescription}</td>
               <td>Cliente</td>
-              <td>${escapeHtml(ambiente)}</td>
+              <td>${escapeHtml(family)}</td>
               <td class="piece-desc">${piecesText}</td>
               <td class="piece-desc">${escapeHtml(observations)}</td>
               <td class="comp">${depth}</td>
@@ -423,7 +394,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           category.getAttribute("Description") ||
           "Unknown Category";
           
-        // Extrair ambiente da descrição da categoria
         const ambienteMatch = categoryDesc.match(/\s*-\s*(.+)/);
         const categoriaAmbiente = ambienteMatch ? ambienteMatch[1].trim() : categoryDesc;
 
@@ -506,12 +476,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
   };
   
-  // Função para determinar se um item deve ser incluído na saída
-  // (Ignoramos acessórios, ferragens, etc.)
   const shouldIncludeItemInOutput = (item: Element): boolean => {
     const family = item.getAttribute("FAMILY") || "";
     
-    // Skip accessories, hardware, production processes, and handles
     if (
       family.toLowerCase().includes("acessório") ||
       family.toLowerCase().includes("acessorios") ||
