@@ -79,6 +79,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               }
               .piece-desc {
                 background-color: #FFFFFF;
+                text-align: left;
               }
               .material {
                 background-color: #FFFFFF;
@@ -189,130 +190,101 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
       if (itemElements.length > 0) {
         let rowCount = 1;
-        // Criar um mapa para agrupar peças do mesmo tipo para o plano de corte
-        const pecasPorTipo = new Map();
-
-        // Primeiro passo: contar as peças por tipo (mesmas dimensões)
-        itemElements.forEach((item) => {
-          const family = item.getAttribute("FAMILY") || "";
-          
-          // Skip accessories, hardware, production processes, and handles
-          if (
-            family.toLowerCase().includes("acessório") ||
-            family.toLowerCase().includes("acessorios") ||
-            family.toLowerCase().includes("ferragem") ||
-            family.toLowerCase().includes("processo") ||
-            family.toLowerCase().includes("puxador")
-          ) {
-            return; // Skip this item
-          }
-          
-          const width = item.getAttribute("WIDTH") || "";
-          const depth = item.getAttribute("DEPTH") || "";
-          const description = item.getAttribute("DESCRIPTION") || "";
-          const quantity = item.getAttribute("QUANTITY") || "1";
-          const repetition = item.getAttribute("REPETITION") || "1";
-          
-          // Chave única para cada tipo de peça (dimensões+descrição)
-          const pecaKey = `${width}x${depth}-${description}`;
-          
-          // Calcular quantidade total
-          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
-          
-          if (pecasPorTipo.has(pecaKey)) {
-            pecasPorTipo.set(pecaKey, pecasPorTipo.get(pecaKey) + totalQuantity);
-          } else {
-            pecasPorTipo.set(pecaKey, totalQuantity);
-          }
-        });
-
-        // Para rastrear módulos já processados e evitar repetição
-        const modulosProcessados = new Set();
-        let currentModuleId = "";
-        let lastUniqueParentId = "";
         
-        // Segundo passo: processar cada item
-        itemElements.forEach((item) => {
-          const id = item.getAttribute("ID") || "";
-          const description = item.getAttribute("DESCRIPTION") || "";
-          const observations = item.getAttribute("OBSERVATIONS") || "";
-          const width = item.getAttribute("WIDTH") || "";
-          const height = item.getAttribute("HEIGHT") || "";
-          const depth = item.getAttribute("DEPTH") || "";
-          const quantity = item.getAttribute("QUANTITY") || "1";
-          const repetition = item.getAttribute("REPETITION") || "1";
-          const family = item.getAttribute("FAMILY") || "";
-          const reference = item.getAttribute("REFERENCE") || "";
-          const uniqueId = item.getAttribute("UNIQUEID") || "";
-          const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
+        // Primeiro passo: agrupar os itens por módulo (uniqueParentId)
+        const moduleMap = new Map();
+        
+        // Identificar todos os módulos principais (COMPONENT="N" ou uniqueParentId="-1" ou "-2")
+        const mainModules = Array.from(itemElements).filter(item => {
           const component = item.getAttribute("COMPONENT") || "N";
-
-          // Skip accessories, hardware, production processes, and handles
-          if (
-            family.toLowerCase().includes("acessório") ||
-            family.toLowerCase().includes("acessorios") ||
-            family.toLowerCase().includes("ferragem") ||
-            family.toLowerCase().includes("processo") ||
-            family.toLowerCase().includes("puxador")
-          ) {
-            return; // Skip this item
-          }
-
-          // Determinar o ID do módulo atual
-          if (component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2") {
-            // Este é um módulo principal
-            currentModuleId = uniqueId;
+          const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
+          return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2";
+        });
+        
+        // Para cada módulo principal, encontrar todos os seus componentes
+        mainModules.forEach(mainModule => {
+          const uniqueId = mainModule.getAttribute("UNIQUEID") || "";
+          if (!uniqueId) return;
+          
+          // Adicionar o módulo principal ao mapa
+          moduleMap.set(uniqueId, {
+            mainModule,
+            components: []
+          });
+          
+          // Encontrar todos os componentes deste módulo
+          Array.from(itemElements).forEach(item => {
+            const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
+            const component = item.getAttribute("COMPONENT") || "N";
             
-            // Adicionar uma linha em branco entre módulos diferentes, exceto para o primeiro
-            if (lastUniqueParentId !== "" && lastUniqueParentId !== uniqueParentId) {
-              csvContent += `<tr><td colspan="16">&nbsp;</td></tr>`;
-            }
-            
-            lastUniqueParentId = uniqueParentId;
-          }
-
-          // Format module information in the required format: (ID) - Description - LxAxP
-          const moduleInfo = (() => {
-            // Se for um componente, mostrar info do módulo apenas na primeira linha do módulo
-            if (component === "Y" && currentModuleId && modulosProcessados.has(currentModuleId)) {
-              return "";
-            }
-            
-            // Para módulos principais ou primeira linha de componentes
-            if (uniqueId) {
-              const moduleItem = Array.from(itemElements).find(
-                el => el.getAttribute("UNIQUEID") === currentModuleId
-              );
-              
-              if (moduleItem) {
-                const moduleDesc = moduleItem.getAttribute("DESCRIPTION") || "";
-                const moduleWidth = moduleItem.getAttribute("WIDTH") || "";
-                const moduleHeight = moduleItem.getAttribute("HEIGHT") || "";
-                const moduleDepth = moduleItem.getAttribute("DEPTH") || "";
-                
-                modulosProcessados.add(currentModuleId);
-                
-                return `(${currentModuleId}) - ${moduleDesc} - L.${moduleWidth}mm x A.${moduleHeight}mm x P.${moduleDepth}mm`;
+            if (component === "Y" && uniqueParentId === uniqueId) {
+              // Este é um componente do módulo atual
+              const moduleInfo = moduleMap.get(uniqueId);
+              if (moduleInfo) {
+                moduleInfo.components.push(item);
               }
             }
-            
-            return family || "";
-          })();
-
-          // Obter informações de material, cor e espessura
+          });
+        });
+        
+        // Agora, processamos cada módulo e seus componentes
+        moduleMap.forEach((moduleInfo, uniqueId) => {
+          const mainModule = moduleInfo.mainModule;
+          const components = moduleInfo.components;
+          
+          // Obter informações do módulo principal
+          const description = mainModule.getAttribute("DESCRIPTION") || "";
+          const width = mainModule.getAttribute("WIDTH") || "";
+          const height = mainModule.getAttribute("HEIGHT") || "";
+          const depth = mainModule.getAttribute("DEPTH") || "";
+          
+          // Formar a descrição do módulo
+          const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+          
+          // Listar todas as peças deste módulo
+          const piecesList = [];
+          
+          // Adicionar o módulo principal à lista se necessário
+          if (shouldIncludeItemInOutput(mainModule)) {
+            piecesList.push({
+              item: mainModule,
+              description: `${uniqueId} - ${mainModule.getAttribute("DESCRIPTION") || ""}`
+            });
+          }
+          
+          // Adicionar todos os componentes à lista
+          components.forEach(component => {
+            if (shouldIncludeItemInOutput(component)) {
+              piecesList.push({
+                item: component,
+                description: `${uniqueId} - ${component.getAttribute("DESCRIPTION") || ""}`
+              });
+            }
+          });
+          
+          // Se não houver peças, pular este módulo
+          if (piecesList.length === 0) return;
+          
+          // Criar uma string com todas as peças para mostrar no plano de corte
+          const piecesText = piecesList.map(piece => piece.description).join("<br>");
+          
+          // Adicionar linha para o módulo principal com todas as peças listadas
+          const mainItem = piecesList[0].item;
+          
+          // Obter informações de material, cor e espessura do módulo principal
           let material = "";
           let color = "";
           let thickness = "";
           let modelExt = "";
-
-          const referencesElements = item.querySelectorAll(
+          
+          const referencesElements = mainItem.querySelectorAll(
             "REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > MODEL_EXT, REFERENCES > THICKNESS"
           );
-
+          
           referencesElements.forEach((ref) => {
             const tagName = ref.tagName;
             const referenceValue = ref.getAttribute("REFERENCE") || "";
-
+            
             if (tagName === "MATERIAL") {
               material = referenceValue;
             } else if (tagName === "MODEL" || tagName === "MODEL_DESCRIPTION") {
@@ -323,11 +295,11 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               thickness = referenceValue;
             }
           });
-
+          
           // Usar MODEL_EXT se estiver disponível, senão usar color
           const finalColor = modelExt || color;
-
-          // Formatar a informação da chapa: "Cor (Material)"
+          
+          // Formatar a informação da chapa: "Material Thickness Color"
           const chapaMaterial = (() => {
             if (finalColor && material && thickness) {
               return `${escapeHtml(material)} ${escapeHtml(thickness)} ${escapeHtml(finalColor)}`;
@@ -339,20 +311,21 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               return "N/A";
             }
           })();
-
+          
+          // Verificar bordas
           let edgeBottom = "";
           let edgeTop = "";
           let edgeRight = "";
           let edgeLeft = "";
-
-          const edgeElements = item.querySelectorAll(
+          
+          const edgeElements = mainItem.querySelectorAll(
             "REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4"
           );
-
+          
           edgeElements.forEach((edge) => {
             const tagName = edge.tagName;
             const value = edge.getAttribute("REFERENCE") || "0";
-
+            
             if (tagName === "FITA_BORDA_1") {
               edgeBottom = value === "1" ? "X" : "";
             } else if (tagName === "FITA_BORDA_2") {
@@ -363,31 +336,30 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               edgeLeft = value === "1" ? "X" : "";
             }
           });
-
+          
           let edgeColor = finalColor || color;
-          const edgeColorElement = item.querySelector(
+          const edgeColorElement = mainItem.querySelector(
             "REFERENCES > MODEL_DESCRIPTION_FITA"
           );
           if (edgeColorElement) {
             edgeColor = edgeColorElement.getAttribute("REFERENCE") || edgeColor;
           }
-
-          // Calculate total quantity (QUANTITY * REPETITION)
-          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
-
-          // Gerar plano de corte na descrição da peça
-          const pecaKey = `${width}x${depth}-${description}`;
-          const totalPecasDesseTipo = pecasPorTipo.get(pecaKey) || 0;
           
-          // Formar a descrição da peça usando o UNIQUEID
-          let descricaoPeca = `${uniqueId ? uniqueId + " - " : ""}${escapeHtml(description)}`;
-
+          // Calcular a quantidade total de componentes neste módulo
+          const quantity = mainItem.getAttribute("QUANTITY") || "1";
+          const repetition = mainItem.getAttribute("REPETITION") || "1";
+          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
+          
+          // Obter as observações (se houver)
+          const observations = mainItem.getAttribute("OBSERVATIONS") || "";
+          
+          // Adicionar linha para o módulo com os componentes listados na descrição
           csvContent += `<tr>
               <td>${rowCount}</td>
-              <td>${escapeHtml(moduleInfo)}</td>
+              <td>${moduleDescription}</td>
               <td>Cliente</td>
               <td>${escapeHtml(ambiente)}</td>
-              <td class="piece-desc">${descricaoPeca}</td>
+              <td class="piece-desc">${piecesText}</td>
               <td class="piece-desc">${escapeHtml(observations)}</td>
               <td class="comp">${depth}</td>
               <td class="larg">${width}</td>
@@ -400,7 +372,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="material">${chapaMaterial}</td>
               <td class="material">${thickness}</td>
             </tr>`;
-
+          
           rowCount++;
         });
 
@@ -524,6 +496,25 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th class="material">ESP.</th>
       </tr>`;
     }
+  };
+  
+  // Função para determinar se um item deve ser incluído na saída
+  // (Ignoramos acessórios, ferragens, etc.)
+  const shouldIncludeItemInOutput = (item: Element): boolean => {
+    const family = item.getAttribute("FAMILY") || "";
+    
+    // Skip accessories, hardware, production processes, and handles
+    if (
+      family.toLowerCase().includes("acessório") ||
+      family.toLowerCase().includes("acessorios") ||
+      family.toLowerCase().includes("ferragem") ||
+      family.toLowerCase().includes("processo") ||
+      family.toLowerCase().includes("puxador")
+    ) {
+      return false;
+    }
+    
+    return true;
   };
 
   const escapeHtml = (unsafe: string): string => {
