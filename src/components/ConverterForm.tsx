@@ -201,7 +201,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           
           Array.from(itemElements).forEach(item => {
             const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
-            const component = item.getAttribute("COMPONENT") || "N";
+            const component = item.getAttribute("COMPONENT") || "Y";
             
             if (component === "Y" && uniqueParentId === uniqueId) {
               const moduleInfo = moduleMap.get(uniqueId);
@@ -220,7 +220,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const width = mainModule.getAttribute("WIDTH") || "";
           const height = mainModule.getAttribute("HEIGHT") || "";
           const depth = mainModule.getAttribute("DEPTH") || "";
-          
           const family = mainModule.getAttribute("FAMILY") || "Ambiente";
           
           const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
@@ -365,11 +364,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       );
 
       if (modelCategories.length === 0) {
+        const defaultEnvironment = "Ambiente";
         csvContent += `<tr>
             <td>1</td>
-            <td>Cozinhas</td>
+            <td class="module-cell">Cozinhas</td>
             <td>Cliente Exemplo</td>
-            <td>${escapeHtml(ambiente)}</td>
+            <td>${escapeHtml(defaultEnvironment)}</td>
             <td class="piece-desc">Exemplo Peça <strong>(Plano de corte: 2 peças)</strong></td>
             <td class="piece-desc">Observações Exemplo</td>
             <td class="comp">100</td>
@@ -411,7 +411,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
           csvContent += `<tr>
               <td>${rowCount}</td>
-              <td>Cozinhas</td>
+              <td class="module-cell">Cozinhas</td>
               <td>Cliente Exemplo</td>
               <td>${escapeHtml(categoriaAmbiente)}</td>
               <td class="piece-desc">${escapeHtml(modelDesc)} <strong>(Plano de corte: 2 peças)</strong></td>
@@ -432,11 +432,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       });
 
       if (rowCount === 1) {
+        const defaultEnvironment = "Ambiente";
         csvContent += `<tr>
             <td>1</td>
-            <td>Cozinhas</td>
+            <td class="module-cell">Cozinhas</td>
             <td>Cliente Exemplo</td>
-            <td>${escapeHtml(ambiente)}</td>
+            <td>${escapeHtml(defaultEnvironment)}</td>
             <td class="piece-desc">Exemplo Peça <strong>(Plano de corte: 2 peças)</strong></td>
             <td class="piece-desc">Observações Exemplo</td>
             <td class="comp">100</td>
