@@ -1,7 +1,7 @@
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
- * Convert XML content to CSV formatted string with HTML
+ * Converts XML content to CSV format for Excel
  */
 export const convertXMLToCSV = (xmlContent: string): string => {
   try {
