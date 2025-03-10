@@ -8,24 +8,7 @@ export const convertXMLToCSV = (xmlContent: string): string => {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
 
-    let csvContent = `<tr>
-        <th>NUM.</th>
-        <th>MÓDULO</th>
-        <th>CLIENTE</th>
-        <th>AMBIENTE</th>
-        <th class="piece-desc">DESC. DA PEÇA</th>
-        <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-        <th style="background-color: #F7CAAC;" class="comp">COMP</th>
-        <th style="background-color: #BDD6EE;" class="larg">LARG</th>
-        <th>QUANT</th>
-        <th style="background-color: #F7CAAC;" class="borda-inf">BORDA INF</th>
-        <th style="background-color: #F7CAAC;" class="borda-sup">BORDA SUP</th>
-        <th style="background-color: #BDD6EE;" class="borda-dir">BORDA DIR</th>
-        <th style="background-color: #BDD6EE;" class="borda-esq">BORDA ESQ</th>
-        <th class="edge-color">COR FITA DE BORDA</th>
-        <th class="material">CHAPA</th>
-        <th class="material">ESP.</th>
-      </tr>`;
+    let csvContent = generateTableHeader();
 
     const itemElements = xmlDoc.querySelectorAll("ITEM");
 
@@ -34,37 +17,58 @@ export const convertXMLToCSV = (xmlContent: string): string => {
       return csvContent;
     }
 
-    // Process model categories if no items found
-    csvContent = processModelCategories(xmlDoc, csvContent);
-    return csvContent;
+    return csvContent + "</table>";
   } catch (error) {
     console.error("Error converting XML to CSV:", error);
     return getDefaultTableHeader();
   }
 };
 
-/**
- * Process item elements from XML
- */
+const generateTableHeader = (): string => {
+  return `<tr>
+    <th>NUM.</th>
+    <th>MÓDULO</th>
+    <th>CLIENTE</th>
+    <th>AMBIENTE</th>
+    <th class="piece-desc">DESC. DA PEÇA</th>
+    <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
+    <th style="background-color: #F7CAAC;" class="comp">COMP</th>
+    <th style="background-color: #BDD6EE;" class="larg">LARG</th>
+    <th>QUANT</th>
+    <th style="background-color: #F7CAAC;" class="borda-inf">BORDA INF</th>
+    <th style="background-color: #F7CAAC;" class="borda-sup">BORDA SUP</th>
+    <th style="background-color: #BDD6EE;" class="borda-dir">BORDA DIR</th>
+    <th style="background-color: #BDD6EE;" class="borda-esq">BORDA ESQ</th>
+    <th class="edge-color">COR FITA DE BORDA</th>
+    <th class="material">CHAPA</th>
+    <th class="material">ESP.</th>
+  </tr>`;
+};
+
 const processItemElements = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
-  
   const moduleMap = new Map();
   
+  // Primeiro, organizar os módulos e seus componentes
   const mainModules = Array.from(itemElements).filter(item => {
     const component = item.getAttribute("COMPONENT") || "N";
     const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
-    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2";
+    const group = item.getAttribute("GROUP") || "";
+    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group === "Tamponamentos";
   });
   
   mainModules.forEach(mainModule => {
     const uniqueId = mainModule.getAttribute("UNIQUEID") || "";
+    const group = mainModule.getAttribute("GROUP") || "";
     if (!uniqueId) return;
     
     moduleMap.set(uniqueId, {
       mainModule,
       components: []
     });
+    
+    // Se for um tamponamento, não precisa buscar componentes
+    if (group === "Tamponamentos") return;
     
     Array.from(itemElements).forEach(item => {
       const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
@@ -87,211 +91,156 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     const height = mainModule.getAttribute("HEIGHT") || "";
     const depth = mainModule.getAttribute("DEPTH") || "";
     const family = mainModule.getAttribute("FAMILY") || "Ambiente";
+    const group = mainModule.getAttribute("GROUP") || "";
+    const reference = mainModule.getAttribute("REFERENCE") || "";
+    const repetition = mainModule.getAttribute("REPETITION") || "1";
+    const observations = mainModule.getAttribute("OBSERVATIONS") || "";
+    
+    // Se for um tamponamento, processar diretamente
+    if (group === "Tamponamentos") {
+      const componentProps = extractItemPropertiesFromReference(reference);
+      
+      csvContent += `<tr>
+        <td>${rowCount}</td>
+        <td class="module-cell">${description}</td>
+        <td></td>
+        <td>${family}</td>
+        <td class="piece-desc">${uniqueId} - ${description}</td>
+        <td class="piece-desc">${escapeHtml(observations)}</td>
+        <td class="comp">${width}</td>
+        <td class="larg">${depth}</td>
+        <td>${repetition}</td>
+        <td class="borda-inf">${componentProps.edgeBottom}</td>
+        <td class="borda-sup">${componentProps.edgeTop}</td>
+        <td class="borda-dir">${componentProps.edgeRight}</td>
+        <td class="borda-esq">${componentProps.edgeLeft}</td>
+        <td class="edge-color">${componentProps.edgeColor}</td>
+        <td class="material">${componentProps.material} ${componentProps.color}</td>
+        <td class="material">${componentProps.thickness}</td>
+      </tr>`;
+      
+      rowCount++;
+      return;
+    }
     
     const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
     
-    const piecesList = [];
-    
-    if (shouldIncludeItemInOutput(mainModule)) {
-      piecesList.push({
-        item: mainModule,
-        description: `${uniqueId} - ${mainModule.getAttribute("DESCRIPTION") || ""}`
-      });
-    }
-    
-    components.forEach(component => {
-      if (shouldIncludeItemInOutput(component)) {
-        piecesList.push({
-          item: component,
-          description: `${uniqueId} - ${component.getAttribute("DESCRIPTION") || ""}`
-        });
-      }
+    // Calcular número total de linhas para este módulo
+    const validComponents = components.filter(comp => {
+      const desc = comp.getAttribute("DESCRIPTION") || "";
+      return !desc.toLowerCase().includes("armário") && 
+             !desc.toLowerCase().includes("caixa") &&
+             !desc.toLowerCase().includes("gaveteiro") &&
+             !desc.toLowerCase().includes("dispenseiro");
     });
     
-    if (piecesList.length === 0) return;
+    const totalRows = validComponents.length;
+    let isFirstRow = true;
     
-    const piecesText = piecesList.map(piece => piece.description).join("<br>");
-    
-    const mainItem = piecesList[0].item;
-    
-    const { 
-      material, 
-      finalColor, 
-      thickness, 
-      edgeColor, 
-      edgeBottom, 
-      edgeTop, 
-      edgeRight, 
-      edgeLeft 
-    } = extractItemProperties(mainItem);
-    
-    const chapaMaterial = createChapaMaterial(material, finalColor, thickness);
-    
-    const repetition = mainItem.getAttribute("REPETITION") || "1";
-    
-    const observations = mainItem.getAttribute("OBSERVATIONS") || "";
-    
-    csvContent += `<tr>
-        <td>${rowCount}</td>
-        <td class="module-cell">${moduleDescription}</td>
-        <td>Cliente</td>
-        <td>${escapeHtml(family)}</td>
-        <td class="piece-desc">${piecesText}</td>
-        <td class="piece-desc">${escapeHtml(observations)}</td>
-        <td class="comp">${depth}</td>
-        <td class="larg">${width}</td>
-        <td>${repetition}</td>
-        <td class="borda-inf">${edgeBottom}</td>
-        <td class="borda-sup">${edgeTop}</td>
-        <td class="borda-dir">${edgeRight}</td>
-        <td class="borda-esq">${edgeLeft}</td>
-        <td class="edge-color">${escapeHtml(edgeColor)}</td>
-        <td class="material">${chapaMaterial}</td>
-        <td class="material">${thickness}</td>
-      </tr>`;
-    
-    rowCount++;
-  });
-
-  return csvContent;
-};
-
-/**
- * Process model categories from XML
- */
-const processModelCategories = (xmlDoc: Document, csvContent: string): string => {
-  const modelCategories = Array.from(
-    xmlDoc.querySelectorAll(
-      "MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation"
-    )
-  );
-
-  if (modelCategories.length === 0) {
-    return csvContent + getDefaultExampleRow();
-  }
-
-  let rowCount = 1;
-
-  modelCategories.forEach((category) => {
-    const categoryDesc =
-      category.getAttribute("DESCRIPTION") ||
-      category.getAttribute("Description") ||
-      "Unknown Category";
+    // Processar os componentes
+    validComponents.forEach(component => {
+      const componentProps = extractItemProperties(component);
+      const componentWidth = component.getAttribute("WIDTH") || "";
+      const componentDepth = component.getAttribute("DEPTH") || "";
+      const componentDesc = component.getAttribute("DESCRIPTION") || "";
+      const componentRepetition = component.getAttribute("REPETITION") || "1";
+      const componentObs = component.getAttribute("OBSERVATIONS") || "";
       
-    const ambienteMatch = categoryDesc.match(/\s*-\s*(.+)/);
-    const categoriaAmbiente = ambienteMatch ? ambienteMatch[1].trim() : categoryDesc;
-
-    const modelInfos = Array.from(
-      category.querySelectorAll(
-        "MODELINFORMATION, ModelInformation, modelinformation"
-      )
-    );
-
-    modelInfos.forEach((modelInfo) => {
-      const modelDesc =
-        modelInfo.getAttribute("DESCRIPTION") ||
-        modelInfo.getAttribute("Description") ||
-        "Unknown Model";
-
       csvContent += `<tr>
-          <td>${rowCount}</td>
-          <td class="module-cell">Cozinhas</td>
-          <td>Cliente Exemplo</td>
-          <td>${escapeHtml(categoriaAmbiente)}</td>
-          <td class="piece-desc">${escapeHtml(modelDesc)} <strong>(Plano de corte: 2 peças)</strong></td>
-          <td class="piece-desc">Observações Exemplo</td>
-          <td class="comp">100</td>
-          <td class="larg">50</td>
-          <td>2</td>
-          <td class="borda-inf">X</td>
-          <td class="borda-sup"></td>
-          <td class="borda-dir">X</td>
-          <td class="borda-esq"></td>
-          <td class="edge-color">Branco</td>
-          <td class="material">Branco (MDF)</td>
-          <td class="material">15</td>
-        </tr>`;
+        <td>${rowCount}</td>
+        ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
+        <td></td>
+        <td>${family}</td>
+        <td class="piece-desc">${uniqueId} - ${componentDesc}</td>
+        <td class="piece-desc">${escapeHtml(componentObs)}</td>
+        <td class="comp">${componentWidth}</td>
+        <td class="larg">${componentDepth}</td>
+        <td>${componentRepetition}</td>
+        <td class="borda-inf">${componentProps.edgeBottom}</td>
+        <td class="borda-sup">${componentProps.edgeTop}</td>
+        <td class="borda-dir">${componentProps.edgeRight}</td>
+        <td class="borda-esq">${componentProps.edgeLeft}</td>
+        <td class="edge-color">${componentProps.edgeColor}</td>
+        <td class="material">${componentProps.material} ${componentProps.color}</td>
+        <td class="material">${componentProps.thickness}</td>
+      </tr>`;
+      
       rowCount++;
+      isFirstRow = false;
     });
   });
-
-  if (rowCount === 1) {
-    return csvContent + getDefaultExampleRow();
-  }
-
+  
   return csvContent;
 };
 
-/**
- * Extract properties from an item element
- */
 const extractItemProperties = (item: Element) => {
-  let material = "";
-  let color = "";
-  let thickness = "";
-  let modelExt = "";
+  let material = "MDF";
+  let color = "Branco";
+  let thickness = "15";
   let edgeColor = "";
-  let edgeBottom = "";
-  let edgeTop = "";
-  let edgeRight = "";
-  let edgeLeft = "";
+  let edgeBottom = "0";
+  let edgeTop = "0";
+  let edgeRight = "0";
+  let edgeLeft = "0";
   
   const referencesElement = item.querySelector("REFERENCES");
   
   if (referencesElement) {
     const materialElement = referencesElement.querySelector("MATERIAL");
-    const modelExtElement = referencesElement.querySelector("MODEL_EXT");
     const modelElement = referencesElement.querySelector("MODEL");
     const thicknessElement = referencesElement.querySelector("THICKNESS");
-    const fitaBordaElement = referencesElement.querySelector("MODEL_DESCRIPTION_FITA");
+    const modelDescriptionFita = referencesElement.querySelector("MODEL_DESCRIPTION_FITA");
     
+    // Material
     if (materialElement) {
-      material = materialElement.getAttribute("REFERENCE") || "";
+      material = materialElement.getAttribute("REFERENCE") || material;
     }
     
-    if (modelExtElement) {
-      modelExt = modelExtElement.getAttribute("REFERENCE") || "";
-    } else if (modelElement) {
-      color = modelElement.getAttribute("REFERENCE") || "";
+    // Cor
+    if (modelElement) {
+      color = modelElement.getAttribute("REFERENCE") || color;
     }
     
+    // Espessura
     if (thicknessElement) {
-      thickness = thicknessElement.getAttribute("REFERENCE") || "";
+      thickness = thicknessElement.getAttribute("REFERENCE") || thickness;
+    }
+
+    // Cor da Fita de Borda
+    if (modelDescriptionFita) {
+      edgeColor = modelDescriptionFita.getAttribute("REFERENCE") || color;
     }
     
-    if (fitaBordaElement) {
-      edgeColor = fitaBordaElement.getAttribute("REFERENCE") || "";
-    } else {
-      edgeColor = modelExt || color;
-    }
-    
+    // Fitas de Borda
     const edgeBottom1 = referencesElement.querySelector("FITA_BORDA_1");
     const edgeTop2 = referencesElement.querySelector("FITA_BORDA_2");
     const edgeRight3 = referencesElement.querySelector("FITA_BORDA_3");
     const edgeLeft4 = referencesElement.querySelector("FITA_BORDA_4");
     
-    if (edgeBottom1 && edgeBottom1.getAttribute("REFERENCE") === "1") {
-      edgeBottom = "X";
+    if (edgeBottom1) {
+      const value = edgeBottom1.getAttribute("REFERENCE");
+      edgeBottom = value === "0" ? "" : "X";
     }
     
-    if (edgeTop2 && edgeTop2.getAttribute("REFERENCE") === "1") {
-      edgeTop = "X";
+    if (edgeTop2) {
+      const value = edgeTop2.getAttribute("REFERENCE");
+      edgeTop = value === "0" ? "" : "X";
     }
     
-    if (edgeRight3 && edgeRight3.getAttribute("REFERENCE") === "1") {
-      edgeRight = "X";
+    if (edgeRight3) {
+      const value = edgeRight3.getAttribute("REFERENCE");
+      edgeRight = value === "0" ? "" : "X";
     }
     
-    if (edgeLeft4 && edgeLeft4.getAttribute("REFERENCE") === "1") {
-      edgeLeft = "X";
+    if (edgeLeft4) {
+      const value = edgeLeft4.getAttribute("REFERENCE");
+      edgeLeft = value === "0" ? "" : "X";
     }
   }
   
-  const finalColor = modelExt || color;
-  
   return {
     material,
-    finalColor,
+    color,
     thickness,
     edgeColor,
     edgeBottom,
@@ -299,6 +248,39 @@ const extractItemProperties = (item: Element) => {
     edgeRight,
     edgeLeft
   };
+};
+
+// Nova função para extrair propriedades da string de referência
+const extractItemPropertiesFromReference = (reference: string) => {
+  const defaultProps = {
+    material: "MDF",
+    color: "Branco",
+    thickness: "15",
+    edgeColor: "Branco",
+    edgeBottom: "",
+    edgeTop: "",
+    edgeRight: "",
+    edgeLeft: ""
+  };
+
+  if (!reference) return defaultProps;
+
+  // Formato esperado: "1.0155.15.Guararapes.Areia.MDF"
+  const parts = reference.split(".");
+  if (parts.length >= 6) {
+    return {
+      material: parts[5] || defaultProps.material,
+      color: parts[4] || defaultProps.color,
+      thickness: parts[2] || defaultProps.thickness,
+      edgeColor: parts[4] || defaultProps.color, // Usando a mesma cor do material para a fita
+      edgeBottom: parts[0] === "1" ? "X" : "",
+      edgeTop: parts[0] === "1" ? "X" : "",
+      edgeRight: parts[0] === "1" ? "X" : "",
+      edgeLeft: parts[0] === "1" ? "X" : ""
+    };
+  }
+
+  return defaultProps;
 };
 
 /**

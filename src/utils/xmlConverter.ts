@@ -1,4 +1,3 @@
-
 /**
  * Utilities for converting XML files to Excel compatible HTML
  */
@@ -20,7 +19,26 @@ export const escapeHtml = (unsafe: string): string => {
  */
 export const shouldIncludeItemInOutput = (item: Element): boolean => {
   const family = item.getAttribute("FAMILY") || "";
+  const description = item.getAttribute("DESCRIPTION") || "";
   
+  // Lista de descrições a serem excluídas
+  const excludedDescriptions = [
+    "Armário 1 Porta",
+    "Caixa Armário",
+    "Armário 2 Portas",
+    "Caixa",
+    "Gaveteiro",
+    "Caixa Gaveteiro",
+    "Dispenseiro",
+    "Caixa Dispenseiro"
+  ];
+  
+  // Verifica se a descrição está na lista de exclusões
+  if (excludedDescriptions.some(desc => description.includes(desc))) {
+    return false;
+  }
+  
+  // Verifica as famílias a serem excluídas
   if (
     family.toLowerCase().includes("acessório") ||
     family.toLowerCase().includes("acessorios") ||
@@ -56,49 +74,60 @@ export const generateHtmlPrefix = (): string => {
       </xml>
       <![endif]-->
       <style>
-        table, td, th {
-          border: 1px solid #000000;
+        table {
           border-collapse: collapse;
-          padding: 5px;
+          width: 100%;
+          margin-bottom: 30px;
+        }
+        td, th {
+          border: 1px solid #000000;
+          padding: 4px;
+          font-size: 11px;
+          font-family: Arial, sans-serif;
         }
         th {
-          background-color: #f0f0f0;
+          background-color: #FFFFFF;
           font-weight: bold;
           text-align: center;
+          vertical-align: middle;
         }
         td {
           text-align: center;
+          vertical-align: middle;
         }
         .piece-desc {
-          background-color: #FFFFFF;
           text-align: left;
+          background-color: #FFFFFF;
         }
         .module-cell {
           font-weight: bold;
           text-align: center;
+          vertical-align: middle;
+        }
+        .module-cell[rowspan] {
+          background-color: #FFFFFF;
+        }
+        .comp, .borda-inf, .borda-sup, .edge-color {
+          background-color: #F7CAAC;
+        }
+        .larg, .borda-dir, .borda-esq {
+          background-color: #BDD6EE;
         }
         .material {
           background-color: #FFFFFF;
         }
-        .comp {
-          background-color: #F7CAAC;
-        }
-        .larg {
-          background-color: #BDD6EE;
-        }
-        .borda-inf, .borda-sup {
-          background-color: #F7CAAC;
-        }
-        .borda-dir, .borda-esq {
-          background-color: #BDD6EE;
-        }
-        .edge-color {
-          background-color: #F7CAAC;
+        h2 {
+          page-break-before: always;
+          margin-top: 20px;
+          margin-bottom: 10px;
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          font-weight: bold;
         }
       </style>
     </head>
     <body>
-      <table border="1">`;
+      <table>`;
 };
 
 /**

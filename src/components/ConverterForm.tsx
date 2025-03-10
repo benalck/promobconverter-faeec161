@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -16,6 +15,9 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { convertXMLToCSV } from "@/utils/xmlParser";
 import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import BannedMessage from "./BannedMessage";
 
 interface ConverterFormProps {
   className?: string;
@@ -26,6 +28,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [outputFileName, setOutputFileName] = useState("modelos_converted");
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Verificar se o usuário está banido
+  if (user?.isBanned) {
+    return <BannedMessage />;
+  }
 
   const handleFileSelect = (file: File) => {
     setXmlFile(file);
