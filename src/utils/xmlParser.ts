@@ -1,4 +1,3 @@
-
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -128,9 +127,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     
     const chapaMaterial = createChapaMaterial(material, finalColor, thickness);
     
-    const quantity = mainItem.getAttribute("QUANTITY") || "1";
     const repetition = mainItem.getAttribute("REPETITION") || "1";
-    const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
     
     const observations = mainItem.getAttribute("OBSERVATIONS") || "";
     
@@ -143,7 +140,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         <td class="piece-desc">${escapeHtml(observations)}</td>
         <td class="comp">${depth}</td>
         <td class="larg">${width}</td>
-        <td>${totalQuantity}</td>
+        <td>${repetition}</td>
         <td class="borda-inf">${edgeBottom}</td>
         <td class="borda-sup">${edgeTop}</td>
         <td class="borda-dir">${edgeRight}</td>
