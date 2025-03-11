@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +20,6 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validações
     if (!name || !email || !password || !confirmPassword) {
       toast({
         title: "Campos obrigatórios",
@@ -34,16 +32,7 @@ export default function Register() {
     if (password !== confirmPassword) {
       toast({
         title: "Senhas diferentes",
-        description: "As senhas digitadas não coincidem.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password.length < 6) {
-      toast({
-        title: "Senha muito curta",
-        description: "A senha deve ter pelo menos 6 caracteres.",
+        description: "As senhas não coincidem.",
         variant: "destructive",
       });
       return;
@@ -53,16 +42,17 @@ export default function Register() {
       setIsLoading(true);
       await register(name, email, password);
       toast({
-        title: "Conta criada com sucesso!",
-        description: "Você será redirecionado para o sistema.",
+        title: "Registro realizado com sucesso!",
+        description: "Sua conta foi criada. Bem-vindo ao sistema.",
       });
       navigate("/converter");
     } catch (error) {
       toast({
-        title: "Erro ao criar conta",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao criar sua conta.",
+        title: "Erro ao registrar",
+        description: "Ocorreu um erro ao criar sua conta. Tente novamente.",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -73,17 +63,16 @@ export default function Register() {
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-2xl font-bold">Criar Conta</CardTitle>
           <CardDescription>
-            Preencha os dados abaixo para se registrar no sistema
+            Registre-se para acessar o sistema de conversão
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
               <Input
                 id="name"
-                type="text"
-                placeholder="Seu nome"
+                placeholder="Seu nome completo"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={isLoading}
@@ -112,7 +101,7 @@ export default function Register() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirme a senha</Label>
+              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -127,12 +116,12 @@ export default function Register() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Criando conta..." : "Criar Conta"}
+              {isLoading ? "Registrando..." : "Registrar"}
             </Button>
             <p className="text-center text-sm text-gray-600">
               Já tem uma conta?{" "}
               <Link to="/login" className="text-primary hover:underline">
-                Fazer login
+                Faça login
               </Link>
             </p>
           </form>
@@ -140,4 +129,4 @@ export default function Register() {
       </Card>
     </div>
   );
-}
+} 

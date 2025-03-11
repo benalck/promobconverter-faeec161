@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -7,7 +6,6 @@ import Register from "@/pages/Register";
 import DehashLogin from "@/pages/DehashLogin";
 import DehashAdmin from "@/pages/DehashAdmin";
 import ConverterForm from "@/components/ConverterForm";
-import TaskManager from "@/components/TaskManager";
 import Navbar from "@/components/Navbar";
 import BannedMessage from "@/components/BannedMessage";
 import BanCheck from "@/components/BanCheck";
@@ -91,14 +89,6 @@ function AppRoutes() {
             <div className="container mx-auto py-8">
               <ConverterForm />
             </div>
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/tarefas"
-        element={
-          <PrivateRoute>
-            <TaskManager />
           </PrivateRoute>
         }
       />
