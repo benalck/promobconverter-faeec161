@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import BannedMessage from './BannedMessage';
@@ -24,4 +25,4 @@ export default function BanCheck({ children }: BanCheckProps) {
 
   // Se não estiver banido, renderizar o conteúdo normalmente
   return <>{children}</>;
-} 
+}
