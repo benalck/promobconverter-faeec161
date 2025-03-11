@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -7,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowRight } from "lucide-react";
+import { FileDown, ArrowRight, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "./FileUpload";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
+import { supabase } from "@/lib/supabase";
 
 interface ConverterFormProps {
   className?: string;
@@ -27,6 +29,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [outputFileName, setOutputFileName] = useState("modelos_converted");
   const [isConverting, setIsConverting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -40,6 +43,21 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     setXmlFile(file);
     const fileName = file.name.replace(/\.[^/.]+$/, "");
     setOutputFileName(fileName);
+  };
+
+  const convertFile = (xmlContent: string) => {
+    try {
+      const csvString = convertXMLToCSV(xmlContent);
+      const htmlPrefix = generateHtmlPrefix();
+      const htmlSuffix = generateHtmlSuffix();
+      return {
+        content: htmlPrefix + csvString + htmlSuffix,
+        success: true
+      };
+    } catch (error) {
+      console.error("Error converting file:", error);
+      return { content: "", success: false };
+    }
   };
 
   const handleConvert = () => {
@@ -58,11 +76,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     reader.onload = (e) => {
       try {
         const xmlContent = e.target?.result as string;
-        const csvString = convertXMLToCSV(xmlContent);
-        const htmlPrefix = generateHtmlPrefix();
-        const htmlSuffix = generateHtmlSuffix();
+        const { content, success } = convertFile(xmlContent);
+        
+        if (!success) {
+          throw new Error("Falha na conversão");
+        }
 
-        const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
+        const blob = new Blob([content], {
           type: "application/vnd.ms-excel;charset=utf-8;",
         });
 
@@ -72,6 +92,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        // Perguntar se o usuário deseja salvar a conversão para uso futuro
+        const shouldSave = window.confirm("Deseja salvar esta conversão nas suas tarefas para uso futuro?");
+        
+        if (shouldSave && user) {
+          saveConversion(xmlContent);
+        }
 
         setIsConverting(false);
         toast({
@@ -99,6 +126,74 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       });
     };
 
+    reader.readAsText(xmlFile);
+  };
+
+  const saveConversion = async (xmlContent: string) => {
+    if (!user || !xmlFile) return;
+    
+    setIsSaving(true);
+    
+    try {
+      const { error } = await supabase
+        .from("conversions")
+        .insert({
+          user_id: user.id,
+          name: outputFileName,
+          original_filename: xmlFile.name,
+          converted_filename: `${outputFileName}.xls`,
+          file_content: xmlContent
+        });
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Conversão salva",
+        description: "Sua conversão foi salva com sucesso nas suas tarefas.",
+        variant: "default",
+      });
+      
+      // Sugerir navegar para a página de tarefas
+      const goToTasks = window.confirm("Sua conversão foi salva. Deseja ir para a página de tarefas para visualizá-la?");
+      if (goToTasks) {
+        navigate('/tarefas');
+      }
+    } catch (error) {
+      console.error("Error saving conversion:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Não foi possível salvar sua conversão.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveConversion = () => {
+    if (!xmlFile) {
+      toast({
+        title: "Nenhum arquivo selecionado",
+        description: "Por favor, faça upload de um arquivo XML para salvar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const xmlContent = e.target?.result as string;
+      saveConversion(xmlContent);
+    };
+    
+    reader.onerror = () => {
+      toast({
+        title: "Erro na leitura",
+        description: "Não foi possível ler o arquivo XML.",
+        variant: "destructive",
+      });
+    };
+    
     reader.readAsText(xmlFile);
   };
 
@@ -139,33 +234,62 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             />
           </div>
 
-          <Button
-            onClick={handleConvert}
-            disabled={!xmlFile || isConverting}
-            className={cn(
-              "w-full py-6 text-base font-medium transition-all duration-500 animate-fade-in",
-              "bg-primary hover:bg-primary/90 text-white relative overflow-hidden group",
-              "border border-primary/20"
-            )}
-            style={{ animationDelay: "200ms" }}
-            size="lg"
-          >
-            <span className="absolute inset-0 w-0 bg-white/20 transition-all duration-500 ease-out group-hover:w-full"></span>
-            <span className="relative flex items-center justify-center gap-2">
-              {isConverting ? (
-                <>
-                  <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
-                  <span>Convertendo...</span>
-                </>
-              ) : (
-                <>
-                  <FileDown className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                  <span>Converter e Baixar</span>
-                  <ArrowRight className="h-5 w-5 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
-                </>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={handleConvert}
+              disabled={!xmlFile || isConverting || isSaving}
+              className={cn(
+                "py-6 text-base font-medium transition-all duration-500 animate-fade-in flex-1",
+                "bg-primary hover:bg-primary/90 text-white relative overflow-hidden group",
+                "border border-primary/20"
               )}
-            </span>
-          </Button>
+              style={{ animationDelay: "200ms" }}
+              size="lg"
+            >
+              <span className="absolute inset-0 w-0 bg-white/20 transition-all duration-500 ease-out group-hover:w-full"></span>
+              <span className="relative flex items-center justify-center gap-2">
+                {isConverting ? (
+                  <>
+                    <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
+                    <span>Convertendo...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                    <span>Converter e Baixar</span>
+                    <ArrowRight className="h-5 w-5 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
+                  </>
+                )}
+              </span>
+            </Button>
+            
+            <Button
+              onClick={handleSaveConversion}
+              disabled={!xmlFile || isConverting || isSaving}
+              className={cn(
+                "py-6 text-base font-medium transition-all duration-500 animate-fade-in",
+                "bg-secondary hover:bg-secondary/90 text-secondary-foreground relative overflow-hidden group",
+                "border border-secondary/20"
+              )}
+              style={{ animationDelay: "300ms" }}
+              size="lg"
+            >
+              <span className="absolute inset-0 w-0 bg-white/20 transition-all duration-500 ease-out group-hover:w-full"></span>
+              <span className="relative flex items-center justify-center gap-2">
+                {isSaving ? (
+                  <>
+                    <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-current"></div>
+                    <span>Salvando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                    <span>Salvar nas Tarefas</span>
+                  </>
+                )}
+              </span>
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
