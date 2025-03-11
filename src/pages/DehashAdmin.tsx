@@ -108,7 +108,7 @@ export default function DehashAdmin() {
 
       const newUsers = users.map(user => 
         user.id === id ? { ...user, isBanned: !user.isBanned } : user
-      ) as User[];
+      );
       
       setUsers(newUsers);
       localStorage.setItem("users", JSON.stringify(newUsers));
@@ -133,7 +133,7 @@ export default function DehashAdmin() {
   const handlePromoteUser = (id: string) => {
     try {
       const newUsers = users.map(user => 
-        user.id === id ? { ...user, role: 'admin' } : user
+        user.id === id ? { ...user, role: 'admin' as const } : user
       );
       setUsers(newUsers);
       localStorage.setItem("users", JSON.stringify(newUsers));
@@ -505,4 +505,4 @@ export default function DehashAdmin() {
       </Dialog>
     </div>
   );
-} 
+}
