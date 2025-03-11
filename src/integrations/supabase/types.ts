@@ -9,7 +9,99 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      conversions: {
+        Row: {
+          conversion_type: string | null
+          converted_filename: string | null
+          created_at: string
+          file_content: string | null
+          id: string
+          name: string
+          original_filename: string | null
+          user_id: string
+        }
+        Insert: {
+          conversion_type?: string | null
+          converted_filename?: string | null
+          created_at?: string
+          file_content?: string | null
+          id?: string
+          name: string
+          original_filename?: string | null
+          user_id: string
+        }
+        Update: {
+          conversion_type?: string | null
+          converted_filename?: string | null
+          created_at?: string
+          file_content?: string | null
+          id?: string
+          name?: string
+          original_filename?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          is_banned: boolean | null
+          last_login: string | null
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_banned?: boolean | null
+          last_login?: string | null
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_banned?: boolean | null
+          last_login?: string | null
+          name?: string | null
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
