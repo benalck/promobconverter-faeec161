@@ -1,9 +1,10 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 
 export default function Navbar() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -21,13 +22,6 @@ export default function Navbar() {
                 Conversor XML para Excel
               </h1>
             </Link>
-            {isAdmin && (
-              <Link to="/admin">
-                <Button variant="ghost" size="sm">
-                  Administração
-                </Button>
-              </Link>
-            )}
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">
@@ -45,4 +39,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-} 
+}
