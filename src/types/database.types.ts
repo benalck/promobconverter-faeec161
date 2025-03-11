@@ -68,38 +68,6 @@ export interface Database {
           due_date?: string | null
         }
       }
-      conversions: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          original_filename: string | null
-          converted_filename: string | null
-          conversion_type: string | null
-          created_at: string
-          file_content: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          original_filename?: string | null
-          converted_filename?: string | null
-          conversion_type?: string | null
-          created_at?: string
-          file_content?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          original_filename?: string | null
-          converted_filename?: string | null
-          conversion_type?: string | null
-          created_at?: string
-          file_content?: string | null
-        }
-      }
     }
     Views: {
       [_ in never]: never
