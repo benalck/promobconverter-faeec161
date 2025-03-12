@@ -1,4 +1,3 @@
-
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -104,12 +103,15 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     if (group === "Tamponamentos") {
       const componentProps = extractItemPropertiesFromXML(mainModule);
       
+      // Formatar a descrição da peça no formato [uniqueId] - [description] [thickness]
+      const pieceDescription = formatPieceDescription(uniqueId, processedDescription, componentProps.thickness);
+      
       csvContent += `<tr>
         <td>${rowCount}</td>
         <td class="module-cell">${processedDescription}</td>
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${processedDescription}</td>
+        <td class="piece-desc">${pieceDescription}</td>
         <td class="piece-desc">${escapeHtml(observations)}</td>
         <td class="comp">${width}</td>
         <td class="larg">${depth}</td>
@@ -153,12 +155,15 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       // Substituir "Especial" por "Sarafo Frontal Passante" também nos componentes
       const processedComponentDesc = componentDesc.includes("Especial") ? "Sarafo Frontal Passante" : componentDesc;
       
+      // Formatar a descrição da peça no formato [uniqueId] - [description] [thickness]
+      const pieceDescription = formatPieceDescription(uniqueId, processedComponentDesc, componentProps.thickness);
+      
       csvContent += `<tr>
         <td>${rowCount}</td>
         ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${processedComponentDesc}</td>
+        <td class="piece-desc">${pieceDescription}</td>
         <td class="piece-desc">${escapeHtml(componentObs)}</td>
         <td class="comp">${componentWidth}</td>
         <td class="larg">${componentDepth}</td>
@@ -178,6 +183,17 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
   });
   
   return csvContent;
+};
+
+/**
+ * Formata a descrição da peça no formato [uniqueId] - [description] [thickness]
+ */
+const formatPieceDescription = (uniqueId: string, description: string, thickness: string): string => {
+  // Se a descrição já contém a espessura no final, não duplicamos a informação
+  if (!description.match(/\d+$/) && thickness && thickness !== "0") {
+    return `${uniqueId} - ${description} ${thickness}`;
+  }
+  return `${uniqueId} - ${description}`;
 };
 
 const extractItemPropertiesFromXML = (item: Element) => {
@@ -386,4 +402,3 @@ const getDefaultExampleRow = (): string => {
       <td class="material">15</td>
     </tr>`;
 };
-
