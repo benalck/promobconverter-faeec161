@@ -1,3 +1,4 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
