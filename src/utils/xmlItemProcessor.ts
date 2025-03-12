@@ -14,12 +14,16 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
     const component = item.getAttribute("COMPONENT") || "N";
     const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
     const group = item.getAttribute("GROUP") || "";
-    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group === "Tamponamentos";
+    // Adicionamos Tampos à lista de grupos que são tratados como módulos principais
+    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || 
+           group === "Tamponamentos" || group === "Tampos";
   });
   
   mainModules.forEach(mainModule => {
     const uniqueId = mainModule.getAttribute("UNIQUEID") || "";
     const group = mainModule.getAttribute("GROUP") || "";
+    const itemId = mainModule.getAttribute("ITEMID") || mainModule.getAttribute("ID") || "";
+    
     if (!uniqueId) return;
     
     moduleMap.set(uniqueId, {
@@ -27,8 +31,8 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
       components: []
     });
     
-    // Se for um tamponamento, não precisa buscar componentes
-    if (group === "Tamponamentos") return;
+    // Se for um tamponamento ou tampo, não precisa buscar componentes
+    if (group === "Tamponamentos" || group === "Tampos") return;
     
     Array.from(itemElements).forEach(item => {
       const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
@@ -55,12 +59,13 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
     const reference = mainModule.getAttribute("REFERENCE") || "";
     const repetition = mainModule.getAttribute("REPETITION") || "1";
     const observations = mainModule.getAttribute("OBSERVATIONS") || "";
+    const itemId = mainModule.getAttribute("ITEMID") || mainModule.getAttribute("ID") || "";
     
     // Se encontrarmos "Especial" na descrição, substituímos por "Sarafo Frontal Passante"
     const processedDescription = description.includes("Especial") ? "Sarafo Frontal Passante" : description;
     
-    // Se for um tamponamento, processar diretamente
-    if (group === "Tamponamentos") {
+    // Se for um tamponamento ou tampo, processar diretamente
+    if (group === "Tamponamentos" || group === "Tampos") {
       const componentProps = extractItemPropertiesFromXML(mainModule);
       
       csvContent += `<tr>
@@ -68,7 +73,7 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
         <td class="module-cell">${processedDescription}</td>
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${processedDescription}</td>
+        <td class="piece-desc">${itemId ? `(${itemId}) ` : ""}${uniqueId} - ${processedDescription}</td>
         <td class="piece-desc">${escapeHtml(observations)}</td>
         <td class="comp">${width}</td>
         <td class="larg">${depth}</td>
@@ -108,6 +113,7 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
       const componentDesc = component.getAttribute("DESCRIPTION") || "";
       const componentRepetition = component.getAttribute("REPETITION") || "1";
       const componentObs = component.getAttribute("OBSERVATIONS") || "";
+      const componentItemId = component.getAttribute("ITEMID") || component.getAttribute("ID") || "";
       
       // Substituir "Especial" por "Sarafo Frontal Passante" também nos componentes
       const processedComponentDesc = componentDesc.includes("Especial") ? "Sarafo Frontal Passante" : componentDesc;
@@ -117,7 +123,7 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
         ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${processedComponentDesc}</td>
+        <td class="piece-desc">${componentItemId ? `(${componentItemId}) ` : ""}${uniqueId} - ${processedComponentDesc}</td>
         <td class="piece-desc">${escapeHtml(componentObs)}</td>
         <td class="comp">${componentWidth}</td>
         <td class="larg">${componentDepth}</td>
