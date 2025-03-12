@@ -1,11 +1,13 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { ShoppingBag, Lock, Mail, User } from "lucide-react";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -42,8 +44,8 @@ export default function Register() {
       setIsLoading(true);
       await register(name, email, password);
       toast({
-        title: "Registro realizado com sucesso!",
-        description: "Sua conta foi criada. Bem-vindo ao sistema.",
+        title: "Conta criada com sucesso!",
+        description: "Seu cadastro foi realizado. Bem-vindo à nossa loja.",
       });
       navigate("/converter");
     } catch (error) {
@@ -58,75 +60,133 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-full max-w-md mx-4">
-        <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-2xl font-bold">Criar Conta</CardTitle>
-          <CardDescription>
-            Registre-se para acessar o sistema de conversão
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                placeholder="Seu nome completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isLoading}
-              />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="w-full max-w-5xl flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden">
+        {/* Banner lateral */}
+        <div className="hidden md:block md:w-1/2 bg-primary/90 p-12 text-white relative">
+          <div className="h-full flex flex-col justify-between">
+            <div>
+              <ShoppingBag className="h-12 w-12 mb-6" />
+              <h1 className="text-3xl font-bold mb-2">Conversor XML para Excel</h1>
+              <p className="text-white/80 mb-8">Transforme seus arquivos XML em planilhas Excel profissionais com apenas alguns cliques.</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
+            
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="bg-white/20 p-2 rounded-full">
+                  <ShoppingBag className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Fácil de Usar</h3>
+                  <p className="text-sm text-white/70">Crie uma conta e comece a converter em segundos</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="bg-white/20 p-2 rounded-full">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Histórico de Conversões</h3>
+                  <p className="text-sm text-white/70">Acompanhe todas as suas conversões anteriores</p>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
+            
+            <div className="mt-12 text-sm text-white/60">
+              © 2023 XML Excel Wizard. Todos os direitos reservados.
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+          </div>
+        </div>
+        
+        {/* Formulário de cadastro */}
+        <Card className="md:w-1/2 border-0 rounded-none shadow-none">
+          <CardHeader className="pt-12 pb-6 text-center">
+            <CardTitle className="text-2xl font-bold">Crie sua conta</CardTitle>
+            <CardDescription>
+              Registre-se para acessar todos os recursos do conversor
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome completo</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="name"
+                    placeholder="Seu nome completo"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full py-6 font-medium transition-all duration-300 bg-primary hover:bg-primary/90 mt-4"
                 disabled={isLoading}
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? "Registrando..." : "Registrar"}
-            </Button>
+              >
+                {isLoading ? "Registrando..." : "Criar conta"}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4 pb-12">
             <p className="text-center text-sm text-gray-600">
               Já tem uma conta?{" "}
-              <Link to="/login" className="text-primary hover:underline">
+              <Link to="/login" className="text-primary font-medium hover:underline">
                 Faça login
               </Link>
             </p>
-          </form>
-        </CardContent>
-      </Card>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
-} 
+}
