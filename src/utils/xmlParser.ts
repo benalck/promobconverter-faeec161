@@ -1,4 +1,3 @@
-
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -75,6 +74,19 @@ const shouldExcludeGroup = (group: string, description: string, family: string):
   return false;
 };
 
+/**
+ * Gera a descrição do módulo no formato solicitado
+ */
+const createModuleDescription = (item: Element): string => {
+  const uniqueId = item.getAttribute("UNIQUEID") || "";
+  const description = item.getAttribute("DESCRIPTION") || "";
+  const width = item.getAttribute("WIDTH") || "";
+  const height = item.getAttribute("HEIGHT") || "";
+  const depth = item.getAttribute("DEPTH") || "";
+  
+  return `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+};
+
 const processItemElements = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
   
@@ -107,8 +119,8 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     const repetition = item.getAttribute("REPETITION") || "1";
     const observations = item.getAttribute("OBSERVATIONS") || "";
     
-    // Create module description for main modules
-    const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    // Criar a descrição do módulo
+    const moduleDescription = createModuleDescription(item);
     
     // If it's a tamponamento, process directly
     if (group === "Tamponamentos") {
@@ -153,7 +165,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       return compComponent === "Y" && compParentId === uniqueId;
     });
     
-    // Add components with module description
+    // Add components with module description only for the first component
     if (components.length > 0) {
       for (let i = 0; i < components.length; i++) {
         const component = components[i];
@@ -165,9 +177,12 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         const componentObs = component.getAttribute("OBSERVATIONS") || "";
         const componentUniqueId = component.getAttribute("UNIQUEID") || "";
         
+        // Coluna MÓDULO apenas mostra a descrição para o primeiro componente
+        const showModuleDescription = i === 0 ? moduleDescription : "";
+        
         csvContent += `<tr>
           <td>${rowCount}</td>
-          <td class="module-cell">${i === 0 ? moduleDescription : ""}</td>
+          <td class="module-cell">${showModuleDescription}</td>
           <td></td>
           <td>${family}</td>
           <td class="piece-desc">${componentUniqueId} - ${componentDesc}</td>
@@ -187,7 +202,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         rowCount++;
       }
       
-      // Add empty row after components
+      // Linha vazia sem descrição na coluna MÓDULO
       csvContent += `<tr>
         <td>${rowCount}</td>
         <td></td>
@@ -209,7 +224,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       rowCount++;
     } else {
-      // If the item has no components, add it as a single row
+      // Se o item não tem componentes, adicionar como linha única
       const itemProps = extractItemProperties(item);
       
       csvContent += `<tr>
@@ -233,7 +248,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       rowCount++;
       
-      // Add empty row after single items
+      // Linha vazia sem descrição na coluna MÓDULO
       csvContent += `<tr>
         <td>${rowCount}</td>
         <td></td>
@@ -436,3 +451,4 @@ const getDefaultExampleRow = (): string => {
       <td class="material">15</td>
     </tr>`;
 };
+
