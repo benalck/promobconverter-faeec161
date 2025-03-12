@@ -55,6 +55,7 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
     const reference = mainModule.getAttribute("REFERENCE") || "";
     const repetition = mainModule.getAttribute("REPETITION") || "1";
     const observations = mainModule.getAttribute("OBSERVATIONS") || "";
+    const itemId = mainModule.getAttribute("ITEMID") || mainModule.getAttribute("ID") || uniqueId; // Extraindo o ITEMID
     
     // Se encontrarmos "Especial" na descrição, substituímos por "Sarafo Frontal Passante"
     const processedDescription = description.includes("Especial") ? "Sarafo Frontal Passante" : description;
@@ -68,7 +69,7 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
         <td class="module-cell">${processedDescription}</td>
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${processedDescription}</td>
+        <td class="piece-desc">${itemId} - ${processedDescription}</td>
         <td class="piece-desc">${escapeHtml(observations)}</td>
         <td class="comp">${width}</td>
         <td class="larg">${depth}</td>
@@ -86,7 +87,7 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
       return;
     }
     
-    const moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    const moduleDescription = `(${itemId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
     
     // Calcular número total de linhas para este módulo
     const validComponents = components.filter(comp => {
@@ -108,6 +109,7 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
       const componentDesc = component.getAttribute("DESCRIPTION") || "";
       const componentRepetition = component.getAttribute("REPETITION") || "1";
       const componentObs = component.getAttribute("OBSERVATIONS") || "";
+      const componentItemId = component.getAttribute("ITEMID") || component.getAttribute("ID") || uniqueId; // Extraindo o ITEMID do componente
       
       // Substituir "Especial" por "Sarafo Frontal Passante" também nos componentes
       const processedComponentDesc = componentDesc.includes("Especial") ? "Sarafo Frontal Passante" : componentDesc;
@@ -117,7 +119,7 @@ export const processItemElements = (itemElements: NodeListOf<Element>, csvConten
         ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${processedComponentDesc}</td>
+        <td class="piece-desc">${componentItemId} - ${processedComponentDesc}</td>
         <td class="piece-desc">${escapeHtml(componentObs)}</td>
         <td class="comp">${componentWidth}</td>
         <td class="larg">${componentDepth}</td>
