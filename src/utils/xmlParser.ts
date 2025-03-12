@@ -1,4 +1,3 @@
-
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -46,77 +45,64 @@ const generateTableHeader = (): string => {
   </tr>`;
 };
 
-/**
- * Verifica se o grupo deve ser excluído
- */
-const shouldExcludeGroup = (group: string, description: string, family: string): boolean => {
-  // Grupos a serem excluídos
-  const excludedGroups = [
-    "acessório", "acessorios", "acessorio", "acess", 
-    "ferragem", "ferragens", 
-    "processo", "processos", "fabricação", "fabricacao"
-  ];
-  
-  const lowercaseGroup = group.toLowerCase();
-  const lowercaseFamily = family.toLowerCase();
-  const lowercaseDescription = description.toLowerCase();
-  
-  // Verifica se o grupo, família ou descrição contém termos excluídos
-  for (const term of excludedGroups) {
-    if (
-      lowercaseGroup.includes(term) || 
-      lowercaseFamily.includes(term) || 
-      lowercaseDescription.includes(term)
-    ) {
-      return true;
-    }
-  }
-  
-  return false;
-};
-
 const processItemElements = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
+  const moduleMap = new Map();
   
-  // Organizar os itens por tipo: módulos e componentes
-  const mainItems = Array.from(itemElements).filter(item => {
+  // Primeiro, organizar os módulos e seus componentes
+  const mainModules = Array.from(itemElements).filter(item => {
     const component = item.getAttribute("COMPONENT") || "N";
     const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
     const group = item.getAttribute("GROUP") || "";
-    const description = item.getAttribute("DESCRIPTION") || "";
-    const family = item.getAttribute("FAMILY") || "";
-    
-    // Excluir grupos específicos
-    if (shouldExcludeGroup(group, description, family)) {
-      return false;
-    }
-    
-    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group !== "";
+    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group === "Tamponamentos";
   });
   
-  // Processar cada item individualmente
-  for (const item of mainItems) {
-    const uniqueId = item.getAttribute("UNIQUEID") || "";
-    const description = item.getAttribute("DESCRIPTION") || "";
-    const width = item.getAttribute("WIDTH") || "";
-    const height = item.getAttribute("HEIGHT") || "";
-    const depth = item.getAttribute("DEPTH") || "";
-    const family = item.getAttribute("FAMILY") || "Ambiente";
-    const group = item.getAttribute("GROUP") || "";
-    const reference = item.getAttribute("REFERENCE") || "";
-    const repetition = item.getAttribute("REPETITION") || "1";
-    const observations = item.getAttribute("OBSERVATIONS") || "";
+  mainModules.forEach(mainModule => {
+    const uniqueId = mainModule.getAttribute("UNIQUEID") || "";
+    const group = mainModule.getAttribute("GROUP") || "";
+    if (!uniqueId) return;
     
-    // Create module description for main modules
-    const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    moduleMap.set(uniqueId, {
+      mainModule,
+      components: []
+    });
     
-    // If it's a tamponamento, process directly
+    // Se for um tamponamento, não precisa buscar componentes
+    if (group === "Tamponamentos") return;
+    
+    Array.from(itemElements).forEach(item => {
+      const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
+      const component = item.getAttribute("COMPONENT") || "Y";
+      
+      if (component === "Y" && uniqueParentId === uniqueId) {
+        const moduleInfo = moduleMap.get(uniqueId);
+        if (moduleInfo) {
+          moduleInfo.components.push(item);
+        }
+      }
+    });
+  });
+  
+  moduleMap.forEach((moduleInfo, uniqueId) => {
+    const { mainModule, components } = moduleInfo;
+    
+    const description = mainModule.getAttribute("DESCRIPTION") || "";
+    const width = mainModule.getAttribute("WIDTH") || "";
+    const height = mainModule.getAttribute("HEIGHT") || "";
+    const depth = mainModule.getAttribute("DEPTH") || "";
+    const family = mainModule.getAttribute("FAMILY") || "Ambiente";
+    const group = mainModule.getAttribute("GROUP") || "";
+    const reference = mainModule.getAttribute("REFERENCE") || "";
+    const repetition = mainModule.getAttribute("REPETITION") || "1";
+    const observations = mainModule.getAttribute("OBSERVATIONS") || "";
+    
+    // Se for um tamponamento, processar diretamente
     if (group === "Tamponamentos") {
       const componentProps = extractItemPropertiesFromReference(reference);
       
       csvContent += `<tr>
         <td>${rowCount}</td>
-        <td class="module-cell">${moduleDescription}</td>
+        <td class="module-cell">${description}</td>
         <td></td>
         <td>${family}</td>
         <td class="piece-desc">${uniqueId} - ${description}</td>
@@ -134,128 +120,55 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       </tr>`;
       
       rowCount++;
-      continue;
+      return;
     }
     
-    // Get the components of this item
-    const components = Array.from(itemElements).filter(comp => {
-      const compParentId = comp.getAttribute("UNIQUEPARENTID") || "";
-      const compComponent = comp.getAttribute("COMPONENT") || "Y";
-      const compGroup = comp.getAttribute("GROUP") || "";
-      const compDescription = comp.getAttribute("DESCRIPTION") || "";
-      const compFamily = comp.getAttribute("FAMILY") || "";
-      
-      // Exclude components from specific groups
-      if (shouldExcludeGroup(compGroup, compDescription, compFamily)) {
-        return false;
-      }
-      
-      return compComponent === "Y" && compParentId === uniqueId;
+    const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    
+    // Calcular número total de linhas para este módulo
+    const validComponents = components.filter(comp => {
+      const desc = comp.getAttribute("DESCRIPTION") || "";
+      return !desc.toLowerCase().includes("armário") && 
+             !desc.toLowerCase().includes("caixa") &&
+             !desc.toLowerCase().includes("gaveteiro") &&
+             !desc.toLowerCase().includes("dispenseiro");
     });
     
-    // Add components with module description
-    if (components.length > 0) {
-      for (let i = 0; i < components.length; i++) {
-        const component = components[i];
-        const componentProps = extractItemProperties(component);
-        const componentWidth = component.getAttribute("WIDTH") || "";
-        const componentDepth = component.getAttribute("DEPTH") || "";
-        const componentDesc = component.getAttribute("DESCRIPTION") || "";
-        const componentRepetition = component.getAttribute("REPETITION") || "1";
-        const componentObs = component.getAttribute("OBSERVATIONS") || "";
-        const componentUniqueId = component.getAttribute("UNIQUEID") || "";
-        
-        csvContent += `<tr>
-          <td>${rowCount}</td>
-          <td class="module-cell">${i === 0 ? moduleDescription : ""}</td>
-          <td></td>
-          <td>${family}</td>
-          <td class="piece-desc">${componentUniqueId} - ${componentDesc}</td>
-          <td class="piece-desc">${escapeHtml(componentObs)}</td>
-          <td class="comp">${componentWidth}</td>
-          <td class="larg">${componentDepth}</td>
-          <td>${componentRepetition}</td>
-          <td class="borda-inf">${componentProps.edgeBottom}</td>
-          <td class="borda-sup">${componentProps.edgeTop}</td>
-          <td class="borda-dir">${componentProps.edgeRight}</td>
-          <td class="borda-esq">${componentProps.edgeLeft}</td>
-          <td class="edge-color">${componentProps.edgeColor}</td>
-          <td class="material">${componentProps.material} ${componentProps.color}</td>
-          <td class="material">${componentProps.thickness}</td>
-        </tr>`;
-        
-        rowCount++;
-      }
-      
-      // Add empty row after components
-      csvContent += `<tr>
-        <td>${rowCount}</td>
-        <td></td>
-        <td></td>
-        <td>${family}</td>
-        <td class="piece-desc"></td>
-        <td class="piece-desc"></td>
-        <td class="comp"></td>
-        <td class="larg"></td>
-        <td></td>
-        <td class="borda-inf"></td>
-        <td class="borda-sup"></td>
-        <td class="borda-dir"></td>
-        <td class="borda-esq"></td>
-        <td class="edge-color"></td>
-        <td class="material"></td>
-        <td class="material"></td>
-      </tr>`;
-      
-      rowCount++;
-    } else {
-      // If the item has no components, add it as a single row
-      const itemProps = extractItemProperties(item);
+    const totalRows = validComponents.length;
+    let isFirstRow = true;
+    
+    // Processar os componentes
+    validComponents.forEach(component => {
+      const componentProps = extractItemProperties(component);
+      const componentWidth = component.getAttribute("WIDTH") || "";
+      const componentDepth = component.getAttribute("DEPTH") || "";
+      const componentDesc = component.getAttribute("DESCRIPTION") || "";
+      const componentRepetition = component.getAttribute("REPETITION") || "1";
+      const componentObs = component.getAttribute("OBSERVATIONS") || "";
       
       csvContent += `<tr>
         <td>${rowCount}</td>
-        <td class="module-cell">${moduleDescription}</td>
+        ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${description}</td>
-        <td class="piece-desc">${escapeHtml(observations)}</td>
-        <td class="comp">${width}</td>
-        <td class="larg">${depth}</td>
-        <td>${repetition}</td>
-        <td class="borda-inf">${itemProps.edgeBottom}</td>
-        <td class="borda-sup">${itemProps.edgeTop}</td>
-        <td class="borda-dir">${itemProps.edgeRight}</td>
-        <td class="borda-esq">${itemProps.edgeLeft}</td>
-        <td class="edge-color">${itemProps.edgeColor}</td>
-        <td class="material">${itemProps.material} ${itemProps.color}</td>
-        <td class="material">${itemProps.thickness}</td>
+        <td class="piece-desc">${uniqueId} - ${componentDesc}</td>
+        <td class="piece-desc">${escapeHtml(componentObs)}</td>
+        <td class="comp">${componentWidth}</td>
+        <td class="larg">${componentDepth}</td>
+        <td>${componentRepetition}</td>
+        <td class="borda-inf">${componentProps.edgeBottom}</td>
+        <td class="borda-sup">${componentProps.edgeTop}</td>
+        <td class="borda-dir">${componentProps.edgeRight}</td>
+        <td class="borda-esq">${componentProps.edgeLeft}</td>
+        <td class="edge-color">${componentProps.edgeColor}</td>
+        <td class="material">${componentProps.material} ${componentProps.color}</td>
+        <td class="material">${componentProps.thickness}</td>
       </tr>`;
       
       rowCount++;
-      
-      // Add empty row after single items
-      csvContent += `<tr>
-        <td>${rowCount}</td>
-        <td></td>
-        <td></td>
-        <td>${family}</td>
-        <td class="piece-desc"></td>
-        <td class="piece-desc"></td>
-        <td class="comp"></td>
-        <td class="larg"></td>
-        <td></td>
-        <td class="borda-inf"></td>
-        <td class="borda-sup"></td>
-        <td class="borda-dir"></td>
-        <td class="borda-esq"></td>
-        <td class="edge-color"></td>
-        <td class="material"></td>
-        <td class="material"></td>
-      </tr>`;
-      
-      rowCount++;
-    }
-  }
+      isFirstRow = false;
+    });
+  });
   
   return csvContent;
 };
@@ -270,57 +183,39 @@ const extractItemProperties = (item: Element) => {
   let edgeRight = "0";
   let edgeLeft = "0";
   
-  const references = item.querySelector("REFERENCES");
+  const referencesElement = item.querySelector("REFERENCES");
   
-  if (references) {
+  if (referencesElement) {
+    const materialElement = referencesElement.querySelector("MATERIAL");
+    const modelElement = referencesElement.querySelector("MODEL");
+    const thicknessElement = referencesElement.querySelector("THICKNESS");
+    const modelDescriptionFita = referencesElement.querySelector("MODEL_DESCRIPTION_FITA");
+    
     // Material
-    const materialElement = references.querySelector("MATERIAL");
     if (materialElement) {
       material = materialElement.getAttribute("REFERENCE") || material;
     }
     
     // Cor
-    const modelElement = references.querySelector("MODEL");
     if (modelElement) {
-      const modelRef = modelElement.getAttribute("REFERENCE") || "";
-      if (modelRef) {
-        const parts = modelRef.split(".");
-        if (parts.length > 0) {
-          // Last part is typically the color name
-          const lastPart = parts[parts.length - 1];
-          if (lastPart) {
-            color = lastPart;
-          }
-        }
-      }
-    }
-    
-    // Model description for more readable color
-    const modelDescriptionElement = references.querySelector("MODEL_DESCRIPTION");
-    if (modelDescriptionElement) {
-      const modelDescription = modelDescriptionElement.getAttribute("REFERENCE");
-      if (modelDescription) {
-        color = modelDescription;
-      }
+      color = modelElement.getAttribute("REFERENCE") || color;
     }
     
     // Espessura
-    const thicknessElement = references.querySelector("THICKNESS");
     if (thicknessElement) {
       thickness = thicknessElement.getAttribute("REFERENCE") || thickness;
     }
 
     // Cor da Fita de Borda
-    const modelDescriptionFita = references.querySelector("MODEL_DESCRIPTION_FITA");
     if (modelDescriptionFita) {
       edgeColor = modelDescriptionFita.getAttribute("REFERENCE") || color;
     }
     
     // Fitas de Borda
-    const edgeBottom1 = references.querySelector("FITA_BORDA_1");
-    const edgeTop2 = references.querySelector("FITA_BORDA_2");
-    const edgeRight3 = references.querySelector("FITA_BORDA_3");
-    const edgeLeft4 = references.querySelector("FITA_BORDA_4");
+    const edgeBottom1 = referencesElement.querySelector("FITA_BORDA_1");
+    const edgeTop2 = referencesElement.querySelector("FITA_BORDA_2");
+    const edgeRight3 = referencesElement.querySelector("FITA_BORDA_3");
+    const edgeLeft4 = referencesElement.querySelector("FITA_BORDA_4");
     
     if (edgeBottom1) {
       const value = edgeBottom1.getAttribute("REFERENCE");
@@ -355,7 +250,7 @@ const extractItemProperties = (item: Element) => {
   };
 };
 
-// Função para extrair propriedades da string de referência
+// Nova função para extrair propriedades da string de referência
 const extractItemPropertiesFromReference = (reference: string) => {
   const defaultProps = {
     material: "MDF",
@@ -370,7 +265,7 @@ const extractItemPropertiesFromReference = (reference: string) => {
 
   if (!reference) return defaultProps;
 
-  // Formato esperado: "1.0155.15.Duratex.Areia.MDF"
+  // Formato esperado: "1.0155.15.Guararapes.Areia.MDF"
   const parts = reference.split(".");
   if (parts.length >= 6) {
     return {
@@ -386,6 +281,21 @@ const extractItemPropertiesFromReference = (reference: string) => {
   }
 
   return defaultProps;
+};
+
+/**
+ * Create chapa material string
+ */
+const createChapaMaterial = (material: string, finalColor: string, thickness: string): string => {
+  if (finalColor && material && thickness) {
+    return `${escapeHtml(material)} ${escapeHtml(thickness)} ${escapeHtml(finalColor)}`;
+  } else if (finalColor && material) {
+    return `${escapeHtml(material)} ${escapeHtml(finalColor)}`;
+  } else if (finalColor || material) {
+    return `${escapeHtml(finalColor || material)}`;
+  } else {
+    return "N/A";
+  }
 };
 
 /**
