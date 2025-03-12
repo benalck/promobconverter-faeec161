@@ -1,3 +1,4 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -54,7 +55,9 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     const component = item.getAttribute("COMPONENT") || "N";
     const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
     const group = item.getAttribute("GROUP") || "";
-    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group === "Tamponamentos";
+    // Include "Tampos" group in the filter
+    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || 
+           group === "Tamponamentos" || group === "Tampos";
   });
   
   mainModules.forEach(mainModule => {
@@ -67,8 +70,8 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       components: []
     });
     
-    // Se for um tamponamento, não precisa buscar componentes
-    if (group === "Tamponamentos") return;
+    // Se for um tamponamento ou tampo, não precisa buscar componentes
+    if (group === "Tamponamentos" || group === "Tampos") return;
     
     Array.from(itemElements).forEach(item => {
       const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
@@ -99,8 +102,8 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     // Se encontrarmos "Especial" na descrição, substituímos por "Sarafo Frontal Passante"
     const processedDescription = description.includes("Especial") ? "Sarafo Frontal Passante" : description;
     
-    // Se for um tamponamento, processar diretamente
-    if (group === "Tamponamentos") {
+    // Se for um tamponamento ou tampo, processar diretamente
+    if (group === "Tamponamentos" || group === "Tampos") {
       const componentProps = extractItemPropertiesFromXML(mainModule);
       
       // Formatar a descrição da peça no formato [uniqueId] - [description] [thickness]
