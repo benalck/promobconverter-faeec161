@@ -1,3 +1,4 @@
+
 import React, { ReactNode } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -16,9 +17,9 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { user, isInitialized } = useAuth();
 
-  if (loading) {
+  if (!isInitialized) {
     return <div>Loading...</div>;
   }
 
@@ -35,13 +36,13 @@ interface AdminRouteProps {
 }
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-    const { user, loading } = useAuth();
+    const { user, isInitialized } = useAuth();
 
-    if (loading) {
+    if (!isInitialized) {
         return <div>Loading...</div>;
     }
 
-    if (!user?.isAdmin) {
+    if (!user || !user.role || user.role !== 'admin') {
         window.location.href = '/login';
         return null;
     }
@@ -50,8 +51,6 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 };
 
 function App() {
-  const { auth } = useAuth();
-
   return (
     <BrowserRouter>
       <AuthProvider>
