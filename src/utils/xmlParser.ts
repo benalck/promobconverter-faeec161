@@ -76,9 +76,10 @@ const shouldExcludeGroup = (group: string, description: string, family: string):
 
 const processItemElements = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
+  const moduleMap = new Map();
   
-  // Organizar os itens por tipo: módulos e componentes
-  const mainItems = Array.from(itemElements).filter(item => {
+  // Primeiro, organizar os módulos e seus componentes
+  const mainModules = Array.from(itemElements).filter(item => {
     const component = item.getAttribute("COMPONENT") || "N";
     const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
     const group = item.getAttribute("GROUP") || "";
@@ -93,40 +94,60 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group !== "";
   });
   
-  // Processar cada item individualmente
-  for (const item of mainItems) {
-    const uniqueId = item.getAttribute("UNIQUEID") || "";
-    const description = item.getAttribute("DESCRIPTION") || "";
-    const width = item.getAttribute("WIDTH") || "";
-    const height = item.getAttribute("HEIGHT") || "";
-    const depth = item.getAttribute("DEPTH") || "";
-    const family = item.getAttribute("FAMILY") || "Ambiente";
-    const group = item.getAttribute("GROUP") || "";
-    const reference = item.getAttribute("REFERENCE") || "";
-    const repetition = item.getAttribute("REPETITION") || "1";
-    const observations = item.getAttribute("OBSERVATIONS") || "";
+  mainModules.forEach(mainModule => {
+    const uniqueId = mainModule.getAttribute("UNIQUEID") || "";
+    const group = mainModule.getAttribute("GROUP") || "";
+    if (!uniqueId) return;
     
-    // Only display module description for main modules, not for pieces
-    const isMainModule = !description.toLowerCase().includes("lateral") && 
-                        !description.toLowerCase().includes("tamponamento") &&
-                        !description.toLowerCase().includes("prateleira") &&
-                        !description.toLowerCase().includes("fundo") &&
-                        !description.toLowerCase().includes("base") &&
-                        !description.toLowerCase().includes("porta") &&
-                        !description.toLowerCase().includes("gaveta");
+    moduleMap.set(uniqueId, {
+      mainModule,
+      components: []
+    });
     
-    // Create module description only for main modules
-    const moduleDescription = isMainModule ? 
-      `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm` : 
-      "";
+    // Coletar componentes apenas se não for um tamponamento
+    if (group === "Tamponamentos") return;
     
-    // If it's a tamponamento, process directly
+    Array.from(itemElements).forEach(item => {
+      const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
+      const component = item.getAttribute("COMPONENT") || "Y";
+      const itemGroup = item.getAttribute("GROUP") || "";
+      const description = item.getAttribute("DESCRIPTION") || "";
+      const family = item.getAttribute("FAMILY") || "";
+      
+      // Excluir componentes de grupos específicos
+      if (shouldExcludeGroup(itemGroup, description, family)) {
+        return;
+      }
+      
+      if (component === "Y" && uniqueParentId === uniqueId) {
+        const moduleInfo = moduleMap.get(uniqueId);
+        if (moduleInfo) {
+          moduleInfo.components.push(item);
+        }
+      }
+    });
+  });
+  
+  moduleMap.forEach((moduleInfo, uniqueId) => {
+    const { mainModule, components } = moduleInfo;
+    
+    const description = mainModule.getAttribute("DESCRIPTION") || "";
+    const width = mainModule.getAttribute("WIDTH") || "";
+    const height = mainModule.getAttribute("HEIGHT") || "";
+    const depth = mainModule.getAttribute("DEPTH") || "";
+    const family = mainModule.getAttribute("FAMILY") || "Ambiente";
+    const group = mainModule.getAttribute("GROUP") || "";
+    const reference = mainModule.getAttribute("REFERENCE") || "";
+    const repetition = mainModule.getAttribute("REPETITION") || "1";
+    const observations = mainModule.getAttribute("OBSERVATIONS") || "";
+    
+    // Se for um tamponamento, processar diretamente
     if (group === "Tamponamentos") {
       const componentProps = extractItemPropertiesFromReference(reference);
       
       csvContent += `<tr>
         <td>${rowCount}</td>
-        <td class="module-cell"></td>
+        <td class="module-cell">${description}</td>
         <td></td>
         <td>${family}</td>
         <td class="piece-desc">${uniqueId} - ${description}</td>
@@ -144,133 +165,52 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       </tr>`;
       
       rowCount++;
-      continue;
+      return;
     }
     
-    // Get the components of this item
-    const components = Array.from(itemElements).filter(comp => {
-      const compParentId = comp.getAttribute("UNIQUEPARENTID") || "";
-      const compComponent = comp.getAttribute("COMPONENT") || "Y";
-      const compGroup = comp.getAttribute("GROUP") || "";
-      const compDescription = comp.getAttribute("DESCRIPTION") || "";
-      const compFamily = comp.getAttribute("FAMILY") || "";
+    const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    
+    // Calcular número total de linhas para este módulo
+    const validComponents = components;
+    
+    const totalRows = validComponents.length;
+    let isFirstRow = true;
+    
+    // Processar os componentes
+    validComponents.forEach(component => {
+      const componentProps = extractItemProperties(component);
+      const componentWidth = component.getAttribute("WIDTH") || "";
+      const componentDepth = component.getAttribute("DEPTH") || "";
+      const componentDesc = component.getAttribute("DESCRIPTION") || "";
+      const componentRepetition = component.getAttribute("REPETITION") || "1";
+      const componentObs = component.getAttribute("OBSERVATIONS") || "";
       
-      // Exclude components from specific groups
-      if (shouldExcludeGroup(compGroup, compDescription, compFamily)) {
-        return false;
-      }
+      csvContent += `<tr>
+        <td>${rowCount}</td>
+        ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
+        <td></td>
+        <td>${family}</td>
+        <td class="piece-desc">${uniqueId} - ${componentDesc}</td>
+        <td class="piece-desc">${escapeHtml(componentObs)}</td>
+        <td class="comp">${componentWidth}</td>
+        <td class="larg">${componentDepth}</td>
+        <td>${componentRepetition}</td>
+        <td class="borda-inf">${componentProps.edgeBottom}</td>
+        <td class="borda-sup">${componentProps.edgeTop}</td>
+        <td class="borda-dir">${componentProps.edgeRight}</td>
+        <td class="borda-esq">${componentProps.edgeLeft}</td>
+        <td class="edge-color">${componentProps.edgeColor}</td>
+        <td class="material">${componentProps.material} ${componentProps.color}</td>
+        <td class="material">${componentProps.thickness}</td>
+      </tr>`;
       
-      return compComponent === "Y" && compParentId === uniqueId;
+      rowCount++;
+      isFirstRow = false;
     });
     
-    // Add components with module description if it's a main module
-    if (components.length > 0) {
-      const firstComponent = components[0];
-      const firstComponentProps = extractItemProperties(firstComponent);
-      const firstComponentWidth = firstComponent.getAttribute("WIDTH") || "";
-      const firstComponentDepth = firstComponent.getAttribute("DEPTH") || "";
-      const firstComponentDesc = firstComponent.getAttribute("DESCRIPTION") || "";
-      const firstComponentRepetition = firstComponent.getAttribute("REPETITION") || "1";
-      const firstComponentObs = firstComponent.getAttribute("OBSERVATIONS") || "";
-      
-      csvContent += `<tr>
-        <td>${rowCount}</td>
-        <td class="module-cell" rowspan="${components.length + 2}">${moduleDescription}</td>
-        <td></td>
-        <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${firstComponentDesc}</td>
-        <td class="piece-desc">${escapeHtml(firstComponentObs)}</td>
-        <td class="comp">${firstComponentWidth}</td>
-        <td class="larg">${firstComponentDepth}</td>
-        <td>${firstComponentRepetition}</td>
-        <td class="borda-inf">${firstComponentProps.edgeBottom}</td>
-        <td class="borda-sup">${firstComponentProps.edgeTop}</td>
-        <td class="borda-dir">${firstComponentProps.edgeRight}</td>
-        <td class="borda-esq">${firstComponentProps.edgeLeft}</td>
-        <td class="edge-color">${firstComponentProps.edgeColor}</td>
-        <td class="material">${firstComponentProps.material} ${firstComponentProps.color}</td>
-        <td class="material">${firstComponentProps.thickness}</td>
-      </tr>`;
-      
-      rowCount++;
-      
-      // Add empty row after main module
-      csvContent += `<tr>
-        <td>${rowCount}</td>
-        <td></td>
-        <td></td>
-        <td>${family}</td>
-        <td class="piece-desc"></td>
-        <td class="piece-desc"></td>
-        <td class="comp"></td>
-        <td class="larg"></td>
-        <td></td>
-        <td class="borda-inf"></td>
-        <td class="borda-sup"></td>
-        <td class="borda-dir"></td>
-        <td class="borda-esq"></td>
-        <td class="edge-color"></td>
-        <td class="material"></td>
-        <td class="material"></td>
-      </tr>`;
-      
-      rowCount++;
-      
-      // Add components
-      for (let i = 1; i < components.length; i++) {
-        const component = components[i];
-        const componentProps = extractItemProperties(component);
-        const componentWidth = component.getAttribute("WIDTH") || "";
-        const componentDepth = component.getAttribute("DEPTH") || "";
-        const componentDesc = component.getAttribute("DESCRIPTION") || "";
-        const componentRepetition = component.getAttribute("REPETITION") || "1";
-        const componentObs = component.getAttribute("OBSERVATIONS") || "";
-        
-        csvContent += `<tr>
-          <td>${rowCount}</td>
-          <td></td>
-          <td>${family}</td>
-          <td class="piece-desc">${uniqueId} - ${componentDesc}</td>
-          <td class="piece-desc">${escapeHtml(componentObs)}</td>
-          <td class="comp">${componentWidth}</td>
-          <td class="larg">${componentDepth}</td>
-          <td>${componentRepetition}</td>
-          <td class="borda-inf">${componentProps.edgeBottom}</td>
-          <td class="borda-sup">${componentProps.edgeTop}</td>
-          <td class="borda-dir">${componentProps.edgeRight}</td>
-          <td class="borda-esq">${componentProps.edgeLeft}</td>
-          <td class="edge-color">${componentProps.edgeColor}</td>
-          <td class="material">${componentProps.material} ${componentProps.color}</td>
-          <td class="material">${componentProps.thickness}</td>
-        </tr>`;
-        
-        rowCount++;
-      }
-      
-      // Add empty row after components
-      csvContent += `<tr>
-        <td>${rowCount}</td>
-        <td></td>
-        <td></td>
-        <td>${family}</td>
-        <td class="piece-desc"></td>
-        <td class="piece-desc"></td>
-        <td class="comp"></td>
-        <td class="larg"></td>
-        <td></td>
-        <td class="borda-inf"></td>
-        <td class="borda-sup"></td>
-        <td class="borda-dir"></td>
-        <td class="borda-esq"></td>
-        <td class="edge-color"></td>
-        <td class="material"></td>
-        <td class="material"></td>
-      </tr>`;
-      
-      rowCount++;
-    } else {
-      // If the item has no components, add it as a single row
-      const itemProps = extractItemProperties(item);
+    // Se não houver componentes válidos, mostrar o módulo principal
+    if (validComponents.length === 0) {
+      const componentProps = extractItemProperties(mainModule);
       
       csvContent += `<tr>
         <td>${rowCount}</td>
@@ -282,40 +222,18 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         <td class="comp">${width}</td>
         <td class="larg">${depth}</td>
         <td>${repetition}</td>
-        <td class="borda-inf">${itemProps.edgeBottom}</td>
-        <td class="borda-sup">${itemProps.edgeTop}</td>
-        <td class="borda-dir">${itemProps.edgeRight}</td>
-        <td class="borda-esq">${itemProps.edgeLeft}</td>
-        <td class="edge-color">${itemProps.edgeColor}</td>
-        <td class="material">${itemProps.material} ${itemProps.color}</td>
-        <td class="material">${itemProps.thickness}</td>
-      </tr>`;
-      
-      rowCount++;
-      
-      // Add empty row after single items
-      csvContent += `<tr>
-        <td>${rowCount}</td>
-        <td></td>
-        <td></td>
-        <td>${family}</td>
-        <td class="piece-desc"></td>
-        <td class="piece-desc"></td>
-        <td class="comp"></td>
-        <td class="larg"></td>
-        <td></td>
-        <td class="borda-inf"></td>
-        <td class="borda-sup"></td>
-        <td class="borda-dir"></td>
-        <td class="borda-esq"></td>
-        <td class="edge-color"></td>
-        <td class="material"></td>
-        <td class="material"></td>
+        <td class="borda-inf">${componentProps.edgeBottom}</td>
+        <td class="borda-sup">${componentProps.edgeTop}</td>
+        <td class="borda-dir">${componentProps.edgeRight}</td>
+        <td class="borda-esq">${componentProps.edgeLeft}</td>
+        <td class="edge-color">${componentProps.edgeColor}</td>
+        <td class="material">${componentProps.material} ${componentProps.color}</td>
+        <td class="material">${componentProps.thickness}</td>
       </tr>`;
       
       rowCount++;
     }
-  }
+  });
   
   return csvContent;
 };
