@@ -1,14 +1,10 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
  * Converts XML content to CSV format for Excel
  */
 export const convertXMLToCSV = (xmlContent: string): string => {
-  // Check if the content is in the delimited text format instead of XML
-  if (!xmlContent.includes("<") && !xmlContent.includes(">") && xmlContent.includes(";")) {
-    return convertDelimitedToCSV(xmlContent);
-  }
-
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
@@ -29,180 +25,6 @@ export const convertXMLToCSV = (xmlContent: string): string => {
   }
 };
 
-/**
- * Converts delimited text content to CSV format
- * Expected format: id;quantity;material;reference;description;width;height;depth;
- */
-export const convertDelimitedToCSV = (content: string): string => {
-  try {
-    let csvContent = generateTableHeader();
-    const lines = content.split('\n').filter(line => line.trim().length > 0);
-    
-    let rowCount = 1;
-    let currentModule = "";
-    
-    for (const line of lines) {
-      const fields = line.split(';').map(field => field.trim());
-      
-      // Skip if we don't have enough fields or if this is a header line
-      if (fields.length < 7 || isNaN(Number(fields[0]))) {
-        continue;
-      }
-      
-      const id = fields[0];
-      const quantity = fields[1];
-      const material = fields[2]; 
-      const reference = fields[3] || "";
-      const description = fields[4] || "";
-      const width = fields[5] || "";
-      const height = fields[6] || "";
-      const depth = fields[7] || "";
-      
-      // If description contains "Especial", replace it with "Sarafo Frontal Passante"
-      const formattedDescription = description.replace("Especial", "Sarafo Frontal Passante");
-      
-      // Extract material properties from reference
-      const materialProps = extractPropertiesFromDelimitedFormat(reference, description, material);
-      
-      // Determine if this is a new module
-      const isNewModule = id === "1" || 
-                          description.includes("Armário") || 
-                          description.includes("Balcao") || 
-                          description.includes("Caixa");
-      
-      // Create module description if needed
-      if (isNewModule) {
-        currentModule = formattedDescription;
-      }
-      
-      // Show module description only for the first item in a module
-      const showModuleDescription = isNewModule ? formattedDescription : "";
-      
-      csvContent += `<tr>
-        <td>${rowCount}</td>
-        <td class="module-cell">${showModuleDescription}</td>
-        <td></td>
-        <td>Ambiente</td>
-        <td class="piece-desc">${id} - ${formattedDescription}</td>
-        <td class="piece-desc"></td>
-        <td class="comp">${width}</td>
-        <td class="larg">${depth}</td>
-        <td>${quantity}</td>
-        <td class="borda-inf">${materialProps.edgeBottom}</td>
-        <td class="borda-sup">${materialProps.edgeTop}</td>
-        <td class="borda-dir">${materialProps.edgeRight}</td>
-        <td class="borda-esq">${materialProps.edgeLeft}</td>
-        <td class="edge-color">${materialProps.edgeColor}</td>
-        <td class="material">${materialProps.material} ${materialProps.color}</td>
-        <td class="material">${materialProps.thickness}</td>
-      </tr>`;
-      
-      rowCount++;
-      
-      // Add a blank row after a module
-      if ((parseInt(id) % 5 === 0 || isNewModule) && parseInt(id) !== lines.length) {
-        csvContent += `<tr>
-          <td>${rowCount}</td>
-          <td></td>
-          <td></td>
-          <td>Ambiente</td>
-          <td class="piece-desc"></td>
-          <td class="piece-desc"></td>
-          <td class="comp"></td>
-          <td class="larg"></td>
-          <td></td>
-          <td class="borda-inf"></td>
-          <td class="borda-sup"></td>
-          <td class="borda-dir"></td>
-          <td class="borda-esq"></td>
-          <td class="edge-color"></td>
-          <td class="material"></td>
-          <td class="material"></td>
-        </tr>`;
-        
-        rowCount++;
-      }
-    }
-    
-    return csvContent;
-  } catch (error) {
-    console.error("Error converting delimited text to CSV:", error);
-    return getDefaultTableHeader();
-  }
-};
-
-/**
- * Extract material properties from delimited format reference
- */
-const extractPropertiesFromDelimitedFormat = (reference: string, description: string, materialValue: string) => {
-  const defaultProps = {
-    material: "MDF",
-    color: "Branco",
-    thickness: "15",
-    edgeColor: "Branco",
-    edgeBottom: "",
-    edgeTop: "",
-    edgeRight: "",
-    edgeLeft: ""
-  };
-  
-  // Check if this is a process item (exclude these)
-  if (description.toLowerCase().includes("processo")) {
-    return defaultProps;
-  }
-  
-  // Extract edge information from reference
-  // Format could be like: 1.1089.500 or 1.2006.15.Branco.MDF or 1.0155.15.Sudati.Unicolores.Pipa.MDF.Esp
-  if (reference) {
-    const parts = reference.split(".");
-    
-    // Check if reference starts with "1." - usually indicates edges
-    if (parts.length > 0 && parts[0] === "1") {
-      defaultProps.edgeBottom = "X";
-      defaultProps.edgeTop = "X";
-      defaultProps.edgeRight = "X";
-      defaultProps.edgeLeft = "X";
-    }
-    
-    // Get thickness if available
-    if (parts.length > 2) {
-      const possibleThickness = parts[2];
-      if (!isNaN(Number(possibleThickness))) {
-        defaultProps.thickness = possibleThickness;
-      }
-    }
-    
-    // Get color and material
-    if (parts.length > 3) {
-      defaultProps.color = parts[3];
-      
-      // Check for more detailed color information (like Unicolores.Pipa)
-      if (parts.length > 5) {
-        defaultProps.color = parts[5]; // Use more specific color name if available
-      }
-      
-      if (parts.length > 4) {
-        defaultProps.material = parts[4];
-      }
-    }
-    
-    // Edge color matches material color
-    defaultProps.edgeColor = defaultProps.color;
-  }
-  
-  // If material value is a number less than 1, it might be MDF
-  if (!isNaN(Number(materialValue)) && Number(materialValue) < 1) {
-    defaultProps.material = "MDF";
-  }
-  
-  // Check description for special types
-  if (description.includes("MDF")) {
-    defaultProps.material = "MDF";
-  }
-  
-  return defaultProps;
-};
-
 const generateTableHeader = (): string => {
   return `<tr>
     <th>NUM.</th>
@@ -211,13 +33,13 @@ const generateTableHeader = (): string => {
     <th>AMBIENTE</th>
     <th class="piece-desc">DESC. DA PEÇA</th>
     <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-    <th style="background-color: #FDE1D3;" class="comp">COMP</th>
-    <th style="background-color: #D3E4FD;" class="larg">LARG</th>
+    <th style="background-color: #F7CAAC;" class="comp">COMP</th>
+    <th style="background-color: #BDD6EE;" class="larg">LARG</th>
     <th>QUANT</th>
-    <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
-    <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
-    <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
-    <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
+    <th style="background-color: #F7CAAC;" class="borda-inf">BORDA INF</th>
+    <th style="background-color: #F7CAAC;" class="borda-sup">BORDA SUP</th>
+    <th style="background-color: #BDD6EE;" class="borda-dir">BORDA DIR</th>
+    <th style="background-color: #BDD6EE;" class="borda-esq">BORDA ESQ</th>
     <th class="edge-color">COR FITA DE BORDA</th>
     <th class="material">CHAPA</th>
     <th class="material">ESP.</th>
@@ -253,29 +75,6 @@ const shouldExcludeGroup = (group: string, description: string, family: string):
   return false;
 };
 
-/**
- * Gera a descrição do módulo no formato solicitado
- */
-const createModuleDescription = (item: Element): string => {
-  // Para tamponamentos, retornar apenas "Tamponamento"
-  const group = item.getAttribute("GROUP") || "";
-  if (group === "Tamponamentos") {
-    return "Tamponamento";
-  }
-  
-  const uniqueId = item.getAttribute("UNIQUEID") || "";
-  const description = item.getAttribute("DESCRIPTION") || "";
-  
-  // Substituir "Especial" por "Sarafo Frontal Passante" na descrição
-  const formattedDescription = description.replace("Especial", "Sarafo Frontal Passante");
-  
-  const width = item.getAttribute("WIDTH") || "";
-  const height = item.getAttribute("HEIGHT") || "";
-  const depth = item.getAttribute("DEPTH") || "";
-  
-  return `(${uniqueId}) - ${formattedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
-};
-
 const processItemElements = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
   
@@ -308,8 +107,8 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     const repetition = item.getAttribute("REPETITION") || "1";
     const observations = item.getAttribute("OBSERVATIONS") || "";
     
-    // Criar a descrição do módulo
-    const moduleDescription = createModuleDescription(item);
+    // Create module description for main modules
+    const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
     
     // If it's a tamponamento, process directly
     if (group === "Tamponamentos") {
@@ -354,7 +153,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       return compComponent === "Y" && compParentId === uniqueId;
     });
     
-    // Add components with module description only for the first component
+    // Add components with module description
     if (components.length > 0) {
       for (let i = 0; i < components.length; i++) {
         const component = components[i];
@@ -366,12 +165,9 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         const componentObs = component.getAttribute("OBSERVATIONS") || "";
         const componentUniqueId = component.getAttribute("UNIQUEID") || "";
         
-        // Coluna MÓDULO apenas mostra a descrição para o primeiro componente
-        const showModuleDescription = i === 0 ? moduleDescription : "";
-        
         csvContent += `<tr>
           <td>${rowCount}</td>
-          <td class="module-cell">${showModuleDescription}</td>
+          <td class="module-cell">${i === 0 ? moduleDescription : ""}</td>
           <td></td>
           <td>${family}</td>
           <td class="piece-desc">${componentUniqueId} - ${componentDesc}</td>
@@ -391,7 +187,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         rowCount++;
       }
       
-      // Linha vazia sem descrição na coluna MÓDULO
+      // Add empty row after components
       csvContent += `<tr>
         <td>${rowCount}</td>
         <td></td>
@@ -413,7 +209,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       rowCount++;
     } else {
-      // Se o item não tem componentes, adicionar como linha única
+      // If the item has no components, add it as a single row
       const itemProps = extractItemProperties(item);
       
       csvContent += `<tr>
@@ -437,7 +233,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       rowCount++;
       
-      // Linha vazia sem descrição na coluna MÓDULO
+      // Add empty row after single items
       csvContent += `<tr>
         <td>${rowCount}</td>
         <td></td>
@@ -640,4 +436,3 @@ const getDefaultExampleRow = (): string => {
       <td class="material">15</td>
     </tr>`;
 };
-
