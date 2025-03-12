@@ -1,3 +1,4 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -87,8 +88,8 @@ const createModuleDescription = (item: Element): string => {
   const uniqueId = item.getAttribute("UNIQUEID") || "";
   const description = item.getAttribute("DESCRIPTION") || "";
   
-  // Substituir "Especial" por "Tamponamento" na descrição
-  const formattedDescription = description.replace("Especial", "Tamponamento");
+  // Substituir "Especial" por "Sarafo Frontal Passante" na descrição
+  const formattedDescription = description.replace("Especial", "Sarafo Frontal Passante");
   
   const width = item.getAttribute("WIDTH") || "";
   const height = item.getAttribute("HEIGHT") || "";
