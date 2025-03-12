@@ -109,9 +109,17 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       // Formatar a descrição da peça no formato [uniqueId] - [description] [thickness]
       const pieceDescription = formatPieceDescription(uniqueId, processedDescription, componentProps.thickness);
       
+      // Formatar a coluna módulo para "Tampo Linear" no formato especial
+      let moduleCell;
+      if (processedDescription.includes("Tampo Linear")) {
+        moduleCell = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+      } else {
+        moduleCell = processedDescription;
+      }
+      
       csvContent += `<tr>
         <td>${rowCount}</td>
-        <td class="module-cell">${processedDescription}</td>
+        <td class="module-cell">${moduleCell}</td>
         <td></td>
         <td>${family}</td>
         <td class="piece-desc">${pieceDescription}</td>
@@ -132,7 +140,13 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       return;
     }
     
-    const moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    // Formatar a coluna módulo para "Tampo Linear" no formato especial
+    let moduleDescription;
+    if (processedDescription.includes("Tampo Linear")) {
+      moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    } else {
+      moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    }
     
     // Calcular número total de linhas para este módulo
     const validComponents = components.filter(comp => {
