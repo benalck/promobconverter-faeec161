@@ -139,55 +139,30 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     });
     
     const totalRows = validComponents.length;
+    let isFirstRow = true;
     
-    // Processar os componentes apenas se houver componentes válidos
-    if (totalRows > 0) {
-      validComponents.forEach((component, index) => {
-        const componentProps = extractItemPropertiesFromXML(component);
-        const componentWidth = component.getAttribute("WIDTH") || "";
-        const componentDepth = component.getAttribute("DEPTH") || "";
-        const componentDesc = component.getAttribute("DESCRIPTION") || "";
-        const componentRepetition = component.getAttribute("REPETITION") || "1";
-        const componentObs = component.getAttribute("OBSERVATIONS") || "";
-        
-        // Substituir "Especial" por "Sarafo Frontal Passante" também nos componentes
-        const processedComponentDesc = componentDesc.includes("Especial") ? "Sarafo Frontal Passante" : componentDesc;
-        
-        csvContent += `<tr>
-          <td>${rowCount}</td>
-          ${index === 0 ? `<td class="module-cell" rowspan="${totalRows}">${moduleDescription}</td>` : ""}
-          <td></td>
-          <td>${family}</td>
-          <td class="piece-desc">${uniqueId} - ${processedComponentDesc}</td>
-          <td class="piece-desc">${escapeHtml(componentObs)}</td>
-          <td class="comp">${componentWidth}</td>
-          <td class="larg">${componentDepth}</td>
-          <td>${componentRepetition}</td>
-          <td class="borda-inf">${componentProps.edgeBottom}</td>
-          <td class="borda-sup">${componentProps.edgeTop}</td>
-          <td class="borda-dir">${componentProps.edgeRight}</td>
-          <td class="borda-esq">${componentProps.edgeLeft}</td>
-          <td class="edge-color">${componentProps.edgeColor}</td>
-          <td class="material">${componentProps.material} ${componentProps.color}</td>
-          <td class="material">${componentProps.thickness}</td>
-        </tr>`;
-        
-        rowCount++;
-      });
-    } else {
-      // Se não houver componentes válidos, criar pelo menos uma linha para o módulo
-      const componentProps = extractItemPropertiesFromXML(mainModule);
+    // Processar os componentes
+    validComponents.forEach(component => {
+      const componentProps = extractItemPropertiesFromXML(component);
+      const componentWidth = component.getAttribute("WIDTH") || "";
+      const componentDepth = component.getAttribute("DEPTH") || "";
+      const componentDesc = component.getAttribute("DESCRIPTION") || "";
+      const componentRepetition = component.getAttribute("REPETITION") || "1";
+      const componentObs = component.getAttribute("OBSERVATIONS") || "";
+      
+      // Substituir "Especial" por "Sarafo Frontal Passante" também nos componentes
+      const processedComponentDesc = componentDesc.includes("Especial") ? "Sarafo Frontal Passante" : componentDesc;
       
       csvContent += `<tr>
         <td>${rowCount}</td>
-        <td class="module-cell">${moduleDescription}</td>
+        ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${processedDescription}</td>
-        <td class="piece-desc">${escapeHtml(observations)}</td>
-        <td class="comp">${width}</td>
-        <td class="larg">${depth}</td>
-        <td>${repetition}</td>
+        <td class="piece-desc">${uniqueId} - ${processedComponentDesc}</td>
+        <td class="piece-desc">${escapeHtml(componentObs)}</td>
+        <td class="comp">${componentWidth}</td>
+        <td class="larg">${componentDepth}</td>
+        <td>${componentRepetition}</td>
         <td class="borda-inf">${componentProps.edgeBottom}</td>
         <td class="borda-sup">${componentProps.edgeTop}</td>
         <td class="borda-dir">${componentProps.edgeRight}</td>
@@ -198,7 +173,8 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       </tr>`;
       
       rowCount++;
-    }
+      isFirstRow = false;
+    });
   });
   
   return csvContent;
