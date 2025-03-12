@@ -106,16 +106,27 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     const repetition = item.getAttribute("REPETITION") || "1";
     const observations = item.getAttribute("OBSERVATIONS") || "";
     
-    // Criar a descrição do módulo
-    const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    // Only display module description for main modules, not for pieces
+    const isMainModule = !description.toLowerCase().includes("lateral") && 
+                        !description.toLowerCase().includes("tamponamento") &&
+                        !description.toLowerCase().includes("prateleira") &&
+                        !description.toLowerCase().includes("fundo") &&
+                        !description.toLowerCase().includes("base") &&
+                        !description.toLowerCase().includes("porta") &&
+                        !description.toLowerCase().includes("gaveta");
     
-    // Se for um tamponamento, processar diretamente
+    // Create module description only for main modules
+    const moduleDescription = isMainModule ? 
+      `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm` : 
+      "";
+    
+    // If it's a tamponamento, process directly
     if (group === "Tamponamentos") {
       const componentProps = extractItemPropertiesFromReference(reference);
       
       csvContent += `<tr>
         <td>${rowCount}</td>
-        <td class="module-cell">${moduleDescription}</td>
+        <td class="module-cell"></td>
         <td></td>
         <td>${family}</td>
         <td class="piece-desc">${uniqueId} - ${description}</td>
@@ -136,7 +147,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       continue;
     }
     
-    // Obter os componentes deste item
+    // Get the components of this item
     const components = Array.from(itemElements).filter(comp => {
       const compParentId = comp.getAttribute("UNIQUEPARENTID") || "";
       const compComponent = comp.getAttribute("COMPONENT") || "Y";
@@ -144,7 +155,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       const compDescription = comp.getAttribute("DESCRIPTION") || "";
       const compFamily = comp.getAttribute("FAMILY") || "";
       
-      // Excluir componentes de grupos específicos
+      // Exclude components from specific groups
       if (shouldExcludeGroup(compGroup, compDescription, compFamily)) {
         return false;
       }
@@ -152,9 +163,8 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       return compComponent === "Y" && compParentId === uniqueId;
     });
     
-    // Adicionar o módulo com uma célula que ocupa várias linhas se necessário
+    // Add components with module description if it's a main module
     if (components.length > 0) {
-      // Adicionar o módulo principal com rowspan
       const firstComponent = components[0];
       const firstComponentProps = extractItemProperties(firstComponent);
       const firstComponentWidth = firstComponent.getAttribute("WIDTH") || "";
@@ -184,9 +194,10 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       rowCount++;
       
-      // Adicionar uma linha vazia após o primeiro componente
+      // Add empty row after main module
       csvContent += `<tr>
         <td>${rowCount}</td>
+        <td></td>
         <td></td>
         <td>${family}</td>
         <td class="piece-desc"></td>
@@ -205,7 +216,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       rowCount++;
       
-      // Adicionar os componentes restantes
+      // Add components
       for (let i = 1; i < components.length; i++) {
         const component = components[i];
         const componentProps = extractItemProperties(component);
@@ -236,9 +247,10 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         rowCount++;
       }
       
-      // Adicionar uma linha vazia após os componentes
+      // Add empty row after components
       csvContent += `<tr>
         <td>${rowCount}</td>
+        <td></td>
         <td></td>
         <td>${family}</td>
         <td class="piece-desc"></td>
@@ -257,7 +269,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       rowCount++;
     } else {
-      // Se o módulo não tiver componentes, adicionar apenas o módulo
+      // If the item has no components, add it as a single row
       const itemProps = extractItemProperties(item);
       
       csvContent += `<tr>
@@ -281,7 +293,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       rowCount++;
       
-      // Adicionar uma linha vazia após o módulo
+      // Add empty row after single items
       csvContent += `<tr>
         <td>${rowCount}</td>
         <td></td>
