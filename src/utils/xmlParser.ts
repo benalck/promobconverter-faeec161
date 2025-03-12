@@ -1,4 +1,3 @@
-
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -87,11 +86,15 @@ const createModuleDescription = (item: Element): string => {
   
   const uniqueId = item.getAttribute("UNIQUEID") || "";
   const description = item.getAttribute("DESCRIPTION") || "";
+  
+  // Substituir "Especial" por "Tamponamento" na descrição
+  const formattedDescription = description.replace("Especial", "Tamponamento");
+  
   const width = item.getAttribute("WIDTH") || "";
   const height = item.getAttribute("HEIGHT") || "";
   const depth = item.getAttribute("DEPTH") || "";
   
-  return `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+  return `(${uniqueId}) - ${formattedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
 };
 
 const processItemElements = (itemElements: NodeListOf<Element>, csvContent: string): string => {
