@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import BannedMessage from "@/components/BannedMessage";
-import { ShoppingBag, Lock, Mail, FileText, CheckCircle, DragDropIcon, Download, Shield, Settings } from "lucide-react";
+import { ShoppingBag, Lock, Mail, FileText, CheckCircle, Upload, Download, Shield, Settings } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -217,7 +216,7 @@ export default function Login() {
           {/* Recurso 3 */}
           <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-              <ShoppingBag className="h-6 w-6 text-primary" />
+              <Upload className="h-6 w-6 text-primary" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Arrastar e Soltar</h3>
             <p className="text-gray-600">
