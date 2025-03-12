@@ -1,3 +1,4 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -76,75 +77,84 @@ const shouldExcludeGroup = (group: string, description: string, family: string):
 
 const processItemElements = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
-  const moduleMap = new Map();
+  const guidMap = new Map();
   
-  // First, organize modules and their components by GUID
-  const mainModules = Array.from(itemElements).filter(item => {
+  // First, organize items by their GUID
+  Array.from(itemElements).forEach(item => {
+    const guid = item.getAttribute("GUID") || "";
+    const parentGuid = item.getAttribute("PARENTGUID") || "";
+    const uniqueId = item.getAttribute("UNIQUEID") || "";
     const component = item.getAttribute("COMPONENT") || "N";
-    const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
     const group = item.getAttribute("GROUP") || "";
     const description = item.getAttribute("DESCRIPTION") || "";
     const family = item.getAttribute("FAMILY") || "";
     
     if (shouldExcludeGroup(group, description, family)) {
-      return false;
+      return;
     }
     
-    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group !== "";
-  });
-  
-  // Group modules by GUID
-  const guidMap = new Map();
-  mainModules.forEach(mainModule => {
-    const guid = mainModule.getAttribute("GUID") || "";
-    if (!guid) return;
-    
-    if (!guidMap.has(guid)) {
+    // Group modules and their components
+    if (guid && !guidMap.has(guid)) {
       guidMap.set(guid, {
-        modules: [],
+        mainModule: null,
+        relatedModules: [],
         components: []
       });
     }
     
     const moduleGroup = guidMap.get(guid);
-    moduleGroup.modules.push(mainModule);
-    
-    // Collect components for this GUID
-    Array.from(itemElements).forEach(item => {
-      const parentGuid = item.getAttribute("PARENTGUID") || "";
-      const component = item.getAttribute("COMPONENT") || "Y";
-      const itemGroup = item.getAttribute("GROUP") || "";
-      const description = item.getAttribute("DESCRIPTION") || "";
-      const family = item.getAttribute("FAMILY") || "";
-      
-      if (shouldExcludeGroup(itemGroup, description, family)) {
-        return;
-      }
-      
-      if (component === "Y" && parentGuid === guid) {
+    if (moduleGroup) {
+      if (component === "N" || parentGuid === "-1" || parentGuid === "-2") {
+        // This is a main module
+        if (!moduleGroup.mainModule) {
+          moduleGroup.mainModule = item;
+        } else {
+          moduleGroup.relatedModules.push(item);
+        }
+      } else if (component === "Y") {
+        // This is a component of the module
         moduleGroup.components.push(item);
       }
-    });
+    }
+    
+    // Add components to their parent's group
+    if (component === "Y" && parentGuid && parentGuid !== "-1" && parentGuid !== "-2") {
+      if (guidMap.has(parentGuid)) {
+        const parentGroup = guidMap.get(parentGuid);
+        parentGroup.components.push(item);
+      }
+    }
   });
   
   // Process each GUID group
   guidMap.forEach((group, guid) => {
-    const { modules, components } = group;
+    const { mainModule, relatedModules, components } = group;
+    
+    // Skip if no main module found
+    if (!mainModule) return;
     
     // Combine module descriptions
-    const combinedModuleDescription = modules.map(module => {
+    const moduleDescriptions = [mainModule, ...relatedModules].map(module => {
       const description = module.getAttribute("DESCRIPTION") || "";
       const width = module.getAttribute("WIDTH") || "";
       const height = module.getAttribute("HEIGHT") || "";
       const depth = module.getAttribute("DEPTH") || "";
       return `${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
-    }).join(" + ");
+    });
     
-    // Get the family from the first module (they should be the same for the same GUID)
-    const family = modules[0]?.getAttribute("FAMILY") || "Ambiente";
+    const combinedModuleDescription = moduleDescriptions.join(" + ");
+    
+    // Get the family from the main module
+    const family = mainModule.getAttribute("FAMILY") || "Ambiente";
     
     // Calculate total rows for this group
-    const validComponents = components;
+    const validComponents = components.filter(comp => {
+      const compGroup = comp.getAttribute("GROUP") || "";
+      const compDesc = comp.getAttribute("DESCRIPTION") || "";
+      const compFamily = comp.getAttribute("FAMILY") || "";
+      return !shouldExcludeGroup(compGroup, compDesc, compFamily);
+    });
+    
     const totalRows = validComponents.length || 1;
     let isFirstRow = true;
     
@@ -183,18 +193,18 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       });
     } else {
       // If no components, show the main module
-      const moduleProps = extractItemProperties(modules[0]);
-      const width = modules[0].getAttribute("WIDTH") || "";
-      const depth = modules[0].getAttribute("DEPTH") || "";
-      const observations = modules[0].getAttribute("OBSERVATIONS") || "";
-      const moduleGuid = modules[0].getAttribute("GUID") || "";
+      const moduleProps = extractItemProperties(mainModule);
+      const width = mainModule.getAttribute("WIDTH") || "";
+      const depth = mainModule.getAttribute("DEPTH") || "";
+      const observations = mainModule.getAttribute("OBSERVATIONS") || "";
+      const moduleGuid = mainModule.getAttribute("GUID") || "";
       
       csvContent += `<tr>
         <td>${rowCount}</td>
         <td class="module-cell">${combinedModuleDescription}</td>
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${moduleGuid} - ${modules[0].getAttribute("DESCRIPTION") || ""}</td>
+        <td class="piece-desc">${moduleGuid} - ${mainModule.getAttribute("DESCRIPTION") || ""}</td>
         <td class="piece-desc">${escapeHtml(observations)}</td>
         <td class="comp">${width}</td>
         <td class="larg">${depth}</td>
@@ -388,4 +398,3 @@ const getDefaultExampleRow = (): string => {
       <td class="material">15</td>
     </tr>`;
 };
-
