@@ -1,3 +1,4 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -83,10 +84,6 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     });
   });
   
-  // Variável para armazenar a descrição do segundo módulo
-  let secondModuleDescription = "";
-  let isFirstModule = true;
-  
   moduleMap.forEach((moduleInfo, uniqueId) => {
     const { mainModule, components } = moduleInfo;
     
@@ -103,23 +100,13 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     // Se encontrarmos "Especial" na descrição, substituímos por "Sarafo Frontal Passante"
     const processedDescription = description.includes("Especial") ? "Sarafo Frontal Passante" : description;
     
-    // Gerar a descrição do módulo
-    const moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
-    
-    // Se for o segundo módulo, salvar a descrição para usar em todos os módulos
-    if (isFirstModule) {
-      isFirstModule = false;
-    } else if (secondModuleDescription === "") {
-      secondModuleDescription = moduleDescription;
-    }
-    
     // Se for um tamponamento, processar diretamente
     if (group === "Tamponamentos") {
       const componentProps = extractItemPropertiesFromXML(mainModule);
       
       csvContent += `<tr>
         <td>${rowCount}</td>
-        <td class="module-cell">${secondModuleDescription || moduleDescription}</td>
+        <td class="module-cell">${processedDescription}</td>
         <td></td>
         <td>${family}</td>
         <td class="piece-desc">${uniqueId} - ${processedDescription}</td>
@@ -139,6 +126,8 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       rowCount++;
       return;
     }
+    
+    const moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
     
     // Calcular número total de linhas para este módulo
     const validComponents = components.filter(comp => {
@@ -166,7 +155,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       
       csvContent += `<tr>
         <td>${rowCount}</td>
-        ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${secondModuleDescription || moduleDescription}</td>` : ""}
+        ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
         <td></td>
         <td>${family}</td>
         <td class="piece-desc">${uniqueId} - ${processedComponentDesc}</td>
@@ -269,7 +258,7 @@ const extractItemPropertiesFromXML = (item: Element) => {
   const reference = item.getAttribute("REFERENCE") || "";
   if (reference && reference.includes(".")) {
     const refParts = reference.split(".");
-    if (refParts.length >= 6) {
+    if (refParts.length >= 5) {
       // Formato como "1.0155.15.Guararapes.Areia.MDF"
       const thicknessFromRef = refParts.find(part => part.match(/^\d+$/));
       if (thicknessFromRef) {
@@ -397,3 +386,4 @@ const getDefaultExampleRow = (): string => {
       <td class="material">15</td>
     </tr>`;
 };
+
