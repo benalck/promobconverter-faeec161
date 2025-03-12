@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import BannedMessage from "@/components/BannedMessage";
-import { ShoppingBag, Lock, Mail } from "lucide-react";
+import { ShoppingBag, Lock, Mail, FileText, CheckCircle, DragDropIcon, Download, Shield, Settings } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -83,8 +83,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="w-full max-w-5xl flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden my-8">
         {/* Banner lateral */}
         <div className="hidden md:block md:w-1/2 bg-primary/90 p-12 text-white relative">
           <div className="h-full flex flex-col justify-between">
@@ -171,7 +171,7 @@ export default function Login() {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4 pb-12">
+          <CardFooter className="flex flex-col space-y-4 pb-6">
             <p className="text-center text-sm text-gray-600">
               Novo cliente?{" "}
               <Link to="/registro" className="text-primary font-medium hover:underline">
@@ -180,6 +180,84 @@ export default function Login() {
             </p>
           </CardFooter>
         </Card>
+      </div>
+
+      {/* Seção de recursos */}
+      <div className="w-full max-w-7xl mx-auto px-4 py-12">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Conversão Simples, Resultados Perfeitos</h2>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Nossa interface intuitiva torna a transformação de dados XML em planilhas Excel formatadas simples e eficiente.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Recurso 1 */}
+          <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <FileText className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Processamento XML</h3>
+            <p className="text-gray-600">
+              Analise estruturas XML complexas com extração precisa de elementos e atributos.
+            </p>
+          </div>
+          
+          {/* Recurso 2 */}
+          <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Formatação Excel</h3>
+            <p className="text-gray-600">
+              Gere planilhas Excel perfeitamente formatadas com layouts de colunas personalizados.
+            </p>
+          </div>
+          
+          {/* Recurso 3 */}
+          <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <ShoppingBag className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Arrastar e Soltar</h3>
+            <p className="text-gray-600">
+              Simplesmente arraste e solte seus arquivos XML para conversão instantânea.
+            </p>
+          </div>
+          
+          {/* Recurso 4 */}
+          <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Download className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Download com Um Clique</h3>
+            <p className="text-gray-600">
+              Baixe seus arquivos XLSX convertidos instantaneamente com um único clique.
+            </p>
+          </div>
+          
+          {/* Recurso 5 */}
+          <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Integridade de Dados</h3>
+            <p className="text-gray-600">
+              Mantenha a integridade completa dos dados durante todo o processo de conversão.
+            </p>
+          </div>
+          
+          {/* Recurso 6 */}
+          <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Settings className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Personalizável</h3>
+            <p className="text-gray-600">
+              Configure mapeamentos de colunas e formatação para atender às suas necessidades específicas.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
