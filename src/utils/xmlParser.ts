@@ -1,4 +1,3 @@
-
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -250,9 +249,12 @@ const extractItemPropertiesFromXML = (item: Element) => {
       }
     }
     
-    // Espessura
+    // Espessura - Certifique-se de que o valor seja extraído corretamente
     if (thicknessElement) {
-      thickness = thicknessElement.getAttribute("REFERENCE") || thickness;
+      const thicknessRef = thicknessElement.getAttribute("REFERENCE");
+      if (thicknessRef && thicknessRef !== "0") {
+        thickness = thicknessRef;
+      }
     }
 
     // Cor da Fita de Borda
