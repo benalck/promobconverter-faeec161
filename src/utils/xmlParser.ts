@@ -1,3 +1,4 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -96,16 +97,19 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     const repetition = mainModule.getAttribute("REPETITION") || "1";
     const observations = mainModule.getAttribute("OBSERVATIONS") || "";
     
+    // Se encontrarmos "Especial" na descrição, substituímos por "Sarafo Frontal Passante"
+    const processedDescription = description.includes("Especial") ? "Sarafo Frontal Passante" : description;
+    
     // Se for um tamponamento, processar diretamente
     if (group === "Tamponamentos") {
-      const componentProps = extractItemPropertiesFromReference(reference);
+      const componentProps = extractItemPropertiesFromXML(mainModule);
       
       csvContent += `<tr>
         <td>${rowCount}</td>
-        <td class="module-cell">${description}</td>
+        <td class="module-cell">${processedDescription}</td>
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${description}</td>
+        <td class="piece-desc">${uniqueId} - ${processedDescription}</td>
         <td class="piece-desc">${escapeHtml(observations)}</td>
         <td class="comp">${width}</td>
         <td class="larg">${depth}</td>
@@ -123,7 +127,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       return;
     }
     
-    const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
+    const moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
     
     // Calcular número total de linhas para este módulo
     const validComponents = components.filter(comp => {
@@ -139,19 +143,22 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     
     // Processar os componentes
     validComponents.forEach(component => {
-      const componentProps = extractItemProperties(component);
+      const componentProps = extractItemPropertiesFromXML(component);
       const componentWidth = component.getAttribute("WIDTH") || "";
       const componentDepth = component.getAttribute("DEPTH") || "";
       const componentDesc = component.getAttribute("DESCRIPTION") || "";
       const componentRepetition = component.getAttribute("REPETITION") || "1";
       const componentObs = component.getAttribute("OBSERVATIONS") || "";
       
+      // Substituir "Especial" por "Sarafo Frontal Passante" também nos componentes
+      const processedComponentDesc = componentDesc.includes("Especial") ? "Sarafo Frontal Passante" : componentDesc;
+      
       csvContent += `<tr>
         <td>${rowCount}</td>
         ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
         <td></td>
         <td>${family}</td>
-        <td class="piece-desc">${uniqueId} - ${componentDesc}</td>
+        <td class="piece-desc">${uniqueId} - ${processedComponentDesc}</td>
         <td class="piece-desc">${escapeHtml(componentObs)}</td>
         <td class="comp">${componentWidth}</td>
         <td class="larg">${componentDepth}</td>
@@ -173,7 +180,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
   return csvContent;
 };
 
-const extractItemProperties = (item: Element) => {
+const extractItemPropertiesFromXML = (item: Element) => {
   let material = "MDF";
   let color = "Branco";
   let thickness = "15";
@@ -198,7 +205,16 @@ const extractItemProperties = (item: Element) => {
     
     // Cor
     if (modelElement) {
-      color = modelElement.getAttribute("REFERENCE") || color;
+      const modelRef = modelElement.getAttribute("REFERENCE") || "";
+      if (modelRef) {
+        // Extrai a cor do formato "Fabricante.Linha.Cor"
+        const parts = modelRef.split(".");
+        if (parts.length >= 3) {
+          color = parts[parts.length - 1]; // Pega o último elemento
+        } else {
+          color = modelRef;
+        }
+      }
     }
     
     // Espessura
@@ -235,6 +251,30 @@ const extractItemProperties = (item: Element) => {
     if (edgeLeft4) {
       const value = edgeLeft4.getAttribute("REFERENCE");
       edgeLeft = value === "0" ? "" : "X";
+    }
+  }
+  
+  // Verificar também a referência direta para formatos específicos
+  const reference = item.getAttribute("REFERENCE") || "";
+  if (reference && reference.includes(".")) {
+    const refParts = reference.split(".");
+    if (refParts.length >= 5) {
+      // Formato como "1.0155.15.Guararapes.Areia.MDF"
+      const thicknessFromRef = refParts.find(part => part.match(/^\d+$/));
+      if (thicknessFromRef) {
+        thickness = thicknessFromRef;
+      }
+      
+      // Buscar material e cor
+      const materialIndex = refParts.indexOf("MDF");
+      if (materialIndex > 0 && materialIndex < refParts.length) {
+        material = "MDF";
+        
+        // Geralmente a cor está um índice antes do material
+        if (materialIndex > 0) {
+          color = refParts[materialIndex - 1];
+        }
+      }
     }
   }
   
@@ -346,3 +386,4 @@ const getDefaultExampleRow = (): string => {
       <td class="material">15</td>
     </tr>`;
 };
+
