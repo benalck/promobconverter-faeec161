@@ -45,6 +45,35 @@ const generateTableHeader = (): string => {
   </tr>`;
 };
 
+/**
+ * Verifica se o grupo deve ser excluído
+ */
+const shouldExcludeGroup = (group: string, description: string, family: string): boolean => {
+  // Grupos a serem excluídos
+  const excludedGroups = [
+    "acessório", "acessorios", "acessorio", "acess", 
+    "ferragem", "ferragens", 
+    "processo", "processos", "fabricação", "fabricacao"
+  ];
+  
+  const lowercaseGroup = group.toLowerCase();
+  const lowercaseFamily = family.toLowerCase();
+  const lowercaseDescription = description.toLowerCase();
+  
+  // Verifica se o grupo, família ou descrição contém termos excluídos
+  for (const term of excludedGroups) {
+    if (
+      lowercaseGroup.includes(term) || 
+      lowercaseFamily.includes(term) || 
+      lowercaseDescription.includes(term)
+    ) {
+      return true;
+    }
+  }
+  
+  return false;
+};
+
 const processItemElements = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
   const moduleMap = new Map();
@@ -54,7 +83,15 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     const component = item.getAttribute("COMPONENT") || "N";
     const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
     const group = item.getAttribute("GROUP") || "";
-    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group === "Tamponamentos";
+    const description = item.getAttribute("DESCRIPTION") || "";
+    const family = item.getAttribute("FAMILY") || "";
+    
+    // Excluir grupos específicos
+    if (shouldExcludeGroup(group, description, family)) {
+      return false;
+    }
+    
+    return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || group !== "";
   });
   
   mainModules.forEach(mainModule => {
@@ -67,12 +104,20 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       components: []
     });
     
-    // Se for um tamponamento, não precisa buscar componentes
+    // Coletar componentes apenas se não for um tamponamento
     if (group === "Tamponamentos") return;
     
     Array.from(itemElements).forEach(item => {
       const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
       const component = item.getAttribute("COMPONENT") || "Y";
+      const itemGroup = item.getAttribute("GROUP") || "";
+      const description = item.getAttribute("DESCRIPTION") || "";
+      const family = item.getAttribute("FAMILY") || "";
+      
+      // Excluir componentes de grupos específicos
+      if (shouldExcludeGroup(itemGroup, description, family)) {
+        return;
+      }
       
       if (component === "Y" && uniqueParentId === uniqueId) {
         const moduleInfo = moduleMap.get(uniqueId);
@@ -126,13 +171,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
     const moduleDescription = `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm`;
     
     // Calcular número total de linhas para este módulo
-    const validComponents = components.filter(comp => {
-      const desc = comp.getAttribute("DESCRIPTION") || "";
-      return !desc.toLowerCase().includes("armário") && 
-             !desc.toLowerCase().includes("caixa") &&
-             !desc.toLowerCase().includes("gaveteiro") &&
-             !desc.toLowerCase().includes("dispenseiro");
-    });
+    const validComponents = components;
     
     const totalRows = validComponents.length;
     let isFirstRow = true;
@@ -168,6 +207,32 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       rowCount++;
       isFirstRow = false;
     });
+    
+    // Se não houver componentes válidos, mostrar o módulo principal
+    if (validComponents.length === 0) {
+      const componentProps = extractItemProperties(mainModule);
+      
+      csvContent += `<tr>
+        <td>${rowCount}</td>
+        <td class="module-cell">${moduleDescription}</td>
+        <td></td>
+        <td>${family}</td>
+        <td class="piece-desc">${uniqueId} - ${description}</td>
+        <td class="piece-desc">${escapeHtml(observations)}</td>
+        <td class="comp">${width}</td>
+        <td class="larg">${depth}</td>
+        <td>${repetition}</td>
+        <td class="borda-inf">${componentProps.edgeBottom}</td>
+        <td class="borda-sup">${componentProps.edgeTop}</td>
+        <td class="borda-dir">${componentProps.edgeRight}</td>
+        <td class="borda-esq">${componentProps.edgeLeft}</td>
+        <td class="edge-color">${componentProps.edgeColor}</td>
+        <td class="material">${componentProps.material} ${componentProps.color}</td>
+        <td class="material">${componentProps.thickness}</td>
+      </tr>`;
+      
+      rowCount++;
+    }
   });
   
   return csvContent;

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -27,6 +28,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [outputFileName, setOutputFileName] = useState("modelos_converted");
   const [isConverting, setIsConverting] = useState(false);
+  const [conversionProgress, setConversionProgress] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -53,12 +55,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
 
     setIsConverting(true);
+    setConversionProgress("Lendo arquivo XML...");
 
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
+        setConversionProgress("Analisando estrutura XML...");
         const xmlContent = e.target?.result as string;
+        
+        setConversionProgress("Processando e convertendo dados...");
         const csvString = convertXMLToCSV(xmlContent);
+        
+        setConversionProgress("Gerando arquivo Excel...");
         const htmlPrefix = generateHtmlPrefix();
         const htmlSuffix = generateHtmlSuffix();
 
@@ -66,6 +74,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           type: "application/vnd.ms-excel;charset=utf-8;",
         });
 
+        setConversionProgress("Preparando download...");
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = `${outputFileName}.xls`;
@@ -74,14 +83,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         document.body.removeChild(link);
 
         setIsConverting(false);
+        setConversionProgress("");
         toast({
           title: "Conversão concluída",
-          description: "Seu arquivo foi convertido com sucesso.",
+          description: "Seu arquivo foi convertido com sucesso, incluindo todos os grupos válidos.",
           variant: "default",
         });
       } catch (error) {
         console.error("Error converting file:", error);
         setIsConverting(false);
+        setConversionProgress("");
         toast({
           title: "Erro na conversão",
           description: "Ocorreu um erro ao converter o arquivo XML.",
@@ -92,6 +103,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
     reader.onerror = () => {
       setIsConverting(false);
+      setConversionProgress("");
       toast({
         title: "Erro na leitura",
         description: "Não foi possível ler o arquivo XML.",
@@ -155,7 +167,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               {isConverting ? (
                 <>
                   <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
-                  <span>Convertendo...</span>
+                  <span>{conversionProgress || "Convertendo..."}</span>
                 </>
               ) : (
                 <>
