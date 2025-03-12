@@ -1,3 +1,4 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -78,6 +79,12 @@ const shouldExcludeGroup = (group: string, description: string, family: string):
  * Gera a descrição do módulo no formato solicitado
  */
 const createModuleDescription = (item: Element): string => {
+  // Para tamponamentos, retornar apenas "Tamponamento"
+  const group = item.getAttribute("GROUP") || "";
+  if (group === "Tamponamentos") {
+    return "Tamponamento";
+  }
+  
   const uniqueId = item.getAttribute("UNIQUEID") || "";
   const description = item.getAttribute("DESCRIPTION") || "";
   const width = item.getAttribute("WIDTH") || "";
