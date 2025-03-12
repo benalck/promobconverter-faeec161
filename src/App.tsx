@@ -1,125 +1,72 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React, { ReactNode } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import Admin from "@/pages/Admin";
 import DehashLogin from "@/pages/DehashLogin";
 import DehashAdmin from "@/pages/DehashAdmin";
-import ConverterForm from "@/components/ConverterForm";
-import Navbar from "@/components/Navbar";
-import BannedMessage from "@/components/BannedMessage";
-import BanCheck from "@/components/BanCheck";
+import NotFound from "@/pages/NotFound";
+import Index from "@/pages/Index";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import "./App.css";
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user, isInitialized } = useAuth();
-  
-  if (!isInitialized) {
-    return <div>Carregando...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user?.isBanned) {
-    return <BannedMessage />;
-  }
-  
-  return (
-    <BanCheck>
-      <Navbar />
-      {children}
-    </BanCheck>
-  );
+interface ProtectedRouteProps {
+  children: ReactNode;
 }
 
-function DehashAdminRoute({ children }: { children: React.ReactNode }) {
-  const adminToken = localStorage.getItem("adminToken");
-  
-  if (!adminToken) {
-    return <Navigate to="/dehash-login" replace />;
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
-  
+
+  if (!user) {
+    window.location.href = '/login';
+    return null;
+  }
+
   return <>{children}</>;
+};
+
+interface AdminRouteProps {
+    children: ReactNode;
 }
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user, isInitialized } = useAuth();
-  
-  if (!isInitialized) {
-    return <div>Carregando...</div>;
-  }
+const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+    const { user, loading } = useAuth();
 
-  if (isAuthenticated && !user?.isBanned) {
-    return <Navigate to="/converter" replace />;
-  }
-  
-  return <>{children}</>;
-}
+    if (loading) {
+        return <div>Loading...</div>;
+    }
 
-function AppRoutes() {
-  const { isInitialized } = useAuth();
+    if (!user?.isAdmin) {
+        window.location.href = '/login';
+        return null;
+    }
 
-  if (!isInitialized) {
-    return <div>Carregando...</div>;
-  }
-
-  return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/registro"
-        element={
-          <PublicRoute>
-            <Register />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/converter"
-        element={
-          <PrivateRoute>
-            <div className="container mx-auto py-8">
-              <ConverterForm />
-            </div>
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/dehash-login"
-        element={<DehashLogin />}
-      />
-      <Route
-        path="/dehash-admin"
-        element={
-          <DehashAdminRoute>
-            <DehashAdmin />
-          </DehashAdminRoute>
-        }
-      />
-      <Route
-        path="/"
-        element={<Navigate to="/converter" replace />}
-      />
-    </Routes>
-  );
-}
+    return <>{children}</>;
+};
 
 function App() {
+  const { auth } = useAuth();
+
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+          <Route path="/dehash-login" element={<DehashLogin />} />
+          <Route path="/dehash-admin" element={<ProtectedRoute><DehashAdmin /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
         <Toaster />
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
