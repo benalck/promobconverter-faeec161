@@ -63,14 +63,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       return;
     }
 
-    // Como removemos a integração com o Stripe, vamos apenas mostrar uma mensagem
-    // quando o usuário ficar sem créditos, ao invés de redirecioná-lo
     if (user.credits <= 0) {
       toast({
         title: "Créditos insuficientes",
-        description: "Você não possui créditos suficientes para realizar esta conversão.",
+        description: "Você não possui créditos suficientes para realizar esta conversão. Adquira mais créditos no seu plano.",
         variant: "destructive",
       });
+      navigate("/plans");
       return;
     }
 
@@ -191,6 +190,17 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <div className="text-center text-sm bg-primary/10 py-2 px-4 rounded-md animate-fade-in">
               <p>Você possui <span className="font-bold">{user.credits}</span> créditos disponíveis</p>
               <p>Cada conversão utiliza 1 crédito</p>
+              {user.credits <= 2 && (
+                <p className="mt-1 text-primary/80">
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto text-primary underline"
+                    onClick={() => navigate("/plans")}
+                  >
+                    Adquira mais créditos
+                  </Button>
+                </p>
+              )}
             </div>
           )}
 
