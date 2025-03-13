@@ -1,5 +1,5 @@
 
-import React, { useEffect, ErrorBoundary } from "react";
+import React, { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import Navbar from "./Navbar";
 
