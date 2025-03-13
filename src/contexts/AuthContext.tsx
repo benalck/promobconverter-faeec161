@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -131,11 +130,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('Erro ao buscar metadados do usuário:', error);
           }
           
+          // Fix here: Ensure role is either 'admin' or 'user'
+          if (profile.role === 'admin') {
+            userRole = 'admin';
+          } else {
+            userRole = 'user';
+          }
+          
           formattedUsers.push({
             id: profile.id,
             name: profile.name,
             email: userEmail,
-            role: userRole,
+            role: userRole, // Use the properly typed userRole
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
             isBanned: profile.is_banned,
@@ -389,7 +395,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (data.name !== undefined) profileData.name = data.name;
       if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
-      if (data.role !== undefined) profileData.role = data.role;
+      
+      // Fix here: Ensure role is properly typed when updating
+      if (data.role !== undefined) {
+        if (data.role === 'admin' || data.role === 'user') {
+          profileData.role = data.role;
+        } else {
+          // Default to 'user' if an invalid role is provided
+          profileData.role = 'user';
+          console.warn('Invalid role provided, defaulting to "user"');
+        }
+      }
+      
       if (data.credits !== undefined) profileData.credits = data.credits;
       if (data.activePlan !== undefined) profileData.active_plan = data.activePlan?.id || null;
       if (data.planExpiryDate !== undefined) profileData.plan_expiry_date = data.planExpiryDate;
