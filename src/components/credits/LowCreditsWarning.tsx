@@ -6,6 +6,9 @@ interface LowCreditsWarningProps {
   onBuyCredits: () => void;
 }
 
+/**
+ * Componente para exibir aviso de que o usuário está com poucos créditos
+ */
 const LowCreditsWarning: React.FC<LowCreditsWarningProps> = React.memo(({ onBuyCredits }) => (
   <div className="absolute -bottom-20 right-0 flex flex-col gap-2 bg-amber-50 text-amber-700 border border-amber-200 text-xs rounded-md px-3 py-2 whitespace-nowrap">
     <p>Seus créditos estão acabando!</p>

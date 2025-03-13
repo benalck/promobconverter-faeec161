@@ -4,11 +4,22 @@ import { useTimeout } from './useTimeout';
 import { User } from '@/contexts/auth/types';
 
 /**
- * Hook personalizado para gerenciar as mensagens de créditos do usuário
+ * Interface para o retorno do hook useUserCreditsMessages
  */
-export function useUserCreditsMessages(user: User | null) {
-  const [showNewCreditsMessage, setShowNewCreditsMessage] = useState(false);
-  const [showLowCreditsWarning, setShowLowCreditsWarning] = useState(false);
+export interface UseUserCreditsMessagesReturn {
+  showNewCreditsMessage: boolean;
+  showLowCreditsWarning: boolean;
+  hasNoCredits: boolean;
+}
+
+/**
+ * Hook personalizado para gerenciar as mensagens de créditos do usuário
+ * @param user - Objeto de usuário
+ * @returns {UseUserCreditsMessagesReturn} Estado das mensagens de créditos
+ */
+export function useUserCreditsMessages(user: User | null): UseUserCreditsMessagesReturn {
+  const [showNewCreditsMessage, setShowNewCreditsMessage] = useState<boolean>(false);
+  const [showLowCreditsWarning, setShowLowCreditsWarning] = useState<boolean>(false);
   
   // Usando o hook customizado useTimeout para os timers
   const newCreditsTimeout = useTimeout(

@@ -6,6 +6,9 @@ interface NoCreditsWarningProps {
   onBuyCredits: () => void;
 }
 
+/**
+ * Componente para exibir aviso de que o usuário não tem créditos
+ */
 const NoCreditsWarning: React.FC<NoCreditsWarningProps> = React.memo(({ onBuyCredits }) => (
   <div className="absolute -bottom-20 right-0 flex flex-col gap-2 bg-red-50 text-red-700 border border-red-200 text-xs rounded-md px-3 py-2 whitespace-nowrap">
     <p>Você não tem mais créditos!</p>

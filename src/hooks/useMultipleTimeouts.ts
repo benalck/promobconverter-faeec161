@@ -2,14 +2,27 @@
 import { useRef, useEffect, useCallback } from 'react';
 
 /**
- * Hook para gerenciar múltiplos timeouts simultaneamente
+ * Interface para o retorno do hook useMultipleTimeouts
  */
-export function useMultipleTimeouts() {
+export interface UseMultipleTimeoutsReturn {
+  setTimeout: (id: string, callback: () => void, delay: number) => string;
+  clearTimeout: (id: string) => boolean;
+  clearAll: () => void;
+  isActive: (id: string) => boolean;
+  getActiveTimeouts: () => string[];
+  count: number;
+}
+
+/**
+ * Hook para gerenciar múltiplos timeouts simultaneamente
+ * @returns {UseMultipleTimeoutsReturn} Objeto com métodos para gerenciar timeouts
+ */
+export function useMultipleTimeouts(): UseMultipleTimeoutsReturn {
   // Usando Map com string como chave e NodeJS.Timeout como valor
   const timeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   // Configura um novo timeout com um ID único
-  const setTimeout = useCallback((id: string, callback: () => void, delay: number) => {
+  const setTimeout = useCallback((id: string, callback: () => void, delay: number): string => {
     // Limpa qualquer timeout existente com o mesmo ID
     if (timeouts.current.has(id)) {
       clearTimeout(timeouts.current.get(id)!);
@@ -30,7 +43,7 @@ export function useMultipleTimeouts() {
   }, []);
   
   // Limpa um timeout específico por ID
-  const clearTimeout = useCallback((id: string) => {
+  const clearTimeout = useCallback((id: string): boolean => {
     if (timeouts.current.has(id)) {
       global.clearTimeout(timeouts.current.get(id)!);
       timeouts.current.delete(id);
@@ -40,7 +53,7 @@ export function useMultipleTimeouts() {
   }, []);
   
   // Limpa todos os timeouts ativos
-  const clearAll = useCallback(() => {
+  const clearAll = useCallback((): void => {
     timeouts.current.forEach((timeoutId) => {
       global.clearTimeout(timeoutId);
     });
@@ -48,12 +61,12 @@ export function useMultipleTimeouts() {
   }, []);
   
   // Verifica se um timeout com determinado ID está ativo
-  const isActive = useCallback((id: string) => {
+  const isActive = useCallback((id: string): boolean => {
     return timeouts.current.has(id);
   }, []);
   
   // Obtém uma lista de todos os IDs de timeout ativos
-  const getActiveTimeouts = useCallback(() => {
+  const getActiveTimeouts = useCallback((): string[] => {
     return Array.from(timeouts.current.keys());
   }, []);
   

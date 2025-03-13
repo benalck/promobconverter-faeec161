@@ -11,6 +11,9 @@ import WelcomeMessage from "./credits/WelcomeMessage";
 import LowCreditsWarning from "./credits/LowCreditsWarning";
 import NoCreditsWarning from "./credits/NoCreditsWarning";
 
+/**
+ * Componente para exibir os créditos do usuário e mensagens relacionadas
+ */
 const UserCredits: React.FC = React.memo(() => {
   const { user } = useAuth();
   const { toast } = useToast();
