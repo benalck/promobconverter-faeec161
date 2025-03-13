@@ -11,7 +11,7 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Verificar se existem perfis no sistema
+// Verificar se existem perfis no sistema de forma simplificada
 export const setupProfiles = async () => {
   try {
     // Verificar se existem perfis

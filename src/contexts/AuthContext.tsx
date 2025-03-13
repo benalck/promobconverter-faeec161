@@ -50,12 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Como o perfil pode não ter o campo role ainda, definimos um valor padrão
       let userRole: 'admin' | 'user' = 'user';
       
-      // Se o perfil tiver um campo adicional 'role', tentamos usá-lo
-      if (profile && typeof profile === 'object') {
-        // @ts-ignore - Ignoramos o erro de tipagem aqui, pois estamos verificando em runtime
-        if (profile.role === 'admin') {
-          userRole = 'admin';
-        }
+      // Verificar se há um role nos metadados do usuário
+      if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
+        userRole = 'admin';
       }
 
       return {
@@ -89,26 +86,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
+      if (!supabaseUsers || supabaseUsers.length === 0) {
+        setUsers([]);
+        return;
+      }
+
       // Converter para o formato interno da aplicação
-      const formattedUsers = supabaseUsers.map(profile => {
-        // Determinar role (admin ou user)
-        let userRole: 'admin' | 'user' = 'user';
-        
-        // @ts-ignore - Verificamos em runtime
-        if (profile.role === 'admin') {
-          userRole = 'admin';
+      const formattedUsers: User[] = [];
+      
+      for (const profile of supabaseUsers) {
+        try {
+          // Tentar buscar os metadados do usuário para verificar a role
+          const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
+          
+          let userRole: 'admin' | 'user' = 'user';
+          if (userData?.user?.user_metadata?.role === 'admin') {
+            userRole = 'admin';
+          }
+          
+          formattedUsers.push({
+            id: profile.id,
+            name: profile.name,
+            email: null, // Não temos o email no perfil
+            role: userRole,
+            createdAt: profile.created_at,
+            lastLogin: profile.last_login || undefined,
+            isBanned: profile.is_banned
+          });
+        } catch (error) {
+          // Se não conseguir buscar os metadados, assume 'user'
+          formattedUsers.push({
+            id: profile.id,
+            name: profile.name,
+            email: null,
+            role: 'user',
+            createdAt: profile.created_at,
+            lastLogin: profile.last_login || undefined,
+            isBanned: profile.is_banned
+          });
         }
-        
-        return {
-          id: profile.id,
-          name: profile.name,
-          email: null, // Não temos o email no perfil
-          role: userRole,
-          createdAt: profile.created_at,
-          lastLogin: profile.last_login || undefined,
-          isBanned: profile.is_banned
-        };
-      });
+      }
 
       setUsers(formattedUsers);
     } catch (error) {
@@ -255,17 +272,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (profileError) throw profileError;
 
-        // Atualizar role usando RPC ou SQL diretamente
-        // Como não podemos usar o campo role diretamente, vamos usar metadados
+        // Armazenar role nos metadados do usuário
         try {
-          // Atualizar metadados do usuário para incluir role
           await supabase.auth.updateUser({
             data: { 
               role: userRole 
             }
           });
           
-          // Também vamos registrar em console para debug
           console.log(`Usuário registrado com role: ${userRole}`);
         } catch (roleError) {
           console.error('Erro ao definir role nos metadados:', roleError);
@@ -313,24 +327,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = (id: string, data: Partial<User>) => {
     try {
-      // Atualizar no Supabase - apenas os campos que existem no schema
-      const profileData: any = {
-        name: data.name,
-        is_banned: data.isBanned
-      };
+      // Preparar dados que existem no schema de profiles
+      const profileData: { 
+        name?: string; 
+        is_banned?: boolean;
+      } = {};
       
-      supabase
-        .from('profiles')
-        .update(profileData)
-        .eq('id', id)
-        .then(() => syncUsers());
+      if (data.name !== undefined) profileData.name = data.name;
+      if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
+      
+      // Atualizar dados no perfil
+      if (Object.keys(profileData).length > 0) {
+        supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', id)
+          .then(() => syncUsers());
+      }
         
-      // Se estamos atualizando a role, precisamos atualizar os metadados do usuário
+      // Se estamos atualizando a role, precisamos atualizar os metadados
       if (data.role) {
         try {
-          // Atualizar metadados do usuário com a nova role
-          // Isso precisa ser feito pelo usuário autenticado com permissões
           console.log(`Tentando atualizar role para: ${data.role}`);
+          // Em um cenário real, seria necessário chamar uma função de admin
+          // ou um método específico para atualizar os metadados do usuário
         } catch (e) {
           console.error('Erro ao atualizar role:', e);
         }
