@@ -4,21 +4,39 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import Stripe from "https://esm.sh/stripe@12.18.0";
 
 // Inicializa o cliente Stripe com a chave secreta
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+if (!stripeKey) {
+  console.error("STRIPE_SECRET_KEY não está configurada");
+}
+
+const stripe = new Stripe(stripeKey || "", {
   apiVersion: "2023-10-16",
 });
 
 // Inicializa o cliente Supabase com a URL e a chave de serviço
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = Deno.env.get("SUPABASE_URL");
+const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+if (!supabaseUrl) {
+  console.error("SUPABASE_URL não está configurada");
+}
+
+if (!supabaseKey) {
+  console.error("SUPABASE_SERVICE_ROLE_KEY não está configurada");
+}
+
+const supabase = createClient(supabaseUrl || "", supabaseKey || "");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-console.log("Stripe checkout function initialized");
+console.log("Stripe checkout function initialized with keys:", {
+  stripeKeyExists: !!stripeKey,
+  supabaseUrlExists: !!supabaseUrl,
+  supabaseKeyExists: !!supabaseKey,
+});
 
 serve(async (req) => {
   // Trata requisições OPTIONS (preflight CORS)
@@ -30,6 +48,29 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar se as chaves de API estão definidas
+    if (!stripeKey || !supabaseUrl || !supabaseKey) {
+      console.error("API keys missing:", {
+        stripeKeyExists: !!stripeKey,
+        supabaseUrlExists: !!supabaseUrl,
+        supabaseKeyExists: !!supabaseKey,
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: "Configuração da API incompleta", 
+          details: {
+            stripeKeyExists: !!stripeKey,
+            supabaseUrlExists: !!supabaseUrl,
+            supabaseKeyExists: !!supabaseKey,
+          }
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Para webhooks do Stripe
     if (req.method === "POST" && req.url.includes("/webhook")) {
       const signature = req.headers.get("stripe-signature");
@@ -230,7 +271,7 @@ serve(async (req) => {
       } catch (error) {
         console.error("Error creating checkout session:", error);
         return new Response(
-          JSON.stringify({ error: "Failed to create checkout session" }),
+          JSON.stringify({ error: "Failed to create checkout session", details: error.message }),
           {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -250,7 +291,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Unhandled error:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ error: "Internal server error", details: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
