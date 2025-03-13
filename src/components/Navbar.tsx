@@ -26,19 +26,23 @@ export default function Navbar() {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
-            <UserCredits />
-            <span className="text-sm text-gray-600">
-              Olá, {user?.name}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="flex items-center gap-1"
-            >
-              <LogOut className="h-4 w-4" />
-              Sair
-            </Button>
+            {user && <UserCredits />}
+            {user && (
+              <span className="text-sm text-gray-600">
+                Olá, {user.name}
+              </span>
+            )}
+            {user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center gap-1"
+              >
+                <LogOut className="h-4 w-4" />
+                Sair
+              </Button>
+            )}
           </div>
         </div>
       </div>
