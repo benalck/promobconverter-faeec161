@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -16,15 +17,21 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Coins } from "lucide-react";
 
 export default function Admin() {
-  const { users, deleteUser, isAdmin, user: currentUser } = useAuth();
+  const { users, deleteUser, isAdmin, user: currentUser, addCredits } = useAuth();
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAddCreditsDialog, setShowAddCreditsDialog] = useState(false);
+  const [creditsToAdd, setCreditsToAdd] = useState<number>(1);
 
   if (!isAdmin) {
     return (
@@ -58,6 +65,26 @@ export default function Admin() {
     }
   };
 
+  const handleAddCredits = async () => {
+    if (!selectedUser || creditsToAdd <= 0) return;
+    
+    try {
+      await addCredits(selectedUser, creditsToAdd);
+      toast({
+        title: "Créditos adicionados",
+        description: `${creditsToAdd} créditos foram adicionados com sucesso.`,
+      });
+      setShowAddCreditsDialog(false);
+      setCreditsToAdd(1);
+    } catch (error) {
+      toast({
+        title: "Erro ao adicionar créditos",
+        description: "Não foi possível adicionar créditos para este usuário.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", {
       locale: ptBR,
@@ -83,6 +110,7 @@ export default function Admin() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Créditos</TableHead>
                 <TableHead>Criado em</TableHead>
                 <TableHead>Último acesso</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -104,23 +132,43 @@ export default function Admin() {
                       {user.role === "admin" ? "Administrador" : "Usuário"}
                     </span>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Coins className="h-4 w-4 text-amber-500" />
+                      <span>{user.credits || 0}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>{formatDate(user.createdAt)}</TableCell>
                   <TableCell>
                     {user.lastLogin ? formatDate(user.lastLogin) : "Nunca"}
                   </TableCell>
                   <TableCell className="text-right">
-                    {user.id !== currentUser?.id && (
+                    <div className="flex justify-end gap-2">
                       <Button
-                        variant="destructive"
+                        variant="outline"
                         size="sm"
                         onClick={() => {
                           setSelectedUser(user.id);
-                          setShowDeleteDialog(true);
+                          setShowAddCreditsDialog(true);
                         }}
                       >
-                        Excluir
+                        <Coins className="h-4 w-4 mr-1" />
+                        Adicionar Créditos
                       </Button>
-                    )}
+                      
+                      {user.id !== currentUser?.id && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user.id);
+                            setShowDeleteDialog(true);
+                          }}
+                        >
+                          Excluir
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -154,6 +202,44 @@ export default function Admin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showAddCreditsDialog} onOpenChange={setShowAddCreditsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Créditos</DialogTitle>
+            <DialogDescription>
+              Adicione créditos para este usuário.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-2">
+              <Label htmlFor="credits">Quantidade de créditos</Label>
+              <Input
+                id="credits"
+                type="number"
+                min="1"
+                value={creditsToAdd}
+                onChange={(e) => setCreditsToAdd(parseInt(e.target.value) || 0)}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAddCreditsDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddCredits}
+              disabled={creditsToAdd <= 0}
+            >
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-} 
+}

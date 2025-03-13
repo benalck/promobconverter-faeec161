@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -12,6 +11,7 @@ interface User {
   createdAt: string;
   lastLogin?: string;
   isBanned?: boolean;
+  credits?: number;
 }
 
 interface AuthContextType {
@@ -26,6 +26,9 @@ interface AuthContextType {
   deleteUser: (id: string) => void;
   updateUser: (id: string, data: Partial<User>) => void;
   getAllUsers: () => User[];
+  addCredits: (userId: string, amount: number) => Promise<void>;
+  useCredits: (userId: string, amount: number) => Promise<boolean>;
+  getUserCredits: (userId: string) => number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,21 +39,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
 
-  // Converte um usuário do Supabase para o formato interno do app
   const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<User> => {
     try {
-      // Buscar profile no Supabase
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
         .single();
 
-      // Determinar a role (admin ou user)
-      // Como o perfil pode não ter o campo role ainda, definimos um valor padrão
       let userRole: 'admin' | 'user' = 'user';
       
-      // Verificar se há um role nos metadados do usuário
       if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
         userRole = 'admin';
       }
@@ -62,7 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: userRole,
         createdAt: supabaseUser.created_at || new Date().toISOString(),
         lastLogin: supabaseUser.last_sign_in_at,
-        isBanned: profile?.is_banned || false
+        isBanned: profile?.is_banned || false,
+        credits: profile?.credits || 0
       };
     } catch (error) {
       console.error('Erro ao converter usuário do Supabase:', error);
@@ -73,11 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: 'user',
         createdAt: supabaseUser.created_at || new Date().toISOString(),
         lastLogin: supabaseUser.last_sign_in_at,
+        credits: 0
       };
     }
   };
 
-  // Função para sincronizar usuários locais com dados do Supabase
   const syncUsers = async () => {
     try {
       const { data: supabaseUsers, error } = await supabase
@@ -91,17 +90,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Converter para o formato interno da aplicação
       const formattedUsers: User[] = [];
       
       for (const profile of supabaseUsers) {
         try {
-          // Buscar informações do usuário dos metadados
           let userEmail = null;
           let userRole: 'admin' | 'user' = 'user';
           
           try {
-            // Extrair role dos metadados (se disponível)
             const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
             if (userData?.user?.user_metadata?.role === 'admin') {
               userRole = 'admin';
@@ -109,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             userEmail = userData?.user?.email || null;
           } catch (error) {
             console.log('Erro ao buscar metadados do usuário:', error);
-            // Continua com role padrão 'user'
+            userRole = 'user';
           }
           
           formattedUsers.push({
@@ -119,10 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: userRole,
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
-            isBanned: profile.is_banned
+            isBanned: profile.is_banned,
+            credits: profile.credits || 0
           });
         } catch (error) {
-          // Se não conseguir buscar os metadados, assume 'user'
           formattedUsers.push({
             id: profile.id,
             name: profile.name,
@@ -130,7 +126,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: 'user',
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
-            isBanned: profile.is_banned
+            isBanned: profile.is_banned,
+            credits: 0
           });
         }
       }
@@ -144,14 +141,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initialize = async () => {
       try {
-        // Verificar se há sessão ativa
         const { data: session } = await supabase.auth.getSession();
         
         if (session.session?.user) {
           const currentUser = await convertSupabaseUser(session.session.user);
           setUser(currentUser);
           
-          // Verificar se o usuário está banido
           if (currentUser.isBanned) {
             toast({
               title: "Conta suspensa",
@@ -163,7 +158,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Sincronizar lista de usuários
         await syncUsers();
       } catch (error) {
         console.error('Erro na inicialização do AuthContext:', error);
@@ -174,7 +168,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initialize();
 
-    // Configurar listener para mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
       
@@ -204,7 +197,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.user) {
         const currentUser = await convertSupabaseUser(data.user);
         
-        // Verificar banimento
         if (currentUser.isBanned) {
           toast({
             title: "Conta suspensa",
@@ -215,7 +207,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
         }
 
-        // Atualizar último login
         await supabase
           .from('profiles')
           .update({ last_login: new Date().toISOString() })
@@ -242,7 +233,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      // Criar usuário no Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -256,16 +246,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
-        // Verificar quantos usuários existem para determinar se é admin
         const { count, error: countError } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true });
           
-        // O primeiro usuário registrado será admin
         const isFirstUser = count === 0 || countError;
         const userRole = isFirstUser ? 'admin' : 'user';
 
-        // Criar perfil no Supabase
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
@@ -280,7 +267,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (profileError) throw profileError;
 
-        // Armazenar role nos metadados do usuário
         try {
           await supabase.auth.updateUser({
             data: { 
@@ -294,7 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const newUser = await convertSupabaseUser(data.user);
-        newUser.role = userRole; // Garantir que a role esteja correta
+        newUser.role = userRole;
         setUser(newUser);
         await syncUsers();
       }
@@ -318,7 +304,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     try {
-      // Marcar como banido no Supabase
       supabase
         .from('profiles')
         .update({ is_banned: true })
@@ -335,16 +320,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = (id: string, data: Partial<User>) => {
     try {
-      // Preparar dados que existem no schema de profiles
       const profileData: { 
         name?: string; 
         is_banned?: boolean;
+        credits?: number;
       } = {};
       
       if (data.name !== undefined) profileData.name = data.name;
       if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
+      if (data.credits !== undefined) profileData.credits = data.credits;
       
-      // Atualizar dados no perfil
       if (Object.keys(profileData).length > 0) {
         supabase
           .from('profiles')
@@ -353,11 +338,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .then(() => syncUsers());
       }
         
-      // Se estamos atualizando a role, precisamos atualizar os metadados
       if (data.role) {
         try {
           console.log(`Tentando atualizar role para: ${data.role}`);
-          // Tentativa de atualizar os metadados
           const currentUser = supabase.auth.getUser();
           if (currentUser) {
             supabase.auth.updateUser({
@@ -374,11 +357,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
       setUsers(newUsers);
 
-      // Se o usuário atualizado for o atual e estiver sendo banido, fazer logout
       if (user?.id === id && data.isBanned) {
         logout();
       } else if (user?.id === id) {
-        // Se não estiver sendo banido, atualizar o estado do usuário
         const updatedUser = { ...user, ...data };
         setUser(updatedUser);
       }
@@ -390,6 +371,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getAllUsers = () => {
     return users;
+  };
+
+  const addCredits = async (userId: string, amount: number) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', userId)
+        .single();
+      
+      const currentCredits = profile?.credits || 0;
+      const newCredits = currentCredits + amount;
+      
+      await supabase
+        .from('profiles')
+        .update({ credits: newCredits })
+        .eq('id', userId);
+        
+      if (user && user.id === userId) {
+        setUser({
+          ...user,
+          credits: newCredits
+        });
+      }
+      
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, credits: newCredits } : u
+      ));
+      
+    } catch (error) {
+      console.error('Erro ao adicionar créditos:', error);
+      throw new Error('Falha ao adicionar créditos');
+    }
+  };
+  
+  const useCredits = async (userId: string, amount: number): Promise<boolean> => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', userId)
+        .single();
+      
+      const currentCredits = profile?.credits || 0;
+      
+      if (currentCredits < amount) {
+        return false;
+      }
+      
+      const newCredits = currentCredits - amount;
+      
+      await supabase
+        .from('profiles')
+        .update({ credits: newCredits })
+        .eq('id', userId);
+        
+      if (user && user.id === userId) {
+        setUser({
+          ...user,
+          credits: newCredits
+        });
+      }
+      
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, credits: newCredits } : u
+      ));
+      
+      return true;
+    } catch (error) {
+      console.error('Erro ao usar créditos:', error);
+      throw new Error('Falha ao usar créditos');
+    }
+  };
+  
+  const getUserCredits = (userId: string): number => {
+    const userObj = users.find(u => u.id === userId);
+    return userObj?.credits || 0;
   };
 
   const logout = async () => {
@@ -410,7 +468,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         deleteUser,
         updateUser,
-        getAllUsers
+        getAllUsers,
+        addCredits,
+        useCredits,
+        getUserCredits
       }}
     >
       {isInitialized ? children : null}

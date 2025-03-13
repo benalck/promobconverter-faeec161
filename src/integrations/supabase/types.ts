@@ -42,29 +42,120 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      credit_purchases: {
+        Row: {
+          amount: number
+          credits: number
+          expiry_date: string
+          id: string
+          plan_id: string
+          purchase_date: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          credits: number
+          expiry_date: string
+          id?: string
+          plan_id: string
+          purchase_date?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          credits?: number
+          expiry_date?: string
+          id?: string
+          plan_id?: string
+          purchase_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_purchases_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
         Row: {
           created_at: string
+          credits: number
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          description?: string | null
+          duration_days: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price: number
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          active_plan: string | null
+          created_at: string
+          credits: number | null
           id: string
           is_banned: boolean | null
           last_login: string | null
           name: string | null
+          plan_expiry_date: string | null
+          role: string | null
         }
         Insert: {
+          active_plan?: string | null
           created_at?: string
+          credits?: number | null
           id: string
           is_banned?: boolean | null
           last_login?: string | null
           name?: string | null
+          plan_expiry_date?: string | null
+          role?: string | null
         }
         Update: {
+          active_plan?: string | null
           created_at?: string
+          credits?: number | null
           id?: string
           is_banned?: boolean | null
           last_login?: string | null
           name?: string | null
+          plan_expiry_date?: string | null
+          role?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_active_plan_fkey"
+            columns: ["active_plan"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {
