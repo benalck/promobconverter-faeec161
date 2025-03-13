@@ -24,10 +24,10 @@ export function useMultipleTimeouts() {
     clearTimeoutById(id);
     
     // Create a new timeout and store it in the map
-    // We need to use a type assertion here because setTimeout returns number in browsers
-    // but TypeScript expects NodeJS.Timeout for the ref
-    const timeoutId = setTimeout(callback, delay) as unknown as NodeJS.Timeout;
-    timeoutsRef.current.set(id, timeoutId);
+    // No navegador, setTimeout retorna um número, mas no Node.js retorna NodeJS.Timeout
+    // Precisamos fazer uma conversão de tipo para compatibilidade
+    const timeoutId = setTimeout(callback, delay);
+    timeoutsRef.current.set(id, timeoutId as unknown as NodeJS.Timeout);
     
     return () => clearTimeoutById(id);
   };
