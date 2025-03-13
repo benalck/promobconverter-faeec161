@@ -1,5 +1,5 @@
 
-import React, { ReactNode, Suspense } from "react";
+import React, { ReactNode } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Register from "@/pages/Register";
@@ -18,7 +18,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isInitialized } = useAuth();
 
   if (!isInitialized) {
-    return <div className="flex justify-center items-center h-screen">Carregando...</div>;
+    return <div>Loading...</div>;
   }
 
   if (!user) {
@@ -29,36 +29,34 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 };
 
 interface AdminRouteProps {
-  children: ReactNode;
+    children: ReactNode;
 }
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { user, isInitialized } = useAuth();
+    const { user, isInitialized } = useAuth();
 
-  if (!isInitialized) {
-    return <div className="flex justify-center items-center h-screen">Carregando...</div>;
-  }
+    if (!isInitialized) {
+        return <div>Loading...</div>;
+    }
 
-  if (!user || !user.role || user.role !== 'admin') {
-    return <Navigate to="/register" replace />;
-  }
+    if (!user || !user.role || user.role !== 'admin') {
+        return <Navigate to="/register" replace />;
+    }
 
-  return <>{children}</>;
+    return <>{children}</>;
 };
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Suspense fallback={<div className="flex justify-center items-center h-screen">Carregando...</div>}>
-          <Routes>
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-            <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+          <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
         <Toaster />
       </AuthProvider>
     </BrowserRouter>
