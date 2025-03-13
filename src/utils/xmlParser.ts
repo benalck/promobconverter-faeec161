@@ -201,9 +201,6 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
   return csvContent;
 };
 
-/**
- * Formata a descrição da peça no formato [uniqueId] - [description] [thickness]
- */
 const formatPieceDescription = (uniqueId: string, description: string, thickness: string): string => {
   // Se a descrição já contém a espessura no final, não duplicamos a informação
   if (!description.match(/\d+$/) && thickness && thickness !== "0") {
@@ -249,11 +246,22 @@ const extractItemPropertiesFromXML = (item: Element) => {
       }
     }
     
-    // Espessura - Certifique-se de que o valor seja extraído corretamente
+    // Espessura - Extrair corretamente o valor de THICKNESS REFERENCE
     if (thicknessElement) {
       const thicknessRef = thicknessElement.getAttribute("REFERENCE");
       if (thicknessRef && thicknessRef !== "0") {
-        thickness = thicknessRef;
+        // Extract numeric part of thickness if it contains additional text
+        const thicknessMatch = thicknessRef.match(/(\d+)/);
+        if (thicknessMatch && thicknessMatch[1]) {
+          thickness = thicknessMatch[1];
+        } else {
+          thickness = thicknessRef;
+        }
+        
+        // Adicionar "mm" se for um valor numérico
+        if (!isNaN(Number(thickness)) && thickness !== "0") {
+          thickness = `${thickness}mm`;
+        }
       }
     }
 
@@ -297,7 +305,7 @@ const extractItemPropertiesFromXML = (item: Element) => {
       // Formato como "1.0155.15.Guararapes.Areia.MDF"
       const thicknessFromRef = refParts.find(part => part.match(/^\d+$/));
       if (thicknessFromRef) {
-        thickness = thicknessFromRef;
+        thickness = `${thicknessFromRef}mm`;
       }
       
       // Buscar material e cor
@@ -311,6 +319,11 @@ const extractItemPropertiesFromXML = (item: Element) => {
         }
       }
     }
+  }
+  
+  // Verificação adicional para garantir que espessura seja um valor completo
+  if (thickness && !isNaN(Number(thickness)) && !thickness.includes("mm")) {
+    thickness = `${thickness}mm`;
   }
   
   return {
@@ -377,13 +390,13 @@ const getDefaultTableHeader = (): string => {
     <th>AMBIENTE</th>
     <th class="piece-desc">DESC. DA PEÇA</th>
     <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-    <th style="background-color: #FDE1D3;" class="comp">COMP</th>
-    <th style="background-color: #D3E4FD;" class="larg">LARG</th>
+    <th style="background-color: #F7CAAC;" class="comp">COMP</th>
+    <th style="background-color: #BDD6EE;" class="larg">LARG</th>
     <th>QUANT</th>
-    <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
-    <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
-    <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
-    <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
+    <th style="background-color: #F7CAAC;" class="borda-inf">BORDA INF</th>
+    <th style="background-color: #F7CAAC;" class="borda-sup">BORDA SUP</th>
+    <th style="background-color: #BDD6EE;" class="borda-dir">BORDA DIR</th>
+    <th style="background-color: #BDD6EE;" class="borda-esq">BORDA ESQ</th>
     <th class="edge-color">COR FITA DE BORDA</th>
     <th class="material">CHAPA</th>
     <th class="material">ESP.</th>
