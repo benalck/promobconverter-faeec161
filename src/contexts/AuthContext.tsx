@@ -50,7 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: supabaseUser.id,
         name: profile?.name || supabaseUser.user_metadata?.name || 'Usuário',
         email: supabaseUser.email,
-        role: profile?.role || 'user',
+        // Verificar se o perfil tem a propriedade role, se não tiver, definir como 'user'
+        role: profile?.role as 'admin' | 'user' || 'user',
         createdAt: supabaseUser.created_at || new Date().toISOString(),
         lastLogin: supabaseUser.last_sign_in_at,
         isBanned: profile?.is_banned || false
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: profile.id,
         name: profile.name,
         email: null, // Não temos o email no perfil
-        role: profile.role || 'user',
+        role: (profile.role as 'admin' | 'user') || 'user',
         createdAt: profile.created_at,
         lastLogin: profile.last_login || undefined,
         isBanned: profile.is_banned

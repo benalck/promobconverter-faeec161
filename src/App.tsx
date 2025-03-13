@@ -1,6 +1,6 @@
 
 import React, { ReactNode } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Register from "@/pages/Register";
 import Admin from "@/pages/Admin";
@@ -21,8 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!user) {
-    window.location.href = '/register';
-    return null;
+    return <Navigate to="/register" replace />;
   }
 
   return <>{children}</>;
@@ -40,8 +39,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     }
 
     if (!user || !user.role || user.role !== 'admin') {
-        window.location.href = '/register';
-        return null;
+        return <Navigate to="/register" replace />;
     }
 
     return <>{children}</>;
@@ -52,7 +50,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/register" element={<Register />} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="*" element={<NotFound />} />
