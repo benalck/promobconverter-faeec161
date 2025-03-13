@@ -6,6 +6,7 @@ import Register from "@/pages/Register";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
+import Plans from "@/pages/Plans";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import "./App.css";
 
@@ -17,7 +18,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isInitialized } = useAuth();
 
   if (!isInitialized) {
-    return <div>Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
 
   if (!user) {
@@ -35,7 +36,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     const { user, isInitialized } = useAuth();
 
     if (!isInitialized) {
-        return <div>Loading...</div>;
+        return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
     }
 
     if (!user || !user.role || user.role !== 'admin') {
@@ -46,6 +47,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 };
 
 function App() {
+  console.log('App rendering');
   return (
     <BrowserRouter>
       <AuthProvider>
@@ -53,6 +55,7 @@ function App() {
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/register" element={<Register />} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+          <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
