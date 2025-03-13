@@ -92,15 +92,7 @@ export default function Plans() {
     try {
       setPurchasingPlanId(planId);
       
-      // Enhanced logging for debugging
-      console.log("Iniciando checkout com os parâmetros:", {
-        planId,
-        userId: user.id,
-        successUrl: `${window.location.origin}/plans`,
-        cancelUrl: `${window.location.origin}/plans`
-      });
-      
-      // Initiate Stripe checkout with improved error handling
+      // Iniciar o checkout do Stripe
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout/create-checkout`, {
         method: 'POST',
         headers: {
@@ -115,39 +107,21 @@ export default function Plans() {
         })
       });
       
-      console.log("Resposta do Stripe checkout - status:", response.status);
-      
-      // Always try to get the response body, even if status is not OK
-      const responseBody = await response.text();
-      console.log("Resposta do Stripe checkout - body:", responseBody);
-      
-      let checkoutData;
-      try {
-        checkoutData = JSON.parse(responseBody);
-      } catch (e) {
-        console.error("Erro ao parsear resposta:", e);
-        throw new Error(`Resposta inválida (status ${response.status}): ${responseBody.substring(0, 100)}...`);
-      }
-      
       if (!response.ok) {
-        console.error("Erro na resposta:", checkoutData);
-        throw new Error(checkoutData.error || `Erro ao criar sessão de checkout (${response.status})`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
       }
       
-      console.log("Dados de checkout:", checkoutData);
+      const { url } = await response.json();
       
-      // Redirect to Stripe checkout
-      if (checkoutData.url) {
-        window.location.href = checkoutData.url;
-      } else {
-        throw new Error('URL de checkout não fornecida');
-      }
+      // Redirecionar para o checkout do Stripe
+      window.location.href = url;
       
     } catch (error) {
       console.error('Erro ao iniciar checkout:', error);
       toast({
         title: "Erro ao processar pagamento",
-        description: error.message || "Não foi possível iniciar o processo de pagamento. Tente novamente mais tarde.",
+        description: "Não foi possível iniciar o processo de pagamento. Tente novamente mais tarde.",
         variant: "destructive",
       });
     } finally {
