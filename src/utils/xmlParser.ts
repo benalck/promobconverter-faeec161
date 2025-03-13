@@ -246,21 +246,16 @@ const extractItemPropertiesFromXML = (item: Element) => {
       }
     }
     
-    // Espessura - Extrair corretamente o valor de THICKNESS REFERENCE
+    // Espessura - Corrigindo a extração para exibir a espessura corretamente
     if (thicknessElement) {
       const thicknessRef = thicknessElement.getAttribute("REFERENCE");
       if (thicknessRef && thicknessRef !== "0") {
-        // Extract numeric part of thickness if it contains additional text
+        // Extrai a parte numérica da espessura
         const thicknessMatch = thicknessRef.match(/(\d+)/);
         if (thicknessMatch && thicknessMatch[1]) {
           thickness = thicknessMatch[1];
         } else {
           thickness = thicknessRef;
-        }
-        
-        // Adicionar "mm" se for um valor numérico
-        if (!isNaN(Number(thickness)) && thickness !== "0") {
-          thickness = `${thickness}mm`;
         }
       }
     }
@@ -305,7 +300,7 @@ const extractItemPropertiesFromXML = (item: Element) => {
       // Formato como "1.0155.15.Guararapes.Areia.MDF"
       const thicknessFromRef = refParts.find(part => part.match(/^\d+$/));
       if (thicknessFromRef) {
-        thickness = `${thicknessFromRef}mm`;
+        thickness = thicknessFromRef;
       }
       
       // Buscar material e cor
@@ -321,8 +316,8 @@ const extractItemPropertiesFromXML = (item: Element) => {
     }
   }
   
-  // Verificação adicional para garantir que espessura seja um valor completo
-  if (thickness && !isNaN(Number(thickness)) && !thickness.includes("mm")) {
+  // Garantir que a espessura tenha o sufixo 'mm'
+  if (thickness && !isNaN(Number(thickness))) {
     thickness = `${thickness}mm`;
   }
   
