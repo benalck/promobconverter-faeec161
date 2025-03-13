@@ -136,7 +136,8 @@ serve(async (req) => {
         );
       }
 
-      const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
+      // Usar a chave de webhook fornecida
+      const webhookSecret = "whsec_WWKyjHEh36klduEPE3IwxRA1khPne1jE";
       const body = await req.text();
       
       let event;
@@ -157,15 +158,22 @@ serve(async (req) => {
         );
       }
 
+      console.log(`Evento webhook recebido: ${event.type}`);
+
       // Processar evento checkout.session.completed
       if (event.type === "checkout.session.completed") {
         const session = event.data.object;
+        
+        console.log(`Processando sessão de checkout completa: ${session.id}`);
+        console.log(`Status do pagamento: ${session.payment_status}`);
         
         if (session.payment_status === "paid") {
           const userId = session.client_reference_id;
           const planId = session.metadata.planId;
           const credits = parseInt(session.metadata.credits);
           const durationDays = parseInt(session.metadata.durationDays);
+          
+          console.log(`Créditos a adicionar: ${credits} para o usuário: ${userId}`);
           
           // Calcular data de expiração
           const expiryDate = new Date();
