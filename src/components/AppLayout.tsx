@@ -20,12 +20,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
         <Navbar />
         
         <header className="text-center mb-8 md:mb-12">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight animate-slide-down">
-            XML para Excel
-          </h1>
-          <p className="mt-2 text-muted-foreground max-w-lg mx-auto animate-slide-up">
-            Transforme arquivos XML em planilhas Excel com formatação profissional em segundos
-          </p>
+          {/* Cabeçalho vazio, texto removido */}
         </header>
         
         <main className={cn("w-full", className)}>
