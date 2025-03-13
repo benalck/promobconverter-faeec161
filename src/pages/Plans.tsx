@@ -24,7 +24,6 @@ interface Plan {
 export default function Plans() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [purchasingPlanId, setPurchasingPlanId] = useState<string | null>(null);
   const { user, refreshUserCredits } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -54,80 +53,7 @@ export default function Plans() {
     };
     
     fetchPlans();
-
-    // Verificar se há uma sessão de checkout completa
-    const checkSession = async () => {
-      const url = new URL(window.location.href);
-      const sessionId = url.searchParams.get("session_id");
-      
-      if (sessionId) {
-        // Remover o parâmetro da URL para evitar recarregar a confirmação
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Atualizar os créditos do usuário após o pagamento bem-sucedido
-        await refreshUserCredits();
-        
-        toast({
-          title: "Pagamento processado com sucesso!",
-          description: "Seus créditos foram adicionados à sua conta.",
-          variant: "default",
-        });
-      }
-    };
-    
-    checkSession();
   }, []);
-
-  const handlePurchase = async (planId: string) => {
-    if (!user) {
-      toast({
-        title: "Faça login para continuar",
-        description: "Você precisa estar logado para adquirir um plano.",
-        variant: "destructive",
-      });
-      navigate("/register");
-      return;
-    }
-    
-    try {
-      setPurchasingPlanId(planId);
-      
-      // Iniciar o checkout do Stripe
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout/create-checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          planId,
-          userId: user.id,
-          successUrl: `${window.location.origin}/plans`,
-          cancelUrl: `${window.location.origin}/plans`
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
-      }
-      
-      const { url } = await response.json();
-      
-      // Redirecionar para o checkout do Stripe
-      window.location.href = url;
-      
-    } catch (error) {
-      console.error('Erro ao iniciar checkout:', error);
-      toast({
-        title: "Erro ao processar pagamento",
-        description: "Não foi possível iniciar o processo de pagamento. Tente novamente mais tarde.",
-        variant: "destructive",
-      });
-    } finally {
-      setPurchasingPlanId(null);
-    }
-  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { 
@@ -159,9 +85,9 @@ export default function Plans() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">Escolha seu plano</h1>
+        <h1 className="text-3xl font-bold mb-2">Nossos planos</h1>
         <p className="text-lg text-gray-600">
-          Adquira créditos para converter seus arquivos XML
+          Em breve você poderá adquirir créditos para converter seus arquivos XML
         </p>
       </div>
       
@@ -235,17 +161,9 @@ export default function Plans() {
               <CardFooter className="flex justify-center pt-2 pb-6">
                 <Button 
                   className="w-full py-6"
-                  onClick={() => handlePurchase(plan.id)} 
-                  disabled={purchasingPlanId === plan.id}
+                  disabled={true}
                 >
-                  {purchasingPlanId === plan.id ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-4 w-4 border-2 border-current border-t-transparent animate-spin rounded-full"></div>
-                      Processando...
-                    </div>
-                  ) : (
-                    'Adquirir plano'
-                  )}
+                  Em breve disponível
                 </Button>
               </CardFooter>
             </Card>
@@ -259,8 +177,7 @@ export default function Plans() {
           <div>
             <h3 className="font-semibold mb-1">Informação sobre pagamentos</h3>
             <p className="text-sm text-gray-600">
-              Os pagamentos são processados de forma segura através do Stripe. Após a confirmação do pagamento, 
-              os créditos serão automaticamente adicionados à sua conta.
+              Estamos trabalhando na integração de pagamentos. Em breve você poderá adquirir créditos para suas conversões.
             </p>
           </div>
         </div>

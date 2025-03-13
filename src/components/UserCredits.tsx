@@ -37,11 +37,6 @@ export default function UserCredits() {
           Você recebeu 3 créditos gratuitos para começar!
         </div>
       )}
-      <Button variant="outline" size="sm" asChild>
-        <Link to="/plans">
-          Adquirir créditos
-        </Link>
-      </Button>
     </div>
   );
 }

@@ -1,5 +1,2 @@
 
 project_id = "npnkmbflfflqpjwhxbfu"
-[[functions]]
-name = "stripe-checkout"
-verify_jwt = false
