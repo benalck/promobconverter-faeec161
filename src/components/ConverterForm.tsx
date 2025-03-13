@@ -66,10 +66,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     if (user.credits <= 0) {
       toast({
         title: "Créditos insuficientes",
-        description: "Você não possui créditos suficientes para realizar esta conversão. Adquira mais créditos no seu plano.",
+        description: "Você não possui créditos suficientes para realizar esta conversão.",
         variant: "destructive",
       });
-      navigate("/plans");
       return;
     }
 
@@ -190,17 +189,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <div className="text-center text-sm bg-primary/10 py-2 px-4 rounded-md animate-fade-in">
               <p>Você possui <span className="font-bold">{user.credits}</span> créditos disponíveis</p>
               <p>Cada conversão utiliza 1 crédito</p>
-              {user.credits <= 2 && (
-                <p className="mt-1 text-primary/80">
-                  <Button 
-                    variant="link" 
-                    className="p-0 h-auto text-primary underline"
-                    onClick={() => navigate("/plans")}
-                  >
-                    Adquira mais créditos
-                  </Button>
-                </p>
-              )}
             </div>
           )}
 
@@ -247,6 +235,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       </CardContent>
     </Card>
   );
-};
+}
 
 export default ConverterForm;

@@ -1,8 +1,6 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Coins } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 export default function UserCredits() {
@@ -45,13 +43,6 @@ export default function UserCredits() {
         <span className="font-medium">{user.credits}</span>
         <span className="text-xs text-primary/80">créditos</span>
       </div>
-      {user.credits <= 2 && (
-        <Link to="/plans">
-          <Button size="sm" variant="outline" className="text-xs h-8">
-            Comprar créditos
-          </Button>
-        </Link>
-      )}
       {showNewCreditsMessage && (
         <div className="absolute -bottom-12 right-0 bg-primary/10 text-primary text-xs rounded-md px-3 py-2 whitespace-nowrap">
           Você recebeu 3 créditos gratuitos para começar!
@@ -59,7 +50,7 @@ export default function UserCredits() {
       )}
       {showLowCreditsWarning && (
         <div className="absolute -bottom-12 right-0 bg-amber-50 text-amber-700 border border-amber-200 text-xs rounded-md px-3 py-2 whitespace-nowrap">
-          Seus créditos estão acabando! <Link to="/plans" className="underline font-medium">Compre mais</Link>
+          Seus créditos estão acabando!
         </div>
       )}
     </div>

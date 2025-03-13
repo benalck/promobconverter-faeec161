@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Crown, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Crown, Check, AlertCircle } from "lucide-react";
 import { format, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -24,8 +24,7 @@ interface Plan {
 export default function Plans() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [purchasingPlanId, setPurchasingPlanId] = useState<string | null>(null);
-  const { user, refreshUserCredits } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -83,84 +82,12 @@ export default function Plans() {
     }
   };
 
-  const handlePurchase = async (planId: string) => {
-    if (!user) {
-      toast({
-        title: "Usuário não autenticado",
-        description: "Você precisa estar logado para adquirir créditos",
-        variant: "destructive",
-      });
-      navigate("/register");
-      return;
-    }
-
-    try {
-      setPurchasingPlanId(planId);
-      
-      // URLs para redirecionamento após o checkout
-      const successUrl = `${window.location.origin}/plans?success=true`;
-      const cancelUrl = `${window.location.origin}/plans?canceled=true`;
-      
-      // Chamar a função Edge do Supabase para criar uma sessão de checkout
-      const { data, error } = await supabase.functions.invoke("stripe-checkout", {
-        body: {
-          planId,
-          userId: user.id,
-          successUrl,
-          cancelUrl
-        },
-      });
-      
-      if (error) throw error;
-      
-      // Redirecionar para a página de checkout do Stripe
-      if (data && data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("URL de checkout não encontrada");
-      }
-    } catch (error) {
-      console.error("Erro ao processar pagamento:", error);
-      toast({
-        title: "Erro no processamento do pagamento",
-        description: "Não foi possível iniciar o checkout. Tente novamente mais tarde.",
-        variant: "destructive",
-      });
-    } finally {
-      setPurchasingPlanId(null);
-    }
-  };
-
-  // Verificar se o usuário acabou de completar um pagamento
-  useEffect(() => {
-    const checkPaymentStatus = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const success = urlParams.get('success');
-      
-      if (success === 'true') {
-        // Limpar a URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Atualizar os créditos do usuário
-        await refreshUserCredits();
-        
-        toast({
-          title: "Pagamento concluído com sucesso!",
-          description: "Seus créditos foram adicionados à sua conta.",
-          variant: "default",
-        });
-      }
-    };
-    
-    checkPaymentStatus();
-  }, []);
-
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2">Nossos planos</h1>
         <p className="text-lg text-gray-600">
-          Escolha o plano que melhor se adequa às suas necessidades
+          Planos disponíveis (compra temporariamente indisponível)
         </p>
       </div>
       
@@ -234,17 +161,9 @@ export default function Plans() {
               <CardFooter className="flex justify-center pt-2 pb-6">
                 <Button 
                   className="w-full py-6"
-                  onClick={() => handlePurchase(plan.id)}
-                  disabled={purchasingPlanId === plan.id}
+                  disabled={true}
                 >
-                  {purchasingPlanId === plan.id ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    `Assinar por ${formatCurrency(plan.price)}`
-                  )}
+                  Compra temporariamente indisponível
                 </Button>
               </CardFooter>
             </Card>
@@ -256,9 +175,9 @@ export default function Plans() {
         <div className="flex gap-4">
           <AlertCircle className="h-6 w-6 text-amber-500 shrink-0" />
           <div>
-            <h3 className="font-semibold mb-1">Informação sobre pagamentos</h3>
+            <h3 className="font-semibold mb-1">Informação sobre créditos</h3>
             <p className="text-sm text-gray-600">
-              Os pagamentos são processados de forma segura pelo Stripe. Seus dados de cartão de crédito não são armazenados em nossos servidores.
+              O sistema de pagamentos está temporariamente indisponível. Entre em contato com o administrador para obter mais créditos.
             </p>
           </div>
         </div>

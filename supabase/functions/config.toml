@@ -1,5 +1,2 @@
 
 project_id = "npnkmbflfflqpjwhxbfu"
-
-[functions.stripe-checkout]
-verify_jwt = false
