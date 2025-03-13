@@ -1,6 +1,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
+import Navbar from "./Navbar";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
       </div>
       
       <div className="w-full max-w-6xl mx-auto relative z-10 animate-fade-in">
+        <Navbar />
+        
         <header className="text-center mb-8 md:mb-12">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight animate-slide-down">
             XML para Excel
