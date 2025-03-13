@@ -22,7 +22,7 @@ export function useMultipleTimeouts() {
     }, delay);
     
     // Armazena o ID do timeout
-    timeouts.current.set(id, timeoutId);
+    timeouts.current.set(id, timeoutId as unknown as NodeJS.Timeout);
     
     return id;
   }, []);
