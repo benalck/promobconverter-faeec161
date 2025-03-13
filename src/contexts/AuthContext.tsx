@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -112,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       for (const profile of supabaseUsers) {
         try {
           let userEmail = null;
+          // Initialize userRole with the default value of 'user'
           let userRole: 'admin' | 'user' = 'user';
           
           try {
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('Erro ao buscar metadados do usuário:', error);
           }
           
+          // Only assign 'admin' if the profile role is explicitly 'admin'
           if (profile.role === 'admin') {
             userRole = 'admin';
           }
