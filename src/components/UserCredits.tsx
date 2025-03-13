@@ -2,11 +2,14 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Coins } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "./ui/button";
 
 export default function UserCredits() {
   const { user } = useAuth();
   const [showNewCreditsMessage, setShowNewCreditsMessage] = useState(false);
   const [showLowCreditsWarning, setShowLowCreditsWarning] = useState(false);
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Se usuário tem exatamente 3 créditos (quantidade inicial), mostrar mensagem de boas-vindas
@@ -34,6 +37,10 @@ export default function UserCredits() {
     }
   }, [user?.credits]);
 
+  const handleBuyCredits = () => {
+    navigate("/plans");
+  };
+
   if (!user) return null;
 
   return (
@@ -49,8 +56,28 @@ export default function UserCredits() {
         </div>
       )}
       {showLowCreditsWarning && (
-        <div className="absolute -bottom-12 right-0 bg-amber-50 text-amber-700 border border-amber-200 text-xs rounded-md px-3 py-2 whitespace-nowrap">
-          Seus créditos estão acabando!
+        <div className="absolute -bottom-20 right-0 flex flex-col gap-2 bg-amber-50 text-amber-700 border border-amber-200 text-xs rounded-md px-3 py-2 whitespace-nowrap">
+          <p>Seus créditos estão acabando!</p>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-800"
+            onClick={handleBuyCredits}
+          >
+            Comprar mais créditos
+          </Button>
+        </div>
+      )}
+      {user.credits === 0 && (
+        <div className="absolute -bottom-20 right-0 flex flex-col gap-2 bg-red-50 text-red-700 border border-red-200 text-xs rounded-md px-3 py-2 whitespace-nowrap">
+          <p>Você não tem mais créditos!</p>
+          <Button 
+            size="sm" 
+            className="bg-red-600 hover:bg-red-700"
+            onClick={handleBuyCredits}
+          >
+            Comprar créditos agora
+          </Button>
         </div>
       )}
     </div>
