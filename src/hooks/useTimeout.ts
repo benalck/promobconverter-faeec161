@@ -137,7 +137,7 @@ export function useTimeout(
  * Hook para gerenciar múltiplos timeouts simultaneamente
  */
 export function useMultipleTimeouts() {
-  // Usando Map<string, NodeJS.Timeout> para armazenar os timeouts
+  // Usando Map com string como chave e NodeJS.Timeout como valor
   const timeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   // Configura um novo timeout com um ID único
