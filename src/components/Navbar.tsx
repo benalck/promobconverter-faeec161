@@ -1,4 +1,5 @@
 
+import React, { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -9,41 +10,46 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    console.log("Navbar montado, user:", user ? "Existe" : "Não existe");
+    return () => console.log("Navbar desmontado");
+  }, [user]);
+
   const handleLogout = async () => {
     try {
+      console.log("Iniciando logout");
       await logout();
+      console.log("Logout completo, redirecionando");
       navigate("/register");
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Erro ao fazer logout:", error);
     }
   };
 
   return (
-    <nav className="bg-white border-b mb-6">
-      <div className="max-w-6xl mx-auto px-4 py-3">
+    <nav className="border-b mb-6 py-3">
+      <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="text-xl font-semibold text-gray-800">
             Conversor XML
           </Link>
           
           <div className="flex items-center space-x-4">
-            {user && <UserCredits />}
-            
             {user && (
-              <span className="text-sm text-gray-600">
-                Olá, {user.name}
-              </span>
-            )}
-            
-            {user && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
-              </Button>
+              <>
+                <UserCredits />
+                <span className="text-sm text-gray-600">
+                  Olá, {user.name || 'Usuário'}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair
+                </Button>
+              </>
             )}
             
             {!user && (

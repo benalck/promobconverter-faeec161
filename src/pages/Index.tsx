@@ -1,13 +1,24 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
 import { FileText, Download, Upload, List, Check, LayoutDashboard, MousePointerClick } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    console.log("Index montado, user:", user ? "Existe" : "Não existe");
+    document.title = "Conversor XML para Excel";
+    return () => console.log("Index desmontado");
+  }, [user]);
+
   return (
     <AppLayout>
       <div className="flex flex-col items-center justify-center w-full">
+        <h1 className="text-2xl font-bold mb-6">Bem-vindo ao Conversor XML</h1>
+        
         <div className="w-full max-w-4xl">
           <ConverterForm />
           
