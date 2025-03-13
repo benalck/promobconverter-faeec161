@@ -246,11 +246,11 @@ const extractItemPropertiesFromXML = (item: Element) => {
       }
     }
     
-    // Espessura - Corrigindo a extração para exibir a espessura corretamente
+    // Espessura - Extrair corretamente o valor de THICKNESS REFERENCE
     if (thicknessElement) {
       const thicknessRef = thicknessElement.getAttribute("REFERENCE");
       if (thicknessRef && thicknessRef !== "0") {
-        // Extrai a parte numérica da espessura
+        // Extract numeric part of thickness if it contains additional text
         const thicknessMatch = thicknessRef.match(/(\d+)/);
         if (thicknessMatch && thicknessMatch[1]) {
           thickness = thicknessMatch[1];
@@ -316,8 +316,8 @@ const extractItemPropertiesFromXML = (item: Element) => {
     }
   }
   
-  // Garantir que a espessura tenha o sufixo 'mm'
-  if (thickness && !isNaN(Number(thickness))) {
+  // Verificação adicional para garantir que espessura seja um valor completo
+  if (thickness && !isNaN(Number(thickness)) && !thickness.includes("mm")) {
     thickness = `${thickness}mm`;
   }
   
