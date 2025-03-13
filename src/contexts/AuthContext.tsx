@@ -4,6 +4,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
+interface Plan {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  credits: number;
+  duration_days: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 interface User {
   id: string;
   name: string | null;
@@ -12,6 +23,9 @@ interface User {
   createdAt: string;
   lastLogin?: string;
   isBanned?: boolean;
+  credits: number;
+  activePlan?: Plan | null;
+  planExpiryDate?: string | null;
 }
 
 interface AuthContextType {
@@ -26,6 +40,7 @@ interface AuthContextType {
   deleteUser: (id: string) => void;
   updateUser: (id: string, data: Partial<User>) => void;
   getAllUsers: () => User[];
+  refreshUserCredits: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,18 +57,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Buscar profile no Supabase
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, plans(*)')
         .eq('id', supabaseUser.id)
         .single();
 
       // Determinar a role (admin ou user)
-      // Como o perfil pode não ter o campo role ainda, definimos um valor padrão
       let userRole: 'admin' | 'user' = 'user';
       
-      // Verificar se há um role nos metadados do usuário
-      if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
+      // Verificar se o perfil tem role definida
+      if (profile?.role === 'admin') {
+        userRole = 'admin';
+      } else if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
         userRole = 'admin';
       }
+
+      // Converter a data de expiração do plano, se existir
+      const planExpiryDate = profile?.plan_expiry_date || null;
 
       return {
         id: supabaseUser.id,
@@ -62,7 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: userRole,
         createdAt: supabaseUser.created_at || new Date().toISOString(),
         lastLogin: supabaseUser.last_sign_in_at,
-        isBanned: profile?.is_banned || false
+        isBanned: profile?.is_banned || false,
+        credits: profile?.credits || 0,
+        activePlan: profile?.plans || null,
+        planExpiryDate
       };
     } catch (error) {
       console.error('Erro ao converter usuário do Supabase:', error);
@@ -73,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: 'user',
         createdAt: supabaseUser.created_at || new Date().toISOString(),
         lastLogin: supabaseUser.last_sign_in_at,
+        credits: 0
       };
     }
   };
@@ -82,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: supabaseUsers, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*, plans(*)');
 
       if (error) throw error;
 
@@ -98,18 +121,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           // Buscar informações do usuário dos metadados
           let userEmail = null;
-          let userRole: 'admin' | 'user' = 'user';
+          let userRole: 'admin' | 'user' = profile.role || 'user';
           
           try {
             // Extrair role dos metadados (se disponível)
             const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
-            if (userData?.user?.user_metadata?.role === 'admin') {
-              userRole = 'admin';
-            }
             userEmail = userData?.user?.email || null;
           } catch (error) {
             console.log('Erro ao buscar metadados do usuário:', error);
-            // Continua com role padrão 'user'
           }
           
           formattedUsers.push({
@@ -119,25 +138,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: userRole,
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
-            isBanned: profile.is_banned
+            isBanned: profile.is_banned,
+            credits: profile.credits || 0,
+            activePlan: profile.plans || null,
+            planExpiryDate: profile.plan_expiry_date || null
           });
         } catch (error) {
-          // Se não conseguir buscar os metadados, assume 'user'
-          formattedUsers.push({
-            id: profile.id,
-            name: profile.name,
-            email: null,
-            role: 'user',
-            createdAt: profile.created_at,
-            lastLogin: profile.last_login || undefined,
-            isBanned: profile.is_banned
-          });
+          console.error('Erro ao processar usuário:', error);
         }
       }
 
       setUsers(formattedUsers);
     } catch (error) {
       console.error('Erro ao sincronizar usuários:', error);
+    }
+  };
+
+  // Função para atualizar os créditos do usuário atual
+  const refreshUserCredits = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*, plans(*)')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
+      
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        return {
+          ...prevUser,
+          credits: profile?.credits || 0,
+          activePlan: profile?.plans || null,
+          planExpiryDate: profile?.plan_expiry_date || null
+        };
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar créditos:', error);
     }
   };
 
@@ -274,7 +314,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name,
               created_at: new Date().toISOString(),
               last_login: new Date().toISOString(),
-              is_banned: false
+              is_banned: false,
+              role: userRole,
+              credits: 0
             }
           ]);
 
@@ -339,10 +381,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profileData: { 
         name?: string; 
         is_banned?: boolean;
+        role?: string;
+        credits?: number;
+        active_plan?: string | null;
+        plan_expiry_date?: string | null;
       } = {};
       
       if (data.name !== undefined) profileData.name = data.name;
       if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
+      if (data.role !== undefined) profileData.role = data.role;
+      if (data.credits !== undefined) profileData.credits = data.credits;
+      if (data.activePlan !== undefined) profileData.active_plan = data.activePlan?.id || null;
+      if (data.planExpiryDate !== undefined) profileData.plan_expiry_date = data.planExpiryDate;
       
       // Atualizar dados no perfil
       if (Object.keys(profileData).length > 0) {
@@ -410,7 +460,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         deleteUser,
         updateUser,
-        getAllUsers
+        getAllUsers,
+        refreshUserCredits
       }}
     >
       {isInitialized ? children : null}
