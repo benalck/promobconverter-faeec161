@@ -4,11 +4,13 @@ import { Coins } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function UserCredits() {
   const { user } = useAuth();
   const [showNewCreditsMessage, setShowNewCreditsMessage] = useState(false);
   const [showLowCreditsWarning, setShowLowCreditsWarning] = useState(false);
+  const { toast } = useToast();
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -38,6 +40,10 @@ export default function UserCredits() {
   }, [user?.credits]);
 
   const handleBuyCredits = () => {
+    toast({
+      title: "Redirecionando",
+      description: "Você será redirecionado para a página de compra de créditos.",
+    });
     navigate("/plans");
   };
 
@@ -45,7 +51,7 @@ export default function UserCredits() {
 
   return (
     <div className="flex items-center gap-2 relative">
-      <div className="hidden md:flex items-center gap-1.5 bg-primary/10 text-primary rounded-md px-3 py-1.5">
+      <div className="flex items-center gap-1.5 bg-primary/10 text-primary rounded-md px-3 py-1.5">
         <Coins className="h-4 w-4" />
         <span className="font-medium">{user.credits}</span>
         <span className="text-xs text-primary/80">créditos</span>
