@@ -10,37 +10,49 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
-    navigate("/register");
+    try {
+      await logout();
+      navigate("/register");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b mb-10">
-      <div className="container mx-auto px-4 py-3">
+    <nav className="bg-white border-b mb-6">
+      <div className="max-w-6xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link to="/">
-              <h1 className="text-xl font-semibold text-gray-800 hover:text-gray-600 transition-colors">
-                {/* Empty title as requested */}
-              </h1>
-            </Link>
-          </div>
+          <Link to="/" className="text-xl font-semibold text-gray-800">
+            Conversor XML
+          </Link>
+          
           <div className="flex items-center space-x-4">
             {user && <UserCredits />}
+            
             {user && (
               <span className="text-sm text-gray-600">
                 Olá, {user.name}
               </span>
             )}
+            
             {user && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
-                className="flex items-center gap-1"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4 mr-2" />
                 Sair
+              </Button>
+            )}
+            
+            {!user && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => navigate("/register")}
+              >
+                Entrar
               </Button>
             )}
           </div>
