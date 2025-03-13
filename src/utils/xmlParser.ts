@@ -325,7 +325,6 @@ const extractItemPropertiesFromXML = (item: Element) => {
   };
 };
 
-// Nova função para extrair propriedades da string de referência
 const extractItemPropertiesFromReference = (reference: string) => {
   const defaultProps = {
     material: "MDF",
@@ -358,9 +357,6 @@ const extractItemPropertiesFromReference = (reference: string) => {
   return defaultProps;
 };
 
-/**
- * Create chapa material string
- */
 const createChapaMaterial = (material: string, finalColor: string, thickness: string): string => {
   if (finalColor && material && thickness) {
     return `${escapeHtml(material)} ${escapeHtml(thickness)} ${escapeHtml(finalColor)}`;
@@ -373,9 +369,6 @@ const createChapaMaterial = (material: string, finalColor: string, thickness: st
   }
 };
 
-/**
- * Get default table header for error cases
- */
 const getDefaultTableHeader = (): string => {
   return `<tr>
     <th>NUM.</th>
@@ -397,9 +390,6 @@ const getDefaultTableHeader = (): string => {
   </tr>`;
 };
 
-/**
- * Get default example row
- */
 const getDefaultExampleRow = (): string => {
   const defaultEnvironment = "Ambiente";
   return `<tr>
