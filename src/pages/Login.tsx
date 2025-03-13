@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import BannedMessage from "@/components/BannedMessage";
-import { ShoppingBag, Lock, Mail } from "lucide-react";
+import { ShoppingBag, Lock, Mail, FileText, Download, Database, Settings, FileSpreadsheet, ArrowRight } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -83,8 +83,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="w-full max-w-5xl flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="w-full max-w-5xl mx-auto flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden my-8">
         {/* Banner lateral */}
         <div className="hidden md:block md:w-1/2 bg-primary/90 p-12 text-white relative">
           <div className="h-full flex flex-col justify-between">
@@ -180,6 +180,76 @@ export default function Login() {
             </p>
           </CardFooter>
         </Card>
+      </div>
+
+      {/* Seção de Passo a Passo */}
+      <div className="w-full max-w-5xl mx-auto mt-4 mb-16 px-4">
+        <h2 className="text-2xl font-bold text-center mb-8">Como Funciona</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Bloco 1 */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
+              <FileText className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Conversão Simples, Resultados Perfeitos</h3>
+            <p className="text-gray-600">Nossa interface intuitiva torna a transformação de dados XML em planilhas Excel formatadas simples e eficiente.</p>
+          </div>
+          
+          {/* Bloco 2 */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
+              <Database className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Processamento XML</h3>
+            <p className="text-gray-600">Analise estruturas XML complexas com extração precisa de elementos e atributos.</p>
+          </div>
+          
+          {/* Bloco 3 */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
+              <FileSpreadsheet className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Formatação Excel</h3>
+            <p className="text-gray-600">Gere planilhas Excel perfeitamente formatadas com layouts de colunas personalizados.</p>
+          </div>
+          
+          {/* Bloco 4 */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
+              <ArrowRight className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Arrastar e Soltar</h3>
+            <p className="text-gray-600">Simplesmente arraste e solte seus arquivos XML para conversão instantânea.</p>
+          </div>
+          
+          {/* Bloco 5 */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
+              <Download className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Download com Um Clique</h3>
+            <p className="text-gray-600">Baixe seus arquivos XLSX convertidos instantaneamente com um único clique.</p>
+          </div>
+          
+          {/* Bloco 6 */}
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
+              <Database className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Integridade de Dados</h3>
+            <p className="text-gray-600">Mantenha a integridade completa dos dados durante todo o processo de conversão.</p>
+          </div>
+          
+          {/* Bloco 7 */}
+          <div className="bg-white p-6 rounded-lg shadow-md mx-auto md:col-span-2 lg:col-span-3 max-w-lg">
+            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4 mx-auto">
+              <Settings className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2 text-center">Personalizável</h3>
+            <p className="text-gray-600 text-center">Configure mapeamentos de colunas e formatação para atender às suas necessidades específicas.</p>
+          </div>
+        </div>
       </div>
     </div>
   );
