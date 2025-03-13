@@ -18,7 +18,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, isInitialized } = useAuth();
 
   if (!isInitialized) {
-    return <div>Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
 
   if (!user) {
@@ -36,7 +36,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     const { user, isInitialized } = useAuth();
 
     if (!isInitialized) {
-        return <div>Loading...</div>;
+        return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
     }
 
     if (!user || !user.role || user.role !== 'admin') {
@@ -47,6 +47,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 };
 
 function App() {
+  console.log('App rendering');
   return (
     <BrowserRouter>
       <AuthProvider>
