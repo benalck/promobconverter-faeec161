@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -8,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowRight, Coins } from "lucide-react";
+import { FileDown, ArrowRight, Coins, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "./FileUpload";
 import { Input } from "@/components/ui/input";
@@ -150,6 +149,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
   };
 
+  const isUsingFreeCredits = user?.credits === 3;
+
   return (
     <>
       <Card
@@ -170,11 +171,20 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         </CardHeader>
         <CardContent className="space-y-8 pb-8">
           {user && (
-            <div className="flex items-center justify-center gap-2 p-2 bg-primary/5 rounded-lg text-primary">
-              <Coins className="h-5 w-5" />
-              <span className="font-medium">
-                {user.credits ?? 0} {user.credits === 1 ? "crédito" : "créditos"} disponível
-              </span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2 p-2 bg-primary/5 rounded-lg text-primary">
+                <Coins className="h-5 w-5" />
+                <span className="font-medium">
+                  {user.credits ?? 0} {user.credits === 1 ? "crédito" : "créditos"} disponível
+                </span>
+              </div>
+              
+              {isUsingFreeCredits && (
+                <div className="flex items-center justify-center gap-2 p-2 bg-amber-50 rounded-lg text-amber-600 text-sm">
+                  <Gift className="h-4 w-4" />
+                  <span>Você está usando seus créditos gratuitos!</span>
+                </div>
+              )}
             </div>
           )}
           

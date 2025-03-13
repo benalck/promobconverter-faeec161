@@ -261,7 +261,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name,
               created_at: new Date().toISOString(),
               last_login: new Date().toISOString(),
-              is_banned: false
+              is_banned: false,
+              credits: 3
             }
           ]);
 
@@ -281,6 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const newUser = await convertSupabaseUser(data.user);
         newUser.role = userRole;
+        newUser.credits = 3;
         setUser(newUser);
         await syncUsers();
       }
