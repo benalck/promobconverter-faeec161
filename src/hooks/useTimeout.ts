@@ -2,7 +2,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
 /**
- * Opções para configuração do timeout
+ * Opções para configuração do timeout.
  */
 interface TimeoutOptions {
   autoStart?: boolean;
@@ -10,7 +10,7 @@ interface TimeoutOptions {
 }
 
 /**
- * Hook personalizado para gerenciar timeouts com funcionalidades avançadas
+ * Hook personalizado para gerenciar timeouts com funcionalidades avançadas.
  * @param callback A função a ser executada após o timeout
  * @param delay Tempo em milissegundos para o timeout, null desativa o timeout
  * @param options Opções de configuração do timeout
@@ -137,7 +137,6 @@ export function useTimeout(
  * Hook para gerenciar múltiplos timeouts simultaneamente
  */
 export function useMultipleTimeouts() {
-  // Modificando para armazenar NodeJS.Timeout diretamente como valor
   const timeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   // Configura um novo timeout com um ID único
@@ -171,8 +170,8 @@ export function useMultipleTimeouts() {
   
   // Limpa todos os timeouts ativos
   const clearAll = useCallback(() => {
-    timeouts.current.forEach((id) => {
-      global.clearTimeout(id);
+    timeouts.current.forEach((timeoutId) => {
+      global.clearTimeout(timeoutId);
     });
     timeouts.current.clear();
   }, []);
