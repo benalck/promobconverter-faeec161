@@ -3,15 +3,19 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Stripe } from "https://esm.sh/stripe@12.18.0?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
-// Inicializar Stripe com a chave privada
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+// Inicializar Stripe com a chave privada diretamente no código
+// Atenção: em ambiente de produção, é melhor usar variáveis de ambiente
+const STRIPE_SECRET_KEY = "sk_test_51OCvEHBOCcKhGyPvkvnCN833fNzIYWoV0rmWrYQ7sEqDJPPlLgfAIIJEkPEkU0Pi2SRbsm3nTrNBe7DKlFNfjEK8008ljsyf9Z";
+const STRIPE_WEBHOOK_SECRET = "sk_test_51OCvEHBOCcKhGyPvkvnCN833fNzIYWoV0rmWrYQ7sEqDJPPlLgfAIIJEkPEkU0Pi2SRbsm3nTrNBe7DKlFNfjEK8008ljsyf9Z";
+const stripe = new Stripe(STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
 });
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+// Supabase configuration
+const SUPABASE_URL = "https://npnkmbflfflqpjwhxbfu.supabase.co";
+const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wbmttYmZsZmZscXBqd2h4YmZ1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTIxNzM3NCwiZXhwIjoyMDU2NzkzMzc0fQ.8t86t8nHoymNO6d9zMqQhlc4XoecC_8nh_PwCX8NRCc";
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -136,7 +140,6 @@ serve(async (req) => {
         );
       }
 
-      const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
       const body = await req.text();
       
       let event;
@@ -144,7 +147,7 @@ serve(async (req) => {
         event = stripe.webhooks.constructEvent(
           body,
           signature,
-          webhookSecret
+          STRIPE_WEBHOOK_SECRET
         );
       } catch (err) {
         console.error(`Webhook Error: ${err.message}`);
