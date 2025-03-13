@@ -82,36 +82,6 @@ const Index = () => {
                 </div>
               </div>
             </section>
-            
-            <section className="max-w-3xl mx-auto bg-white/70 backdrop-blur-sm rounded-lg border border-gray-100 shadow-glass-sm p-8 mt-12">
-              <h2 className="text-2xl font-bold tracking-tight text-center mb-6">Como Funciona</h2>
-              
-              <div className="space-y-8">
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/80 text-white flex items-center justify-center font-bold text-xl">1</div>
-                  <div>
-                    <h3 className="text-lg font-medium mb-1">Faça Upload do Arquivo XML</h3>
-                    <p className="text-gray-600">Arraste e solte seu arquivo XML ou selecione-o do seu computador.</p>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/80 text-white flex items-center justify-center font-bold text-xl">2</div>
-                  <div>
-                    <h3 className="text-lg font-medium mb-1">Personalize o Nome da Saída</h3>
-                    <p className="text-gray-600">Escolha um nome para o seu arquivo Excel convertido.</p>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/80 text-white flex items-center justify-center font-bold text-xl">3</div>
-                  <div>
-                    <h3 className="text-lg font-medium mb-1">Converta e Baixe</h3>
-                    <p className="text-gray-600">Clique no botão para processar o XML e baixar o Excel formatado automaticamente.</p>
-                  </div>
-                </div>
-              </div>
-            </section>
           </div>
         </div>
       </div>
