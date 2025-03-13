@@ -7,8 +7,6 @@ import Register from "@/pages/Register";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
-import AuthLogin from "@/pages/AuthLogin";
-import AuthRegister from "@/pages/AuthRegister";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import "./App.css";
 
@@ -58,8 +56,6 @@ function App() {
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/auth/login" element={<AuthLogin />} />
-          <Route path="/auth/register" element={<AuthRegister />} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
