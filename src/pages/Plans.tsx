@@ -92,7 +92,7 @@ export default function Plans() {
     try {
       setPurchasingPlanId(planId);
       
-      // Melhorado o erro de log para incluir mais informações
+      // Enhanced logging for debugging
       console.log("Iniciando checkout com os parâmetros:", {
         planId,
         userId: user.id,
@@ -100,7 +100,7 @@ export default function Plans() {
         cancelUrl: `${window.location.origin}/plans`
       });
       
-      // Iniciar o checkout do Stripe
+      // Initiate Stripe checkout with improved error handling
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout/create-checkout`, {
         method: 'POST',
         headers: {
@@ -115,18 +115,28 @@ export default function Plans() {
         })
       });
       
-      console.log("Resposta do Stripe checkout:", response.status);
+      console.log("Resposta do Stripe checkout - status:", response.status);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Erro na resposta:", errorData);
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
+      // Always try to get the response body, even if status is not OK
+      const responseBody = await response.text();
+      console.log("Resposta do Stripe checkout - body:", responseBody);
+      
+      let checkoutData;
+      try {
+        checkoutData = JSON.parse(responseBody);
+      } catch (e) {
+        console.error("Erro ao parsear resposta:", e);
+        throw new Error(`Resposta inválida (status ${response.status}): ${responseBody.substring(0, 100)}...`);
       }
       
-      const checkoutData = await response.json();
+      if (!response.ok) {
+        console.error("Erro na resposta:", checkoutData);
+        throw new Error(checkoutData.error || `Erro ao criar sessão de checkout (${response.status})`);
+      }
+      
       console.log("Dados de checkout:", checkoutData);
       
-      // Redirecionar para o checkout do Stripe
+      // Redirect to Stripe checkout
       if (checkoutData.url) {
         window.location.href = checkoutData.url;
       } else {
@@ -137,7 +147,7 @@ export default function Plans() {
       console.error('Erro ao iniciar checkout:', error);
       toast({
         title: "Erro ao processar pagamento",
-        description: "Não foi possível iniciar o processo de pagamento. Tente novamente mais tarde.",
+        description: error.message || "Não foi possível iniciar o processo de pagamento. Tente novamente mais tarde.",
         variant: "destructive",
       });
     } finally {
