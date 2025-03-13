@@ -92,6 +92,14 @@ export default function Plans() {
     try {
       setPurchasingPlanId(planId);
       
+      // Melhorado o erro de log para incluir mais informações
+      console.log("Iniciando checkout com os parâmetros:", {
+        planId,
+        userId: user.id,
+        successUrl: `${window.location.origin}/plans`,
+        cancelUrl: `${window.location.origin}/plans`
+      });
+      
       // Iniciar o checkout do Stripe
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout/create-checkout`, {
         method: 'POST',
@@ -107,15 +115,23 @@ export default function Plans() {
         })
       });
       
+      console.log("Resposta do Stripe checkout:", response.status);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Erro na resposta:", errorData);
         throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
       }
       
-      const { url } = await response.json();
+      const checkoutData = await response.json();
+      console.log("Dados de checkout:", checkoutData);
       
       // Redirecionar para o checkout do Stripe
-      window.location.href = url;
+      if (checkoutData.url) {
+        window.location.href = checkoutData.url;
+      } else {
+        throw new Error('URL de checkout não fornecida');
+      }
       
     } catch (error) {
       console.error('Erro ao iniciar checkout:', error);

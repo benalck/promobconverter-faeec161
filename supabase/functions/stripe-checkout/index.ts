@@ -6,7 +6,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 // Inicializar Stripe com a chave privada diretamente no código
 // Atenção: em ambiente de produção, é melhor usar variáveis de ambiente
 const STRIPE_SECRET_KEY = "sk_test_51OCvEHBOCcKhGyPvkvnCN833fNzIYWoV0rmWrYQ7sEqDJPPlLgfAIIJEkPEkU0Pi2SRbsm3nTrNBe7DKlFNfjEK8008ljsyf9Z";
-const STRIPE_WEBHOOK_SECRET = "sk_test_51OCvEHBOCcKhGyPvkvnCN833fNzIYWoV0rmWrYQ7sEqDJPPlLgfAIIJEkPEkU0Pi2SRbsm3nTrNBe7DKlFNfjEK8008ljsyf9Z";
+// Webhook secret deve ser diferente da chave secreta - usando um valor temporário para teste
+// Você deve substituir isso pelo webhook signing secret real da sua conta Stripe
+const STRIPE_WEBHOOK_SECRET = "whsec_test_webhook_secret_key_for_testing";
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
 });
@@ -30,6 +32,8 @@ interface CheckoutRequest {
 }
 
 serve(async (req) => {
+  console.log(`[${new Date().toISOString()}] Request received: ${req.method} ${req.url}`);
+  
   // Lidar com requisições CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -40,12 +44,31 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const path = url.pathname.split("/").pop();
+    
+    console.log(`Path: ${path}`);
 
     // Rota para criar uma sessão de checkout
     if (path === "create-checkout") {
-      const { planId, userId, successUrl, cancelUrl }: CheckoutRequest = await req.json();
+      console.log("Processing create-checkout request");
+      let requestBody;
+      try {
+        requestBody = await req.json();
+        console.log("Request body:", JSON.stringify(requestBody));
+      } catch (error) {
+        console.error("Error parsing request body:", error);
+        return new Response(
+          JSON.stringify({ error: "Error parsing request body" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      const { planId, userId, successUrl, cancelUrl } = requestBody as CheckoutRequest;
 
       if (!planId || !userId || !successUrl || !cancelUrl) {
+        console.error("Missing required parameters:", { planId, userId, successUrl, cancelUrl });
         return new Response(
           JSON.stringify({ error: "Parâmetros incompletos" }),
           {
@@ -63,6 +86,7 @@ serve(async (req) => {
         .single();
 
       if (planError || !plan) {
+        console.error("Plan error:", planError);
         return new Response(
           JSON.stringify({ error: "Plano não encontrado" }),
           {
@@ -80,6 +104,7 @@ serve(async (req) => {
         .single();
 
       if (profileError) {
+        console.error("Profile error:", profileError);
         return new Response(
           JSON.stringify({ error: "Usuário não encontrado" }),
           {
@@ -89,48 +114,62 @@ serve(async (req) => {
         );
       }
 
-      // Criar sessão de checkout do Stripe
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            price_data: {
-              currency: "brl",
-              product_data: {
-                name: `Plano ${plan.name}`,
-                description: plan.description || `${plan.credits} créditos por ${plan.duration_days} dias`,
+      try {
+        // Criar sessão de checkout do Stripe
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          line_items: [
+            {
+              price_data: {
+                currency: "brl",
+                product_data: {
+                  name: `Plano ${plan.name}`,
+                  description: plan.description || `${plan.credits} créditos por ${plan.duration_days} dias`,
+                },
+                unit_amount: Math.round(plan.price * 100), // Stripe trabalha com centavos
               },
-              unit_amount: Math.round(plan.price * 100), // Stripe trabalha com centavos
+              quantity: 1,
             },
-            quantity: 1,
+          ],
+          mode: "payment",
+          success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: cancelUrl,
+          client_reference_id: userId,
+          customer_email: profile.email,
+          metadata: {
+            planId: planId,
+            userId: userId,
+            credits: plan.credits.toString(),
+            durationDays: plan.duration_days.toString(),
           },
-        ],
-        mode: "payment",
-        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl,
-        client_reference_id: userId,
-        customer_email: profile.email,
-        metadata: {
-          planId: planId,
-          userId: userId,
-          credits: plan.credits.toString(),
-          durationDays: plan.duration_days.toString(),
-        },
-      });
+        });
 
-      return new Response(
-        JSON.stringify({ id: session.id, url: session.url }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+        console.log("Checkout session created:", session.id);
+        return new Response(
+          JSON.stringify({ id: session.id, url: session.url }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      } catch (error) {
+        console.error("Stripe session creation error:", error);
+        return new Response(
+          JSON.stringify({ error: `Erro ao criar sessão: ${error.message}` }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
     }
     
     // Rota para webhooks do Stripe
     else if (path === "webhook") {
+      console.log("Processing webhook request");
       const signature = req.headers.get("stripe-signature");
       if (!signature) {
+        console.error("Missing Stripe signature");
         return new Response(
           JSON.stringify({ error: "Assinatura Stripe não encontrada" }),
           {
@@ -144,6 +183,12 @@ serve(async (req) => {
       
       let event;
       try {
+        // Em produção, use um webhook signing secret real
+        // Para fins de teste, podemos pular a verificação rigorosa
+        // descomentando esta linha e comentando o bloco try/catch
+        // event = JSON.parse(body);
+
+        // Verificação normal de webhook para produção
         event = stripe.webhooks.constructEvent(
           body,
           signature,
@@ -163,6 +208,7 @@ serve(async (req) => {
       // Processar evento checkout.session.completed
       if (event.type === "checkout.session.completed") {
         const session = event.data.object;
+        console.log("Processing completed checkout:", session.id);
         
         if (session.payment_status === "paid") {
           const userId = session.client_reference_id;
