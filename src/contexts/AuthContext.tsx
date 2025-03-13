@@ -96,18 +96,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       for (const profile of supabaseUsers) {
         try {
-          // Tentar buscar os metadados do usuário para verificar a role
-          const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
-          
+          // Buscar informações do usuário dos metadados
+          let userEmail = null;
           let userRole: 'admin' | 'user' = 'user';
-          if (userData?.user?.user_metadata?.role === 'admin') {
-            userRole = 'admin';
+          
+          try {
+            // Extrair role dos metadados (se disponível)
+            const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
+            if (userData?.user?.user_metadata?.role === 'admin') {
+              userRole = 'admin';
+            }
+            userEmail = userData?.user?.email || null;
+          } catch (error) {
+            console.log('Erro ao buscar metadados do usuário:', error);
+            // Continua com role padrão 'user'
           }
           
           formattedUsers.push({
             id: profile.id,
             name: profile.name,
-            email: null, // Não temos o email no perfil
+            email: userEmail,
             role: userRole,
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
@@ -349,8 +357,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.role) {
         try {
           console.log(`Tentando atualizar role para: ${data.role}`);
-          // Em um cenário real, seria necessário chamar uma função de admin
-          // ou um método específico para atualizar os metadados do usuário
+          // Tentativa de atualizar os metadados
+          const currentUser = supabase.auth.getUser();
+          if (currentUser) {
+            supabase.auth.updateUser({
+              data: { role: data.role }
+            });
+          }
         } catch (e) {
           console.error('Erro ao atualizar role:', e);
         }
