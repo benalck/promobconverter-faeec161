@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useCallback, useState } from 'react';
 
 /**
@@ -136,6 +137,7 @@ export function useTimeout(
  * Hook para gerenciar múltiplos timeouts simultaneamente
  */
 export function useMultipleTimeouts() {
+  // Usando Map<string, NodeJS.Timeout> para armazenar os timeouts
   const timeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   
   // Configura um novo timeout com um ID único
