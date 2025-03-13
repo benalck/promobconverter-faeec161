@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -120,7 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           // Buscar informações do usuário dos metadados
           let userEmail = null;
-          let userRole: 'admin' | 'user' = profile.role || 'user';
+          // Fix here: Initialize with a valid role type
+          let userRole: 'admin' | 'user' = 'user';
           
           try {
             // Extrair role dos metadados (se disponível)
@@ -141,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: profile.id,
             name: profile.name,
             email: userEmail,
-            role: userRole, // Use the properly typed userRole
+            role: userRole, // Now correctly typed as 'admin' | 'user'
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
             isBanned: profile.is_banned,
