@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Lock, Mail, User, EyeOff, Eye } from "lucide-react";
+import { ShoppingBag, Lock, Mail, User, EyeOff, Eye, Gift } from "lucide-react";
 import HowItWorksButton from "@/components/HowItWorksButton";
 
 export default function Register() {
@@ -134,6 +134,18 @@ export default function Register() {
                   <p className="text-sm text-white/70">Acompanhe todas as suas conversões anteriores</p>
                 </div>
               </div>
+
+              {!isLoginMode && (
+                <div className="flex items-start space-x-3">
+                  <div className="bg-white/20 p-2 rounded-full">
+                    <Gift className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">3 Créditos Grátis</h3>
+                    <p className="text-sm text-white/70">Ganhe 3 créditos grátis ao se registrar</p>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="mt-12 text-sm text-white/60">
@@ -153,6 +165,12 @@ export default function Register() {
                 ? "Entre com suas credenciais para acessar o conversor" 
                 : "Registre-se para acessar todos os recursos do conversor"}
             </CardDescription>
+            {!isLoginMode && (
+              <div className="mt-2 flex items-center justify-center gap-2 text-sm text-primary">
+                <Gift className="h-4 w-4" />
+                <span>Ganhe 3 créditos grátis ao se registrar!</span>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
