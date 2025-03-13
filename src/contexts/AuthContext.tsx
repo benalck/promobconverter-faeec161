@@ -1,7 +1,19 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
+
+interface Plan {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  credits: number;
+  duration_days: number;
+  is_active: boolean;
+  created_at: string;
+}
 
 interface User {
   id: string;
@@ -11,7 +23,9 @@ interface User {
   createdAt: string;
   lastLogin?: string;
   isBanned?: boolean;
-  credits?: number;
+  credits: number;
+  activePlan?: Plan | null;
+  planExpiryDate?: string | null;
 }
 
 interface AuthContextType {
@@ -26,9 +40,7 @@ interface AuthContextType {
   deleteUser: (id: string) => void;
   updateUser: (id: string, data: Partial<User>) => void;
   getAllUsers: () => User[];
-  addCredits: (userId: string, amount: number) => Promise<void>;
-  useCredits: (userId: string, amount: number) => Promise<boolean>;
-  getUserCredits: (userId: string) => number;
+  refreshUserCredits: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,15 +55,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, plans(*)')
         .eq('id', supabaseUser.id)
         .single();
 
+      // Default to user role
       let userRole: 'admin' | 'user' = 'user';
       
-      if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
+      // Only assign admin role if explicitly defined
+      if (profile?.role === 'admin') {
+        userRole = 'admin';
+      } else if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
         userRole = 'admin';
       }
+
+      const planExpiryDate = profile?.plan_expiry_date || null;
 
       return {
         id: supabaseUser.id,
@@ -61,7 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: supabaseUser.created_at || new Date().toISOString(),
         lastLogin: supabaseUser.last_sign_in_at,
         isBanned: profile?.is_banned || false,
-        credits: profile?.credits || 0
+        credits: profile?.credits || 0,
+        activePlan: profile?.plans || null,
+        planExpiryDate
       };
     } catch (error) {
       console.error('Erro ao converter usuário do Supabase:', error);
@@ -81,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: supabaseUsers, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*, plans(*)');
 
       if (error) throw error;
 
@@ -95,17 +115,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       for (const profile of supabaseUsers) {
         try {
           let userEmail = null;
+          // Initialize userRole with the default value of 'user'
           let userRole: 'admin' | 'user' = 'user';
           
           try {
+            // This will fail in the browser since admin APIs are only available server-side
+            // Let's catch it and continue
             const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
-            if (userData?.user?.user_metadata?.role === 'admin') {
-              userRole = 'admin';
-            }
             userEmail = userData?.user?.email || null;
           } catch (error) {
             console.log('Erro ao buscar metadados do usuário:', error);
-            userRole = 'user';
+          }
+          
+          // Only assign 'admin' if the profile role is explicitly 'admin'
+          if (profile.role === 'admin') {
+            userRole = 'admin';
           }
           
           formattedUsers.push({
@@ -116,19 +140,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
             isBanned: profile.is_banned,
-            credits: profile.credits || 0
+            credits: profile.credits || 0,
+            activePlan: profile.plans || null,
+            planExpiryDate: profile.plan_expiry_date || null
           });
         } catch (error) {
-          formattedUsers.push({
-            id: profile.id,
-            name: profile.name,
-            email: null,
-            role: 'user',
-            createdAt: profile.created_at,
-            lastLogin: profile.last_login || undefined,
-            isBanned: profile.is_banned,
-            credits: 0
-          });
+          console.error('Erro ao processar usuário:', error);
         }
       }
 
@@ -138,12 +155,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshUserCredits = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*, plans(*)')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
+      
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        return {
+          ...prevUser,
+          credits: profile?.credits || 0,
+          activePlan: profile?.plans || null,
+          planExpiryDate: profile?.plan_expiry_date || null
+        };
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar créditos:', error);
+    }
+  };
+
   useEffect(() => {
     const initialize = async () => {
       try {
+        console.log('Initializing AuthContext...');
         const { data: session } = await supabase.auth.getSession();
         
         if (session.session?.user) {
+          console.log('User found in session:', session.session.user.id);
           const currentUser = await convertSupabaseUser(session.session.user);
           setUser(currentUser);
           
@@ -156,12 +201,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await logout();
             return;
           }
+        } else {
+          console.log('No user found in session');
         }
 
         await syncUsers();
       } catch (error) {
         console.error('Erro na inicialização do AuthContext:', error);
       } finally {
+        console.log('AuthContext initialization complete');
         setIsInitialized(true);
       }
     };
@@ -187,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login with email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -195,6 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
+        console.log('Login successful, user:', data.user.id);
         const currentUser = await convertSupabaseUser(data.user);
         
         if (currentUser.isBanned) {
@@ -233,6 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (name: string, email: string, password: string) => {
     try {
+      console.log('Attempting registration with email:', email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -246,6 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
+        console.log('Registration successful, user:', data.user.id);
         const { count, error: countError } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true });
@@ -261,7 +313,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name,
               created_at: new Date().toISOString(),
               last_login: new Date().toISOString(),
-              is_banned: false
+              is_banned: false,
+              role: userRole,
+              credits: 0
             }
           ]);
 
@@ -323,12 +377,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const profileData: { 
         name?: string; 
         is_banned?: boolean;
+        role?: string;
         credits?: number;
+        active_plan?: string | null;
+        plan_expiry_date?: string | null;
       } = {};
       
       if (data.name !== undefined) profileData.name = data.name;
       if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
+      
+      if (data.role !== undefined) {
+        if (data.role === 'admin' || data.role === 'user') {
+          profileData.role = data.role;
+        } else {
+          profileData.role = 'user';
+          console.warn('Invalid role provided, defaulting to "user"');
+        }
+      }
+      
       if (data.credits !== undefined) profileData.credits = data.credits;
+      if (data.activePlan !== undefined) profileData.active_plan = data.activePlan?.id || null;
+      if (data.planExpiryDate !== undefined) profileData.plan_expiry_date = data.planExpiryDate;
       
       if (Object.keys(profileData).length > 0) {
         supabase
@@ -341,12 +410,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.role) {
         try {
           console.log(`Tentando atualizar role para: ${data.role}`);
-          const currentUser = supabase.auth.getUser();
-          if (currentUser) {
-            supabase.auth.updateUser({
-              data: { role: data.role }
-            });
-          }
+          supabase.auth.updateUser({
+            data: { role: data.role }
+          });
         } catch (e) {
           console.error('Erro ao atualizar role:', e);
         }
@@ -373,83 +439,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return users;
   };
 
-  const addCredits = async (userId: string, amount: number) => {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', userId)
-        .single();
-      
-      const currentCredits = profile?.credits || 0;
-      const newCredits = currentCredits + amount;
-      
-      await supabase
-        .from('profiles')
-        .update({ credits: newCredits })
-        .eq('id', userId);
-        
-      if (user && user.id === userId) {
-        setUser({
-          ...user,
-          credits: newCredits
-        });
-      }
-      
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, credits: newCredits } : u
-      ));
-      
-    } catch (error) {
-      console.error('Erro ao adicionar créditos:', error);
-      throw new Error('Falha ao adicionar créditos');
-    }
-  };
-  
-  const useCredits = async (userId: string, amount: number): Promise<boolean> => {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', userId)
-        .single();
-      
-      const currentCredits = profile?.credits || 0;
-      
-      if (currentCredits < amount) {
-        return false;
-      }
-      
-      const newCredits = currentCredits - amount;
-      
-      await supabase
-        .from('profiles')
-        .update({ credits: newCredits })
-        .eq('id', userId);
-        
-      if (user && user.id === userId) {
-        setUser({
-          ...user,
-          credits: newCredits
-        });
-      }
-      
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, credits: newCredits } : u
-      ));
-      
-      return true;
-    } catch (error) {
-      console.error('Erro ao usar créditos:', error);
-      throw new Error('Falha ao usar créditos');
-    }
-  };
-  
-  const getUserCredits = (userId: string): number => {
-    const userObj = users.find(u => u.id === userId);
-    return userObj?.credits || 0;
-  };
-
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -469,12 +458,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         deleteUser,
         updateUser,
         getAllUsers,
-        addCredits,
-        useCredits,
-        getUserCredits
+        refreshUserCredits
       }}
     >
-      {isInitialized ? children : null}
+      {isInitialized ? children : <div className="min-h-screen flex items-center justify-center">Carregando...</div>}
     </AuthContext.Provider>
   );
 }
