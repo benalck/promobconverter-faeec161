@@ -35,7 +35,6 @@ export function useMultipleTimeouts(): UseMultipleTimeoutsReturn {
     }, delay);
     
     // Armazena o timeout no Map usando o id fornecido como chave
-    // Convertemos explicitamente o timeoutId para NodeJS.Timeout para evitar erros de tipo
     timeouts.current.set(id, timeoutId as unknown as NodeJS.Timeout);
     
     return id;
