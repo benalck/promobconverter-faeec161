@@ -34,9 +34,8 @@ export function useMultipleTimeouts(): UseMultipleTimeoutsReturn {
       timeouts.current.delete(id);
     }, delay);
     
-    // Armazena o ID do timeout
-    // O retorno de setTimeout é um number no browser e um Timeout objeto no Node
-    // Precisamos garantir que seja tratado corretamente como NodeJS.Timeout
+    // Armazena o timeout no Map usando o id fornecido como chave
+    // Convertemos explicitamente o timeoutId para NodeJS.Timeout para evitar erros de tipo
     timeouts.current.set(id, timeoutId as unknown as NodeJS.Timeout);
     
     return id;
