@@ -46,12 +46,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', supabaseUser.id)
         .single();
 
+      // Determinar a role (admin ou user)
+      // Como o perfil pode não ter o campo role ainda, definimos um valor padrão
+      let userRole: 'admin' | 'user' = 'user';
+      
+      // Se o perfil tiver um campo adicional 'role', tentamos usá-lo
+      if (profile && typeof profile === 'object') {
+        // @ts-ignore - Ignoramos o erro de tipagem aqui, pois estamos verificando em runtime
+        if (profile.role === 'admin') {
+          userRole = 'admin';
+        }
+      }
+
       return {
         id: supabaseUser.id,
         name: profile?.name || supabaseUser.user_metadata?.name || 'Usuário',
         email: supabaseUser.email,
-        // Verificar se o perfil tem a propriedade role, se não tiver, definir como 'user'
-        role: profile?.role as 'admin' | 'user' || 'user',
+        role: userRole,
         createdAt: supabaseUser.created_at || new Date().toISOString(),
         lastLogin: supabaseUser.last_sign_in_at,
         isBanned: profile?.is_banned || false
@@ -79,15 +90,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       // Converter para o formato interno da aplicação
-      const formattedUsers = supabaseUsers.map(profile => ({
-        id: profile.id,
-        name: profile.name,
-        email: null, // Não temos o email no perfil
-        role: (profile.role as 'admin' | 'user') || 'user',
-        createdAt: profile.created_at,
-        lastLogin: profile.last_login || undefined,
-        isBanned: profile.is_banned
-      }));
+      const formattedUsers = supabaseUsers.map(profile => {
+        // Determinar role (admin ou user)
+        let userRole: 'admin' | 'user' = 'user';
+        
+        // @ts-ignore - Verificamos em runtime
+        if (profile.role === 'admin') {
+          userRole = 'admin';
+        }
+        
+        return {
+          id: profile.id,
+          name: profile.name,
+          email: null, // Não temos o email no perfil
+          role: userRole,
+          createdAt: profile.created_at,
+          lastLogin: profile.last_login || undefined,
+          isBanned: profile.is_banned
+        };
+      });
 
       setUsers(formattedUsers);
     } catch (error) {
@@ -210,6 +231,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
+        // Verificar quantos usuários existem para determinar se é admin
+        const { count, error: countError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+          
+        // O primeiro usuário registrado será admin
+        const isFirstUser = count === 0 || countError;
+        const userRole = isFirstUser ? 'admin' : 'user';
+
         // Criar perfil no Supabase
         const { error: profileError } = await supabase
           .from('profiles')
@@ -219,14 +249,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               name,
               created_at: new Date().toISOString(),
               last_login: new Date().toISOString(),
-              role: users.length === 0 ? 'admin' : 'user', // Primeiro usuário é admin
               is_banned: false
             }
           ]);
 
         if (profileError) throw profileError;
 
+        // Precisamos adicionar a role manualmente através de um update
+        // já que o campo não existe no tipo profiles
+        const { error: roleError } = await supabase.rpc('set_role', { 
+          user_id: data.user.id, 
+          user_role: userRole 
+        }).catch(() => {
+          // Se o RPC falhar, tentamos atualizar o perfil diretamente
+          // @ts-ignore - Ignoramos erro de tipagem aqui
+          return supabase
+            .from('profiles')
+            .update({ role: userRole })
+            .eq('id', data.user.id);
+        });
+
+        if (roleError) console.error('Erro ao definir role:', roleError);
+
         const newUser = await convertSupabaseUser(data.user);
+        newUser.role = userRole; // Garantir que a role esteja correta
         setUser(newUser);
         await syncUsers();
       }

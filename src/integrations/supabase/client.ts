@@ -11,41 +11,29 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Define uma função para criar as tabelas necessárias (profiles com campo role)
-export const setupDatabase = async () => {
-  // Primeiro, verificamos se a tabela profiles já existe
-  const { data: tablesData } = await supabase
-    .from('information_schema.tables')
-    .select('table_name')
-    .eq('table_schema', 'public')
-    .eq('table_name', 'profiles');
+// Verificar se existem perfis no sistema
+export const setupProfiles = async () => {
+  try {
+    // Verificar se existem perfis
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('*');
+    
+    if (error) {
+      console.error('Erro ao verificar perfis:', error);
+      return;
+    }
 
-  const profilesTableExists = tablesData && tablesData.length > 0;
-
-  // Se a tabela não existir, criamos ela
-  if (!profilesTableExists) {
-    const { error } = await supabase.rpc('create_profiles_table');
-    if (error) console.error('Erro ao criar tabela profiles:', error);
-  }
-
-  // Verificamos se a coluna role existe na tabela profiles
-  const { data: columnsData } = await supabase
-    .from('information_schema.columns')
-    .select('column_name')
-    .eq('table_schema', 'public')
-    .eq('table_name', 'profiles')
-    .eq('column_name', 'role');
-
-  const roleColumnExists = columnsData && columnsData.length > 0;
-
-  // Se a coluna não existir, adicionamos ela
-  if (!roleColumnExists) {
-    const { error } = await supabase.rpc('add_role_column');
-    if (error) console.error('Erro ao adicionar coluna role:', error);
+    // Se não houver perfis e a tabela existir, está tudo configurado
+    if (profiles) {
+      console.log(`${profiles.length} perfis encontrados no sistema.`);
+    }
+  } catch (error) {
+    console.error('Erro ao configurar perfis:', error);
   }
 };
 
-// Tenta configurar o banco de dados
-setupDatabase().catch(error => {
+// Executar verificação de perfis ao iniciar a aplicação
+setupProfiles().catch(error => {
   console.error('Erro ao configurar banco de dados:', error);
 });
