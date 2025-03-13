@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import BannedMessage from "@/components/BannedMessage";
-import { ShoppingBag, Lock, Mail, FileText, Download, Database, Settings, FileSpreadsheet, ArrowRight } from "lucide-react";
+import LoginTutorial from "@/components/LoginTutorial";
+import { ShoppingBag, Lock, Mail, FileText, Download, Database, HelpCircle, Info, ChevronRight } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,6 +18,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [pageLoaded, setPageLoaded] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -31,7 +34,7 @@ export default function Login() {
       if (user.isBanned) {
         setIsBanned(true);
       } else {
-        navigate("/converter");
+        navigate("/");
       }
     }
   }, [user, pageLoaded, navigate]);
@@ -53,9 +56,9 @@ export default function Login() {
       await login(email, password);
       toast({
         title: "Login realizado com sucesso!",
-        description: "Bem-vindo à nossa loja de conversão.",
+        description: "Bem-vindo à nossa aplicação de conversão.",
       });
-      navigate("/converter");
+      navigate("/");
     } catch (error) {
       if (error instanceof Error && error.message.includes('banida')) {
         setIsBanned(true);
@@ -97,11 +100,11 @@ export default function Login() {
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <div className="bg-white/20 p-2 rounded-full">
-                  <ShoppingBag className="h-5 w-5" />
+                  <FileText className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-medium">Simples e Rápido</h3>
-                  <p className="text-sm text-white/70">Interface intuitiva para conversão em segundos</p>
+                  <h3 className="font-medium">Simplifique a Conversão</h3>
+                  <p className="text-sm text-white/70">De XML para Excel em segundos</p>
                 </div>
               </div>
               
@@ -110,14 +113,14 @@ export default function Login() {
                   <Lock className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-medium">Seguro</h3>
-                  <p className="text-sm text-white/70">Seus dados são processados localmente</p>
+                  <h3 className="font-medium">Seguro e Confiável</h3>
+                  <p className="text-sm text-white/70">Processamento seguro de seus dados</p>
                 </div>
               </div>
             </div>
             
             <div className="mt-12 text-sm text-white/60">
-              © 2023 XML Excel Wizard. Todos os direitos reservados.
+              © {new Date().getFullYear()} XML Excel Wizard. Todos os direitos reservados.
             </div>
           </div>
         </div>
@@ -174,82 +177,32 @@ export default function Login() {
           <CardFooter className="flex flex-col space-y-4 pb-12">
             <p className="text-center text-sm text-gray-600">
               Novo cliente?{" "}
-              <Link to="/registro" className="text-primary font-medium hover:underline">
+              <Link to="/register" className="text-primary font-medium hover:underline">
                 Crie sua conta
               </Link>
             </p>
+            <div className="w-full mt-4">
+              <Dialog open={tutorialOpen} onOpenChange={setTutorialOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    <span>Como funciona nossa aplicação</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Como funciona o conversor XML para Excel</DialogTitle>
+                    <DialogDescription>
+                      Um passo a passo completo do processo de conversão
+                    </DialogDescription>
+                  </DialogHeader>
+                  <LoginTutorial onClose={() => setTutorialOpen(false)} />
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardFooter>
         </Card>
-      </div>
-
-      {/* Seção de Passo a Passo */}
-      <div className="w-full max-w-5xl mx-auto mt-4 mb-16 px-4">
-        <h2 className="text-2xl font-bold text-center mb-8">Como Funciona</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Bloco 1 */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-              <FileText className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Conversão Simples, Resultados Perfeitos</h3>
-            <p className="text-gray-600">Nossa interface intuitiva torna a transformação de dados XML em planilhas Excel formatadas simples e eficiente.</p>
-          </div>
-          
-          {/* Bloco 2 */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-              <Database className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Processamento XML</h3>
-            <p className="text-gray-600">Analise estruturas XML complexas com extração precisa de elementos e atributos.</p>
-          </div>
-          
-          {/* Bloco 3 */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-              <FileSpreadsheet className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Formatação Excel</h3>
-            <p className="text-gray-600">Gere planilhas Excel perfeitamente formatadas com layouts de colunas personalizados.</p>
-          </div>
-          
-          {/* Bloco 4 */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-              <ArrowRight className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Arrastar e Soltar</h3>
-            <p className="text-gray-600">Simplesmente arraste e solte seus arquivos XML para conversão instantânea.</p>
-          </div>
-          
-          {/* Bloco 5 */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-              <Download className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Download com Um Clique</h3>
-            <p className="text-gray-600">Baixe seus arquivos XLSX convertidos instantaneamente com um único clique.</p>
-          </div>
-          
-          {/* Bloco 6 */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4">
-              <Database className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Integridade de Dados</h3>
-            <p className="text-gray-600">Mantenha a integridade completa dos dados durante todo o processo de conversão.</p>
-          </div>
-          
-          {/* Bloco 7 */}
-          <div className="bg-white p-6 rounded-lg shadow-md mx-auto md:col-span-2 lg:col-span-3 max-w-lg">
-            <div className="bg-primary/10 p-3 rounded-full w-fit mb-4 mx-auto">
-              <Settings className="h-6 w-6 text-primary" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2 text-center">Personalizável</h3>
-            <p className="text-gray-600 text-center">Configure mapeamentos de colunas e formatação para atender às suas necessidades específicas.</p>
-          </div>
-        </div>
       </div>
     </div>
   );
