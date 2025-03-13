@@ -39,7 +39,7 @@ export default function Navbar() {
               <>
                 <UserCredits />
                 <span className="text-sm text-gray-600">
-                  Olá, {user.name || 'Usuário'}
+                  Olá, {user.name || user.email?.split('@')[0] || 'Usuário'}
                 </span>
                 <Button
                   variant="outline"
