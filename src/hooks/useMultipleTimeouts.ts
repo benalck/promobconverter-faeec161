@@ -22,7 +22,8 @@ export function useMultipleTimeouts() {
     }, delay);
     
     // Armazena o ID do timeout
-    // Convertendo corretamente o número do timeout para NodeJS.Timeout
+    // O retorno de setTimeout é um number no browser e um Timeout objeto no Node
+    // Precisamos garantir que seja tratado corretamente como NodeJS.Timeout
     timeouts.current.set(id, timeoutId as unknown as NodeJS.Timeout);
     
     return id;
