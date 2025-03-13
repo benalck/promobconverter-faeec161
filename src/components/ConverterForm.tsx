@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -19,6 +18,7 @@ import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ConverterFormProps {
   className?: string;
@@ -29,10 +29,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [outputFileName, setOutputFileName] = useState("modelos_converted");
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUserCredits } = useAuth();
   const navigate = useNavigate();
 
-  // Verificar se o usuário está banido
   if (user?.isBanned) {
     return <BannedMessage />;
   }
@@ -43,7 +42,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     setOutputFileName(fileName);
   };
 
-  const handleConvert = () => {
+  const handleConvert = async () => {
     if (!xmlFile) {
       toast({
         title: "Nenhum arquivo selecionado",
@@ -53,54 +52,100 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       return;
     }
 
-    setIsConverting(true);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const xmlContent = e.target?.result as string;
-        const csvString = convertXMLToCSV(xmlContent);
-        const htmlPrefix = generateHtmlPrefix();
-        const htmlSuffix = generateHtmlSuffix();
-
-        const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
-          type: "application/vnd.ms-excel;charset=utf-8;",
-        });
-
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `${outputFileName}.xls`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        setIsConverting(false);
-        toast({
-          title: "Conversão concluída",
-          description: "Seu arquivo foi convertido com sucesso.",
-          variant: "default",
-        });
-      } catch (error) {
-        console.error("Error converting file:", error);
-        setIsConverting(false);
-        toast({
-          title: "Erro na conversão",
-          description: "Ocorreu um erro ao converter o arquivo XML.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    reader.onerror = () => {
-      setIsConverting(false);
+    if (!user) {
       toast({
-        title: "Erro na leitura",
-        description: "Não foi possível ler o arquivo XML.",
+        title: "Usuário não autenticado",
+        description: "Você precisa estar logado para converter arquivos.",
         variant: "destructive",
       });
-    };
+      navigate("/register");
+      return;
+    }
 
-    reader.readAsText(xmlFile);
+    if (user.credits <= 0) {
+      toast({
+        title: "Créditos insuficientes",
+        description: "Você não possui créditos suficientes para realizar esta conversão.",
+        variant: "destructive",
+      });
+      navigate("/plans");
+      return;
+    }
+
+    setIsConverting(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const xmlContent = e.target?.result as string;
+          const csvString = convertXMLToCSV(xmlContent);
+          const htmlPrefix = generateHtmlPrefix();
+          const htmlSuffix = generateHtmlSuffix();
+
+          const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
+            type: "application/vnd.ms-excel;charset=utf-8;",
+          });
+
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `${outputFileName}.xls`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          const { data, error } = await supabase
+            .from('profiles')
+            .update({ credits: user.credits - 1 })
+            .eq('id', user.id);
+
+          if (error) {
+            console.error("Erro ao atualizar créditos:", error);
+            toast({
+              title: "Erro ao atualizar créditos",
+              description: "Ocorreu um erro ao atualizar seus créditos.",
+              variant: "destructive",
+            });
+          } else {
+            await refreshUserCredits();
+            
+            toast({
+              title: "Conversão concluída",
+              description: `Seu arquivo foi convertido com sucesso. Você utilizou 1 crédito e agora possui ${user.credits - 1} créditos.`,
+              variant: "default",
+            });
+          }
+        } catch (error) {
+          console.error("Error converting file:", error);
+          toast({
+            title: "Erro na conversão",
+            description: "Ocorreu um erro ao converter o arquivo XML.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsConverting(false);
+        }
+      };
+
+      reader.onerror = () => {
+        setIsConverting(false);
+        toast({
+          title: "Erro na leitura",
+          description: "Não foi possível ler o arquivo XML.",
+          variant: "destructive",
+        });
+      };
+
+      reader.readAsText(xmlFile);
+    } catch (error) {
+      console.error("Error in handleConvert:", error);
+      setIsConverting(false);
+      toast({
+        title: "Erro inesperado",
+        description: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -140,9 +185,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             />
           </div>
 
+          {user && (
+            <div className="text-center text-sm bg-primary/10 py-2 px-4 rounded-md animate-fade-in">
+              <p>Você possui <span className="font-bold">{user.credits}</span> créditos disponíveis</p>
+              <p>Cada conversão utiliza 1 crédito</p>
+            </div>
+          )}
+
           <Button
             onClick={handleConvert}
-            disabled={!xmlFile || isConverting}
+            disabled={!xmlFile || isConverting || !user || user.credits <= 0}
             className={cn(
               "w-full py-6 text-base font-medium transition-all duration-500 animate-fade-in",
               "bg-primary hover:bg-primary/90 text-white relative overflow-hidden group",
@@ -167,6 +219,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               )}
             </span>
           </Button>
+          
+          {(!user || user.credits <= 0) && (
+            <div className="text-center mt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/plans")}
+                className="animate-pulse"
+              >
+                {user ? "Adquirir mais créditos" : "Criar conta para obter créditos"}
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
