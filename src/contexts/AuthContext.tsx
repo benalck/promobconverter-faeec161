@@ -59,10 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', supabaseUser.id)
         .single();
 
-      // Default to user role
       let userRole: 'admin' | 'user' = 'user';
       
-      // Only assign admin role if explicitly defined
       if (profile?.role === 'admin') {
         userRole = 'admin';
       } else if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
@@ -119,8 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           let userRole: 'admin' | 'user' = 'user';
           
           try {
-            // This will fail in the browser since admin APIs are only available server-side
-            // Let's catch it and continue
             const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
             userEmail = userData?.user?.email || null;
           } catch (error) {
@@ -184,11 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initialize = async () => {
       try {
-        console.log('Initializing AuthContext...');
         const { data: session } = await supabase.auth.getSession();
         
         if (session.session?.user) {
-          console.log('User found in session:', session.session.user.id);
           const currentUser = await convertSupabaseUser(session.session.user);
           setUser(currentUser);
           
@@ -201,15 +195,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await logout();
             return;
           }
-        } else {
-          console.log('No user found in session');
         }
 
         await syncUsers();
       } catch (error) {
         console.error('Erro na inicialização do AuthContext:', error);
       } finally {
-        console.log('AuthContext initialization complete');
         setIsInitialized(true);
       }
     };
@@ -235,7 +226,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('Attempting login with email:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -244,7 +234,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
-        console.log('Login successful, user:', data.user.id);
         const currentUser = await convertSupabaseUser(data.user);
         
         if (currentUser.isBanned) {
@@ -283,7 +272,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      console.log('Attempting registration with email:', email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -297,7 +285,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
-        console.log('Registration successful, user:', data.user.id);
         const { count, error: countError } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true });
@@ -461,7 +448,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshUserCredits
       }}
     >
-      {isInitialized ? children : <div className="min-h-screen flex items-center justify-center">Carregando...</div>}
+      {isInitialized ? children : null}
     </AuthContext.Provider>
   );
 }
