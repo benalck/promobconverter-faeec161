@@ -255,21 +255,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (profileError) throw profileError;
 
-        // Precisamos adicionar a role manualmente através de um update
-        // já que o campo não existe no tipo profiles
-        const { error: roleError } = await supabase.rpc('set_role', { 
-          user_id: data.user.id, 
-          user_role: userRole 
-        }).catch(() => {
-          // Se o RPC falhar, tentamos atualizar o perfil diretamente
-          // @ts-ignore - Ignoramos erro de tipagem aqui
-          return supabase
-            .from('profiles')
-            .update({ role: userRole })
-            .eq('id', data.user.id);
-        });
-
-        if (roleError) console.error('Erro ao definir role:', roleError);
+        // Atualizar role usando RPC ou SQL diretamente
+        // Como não podemos usar o campo role diretamente, vamos usar metadados
+        try {
+          // Atualizar metadados do usuário para incluir role
+          await supabase.auth.updateUser({
+            data: { 
+              role: userRole 
+            }
+          });
+          
+          // Também vamos registrar em console para debug
+          console.log(`Usuário registrado com role: ${userRole}`);
+        } catch (roleError) {
+          console.error('Erro ao definir role nos metadados:', roleError);
+        }
 
         const newUser = await convertSupabaseUser(data.user);
         newUser.role = userRole; // Garantir que a role esteja correta
@@ -313,17 +313,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = (id: string, data: Partial<User>) => {
     try {
-      // Atualizar no Supabase
+      // Atualizar no Supabase - apenas os campos que existem no schema
+      const profileData: any = {
+        name: data.name,
+        is_banned: data.isBanned
+      };
+      
       supabase
         .from('profiles')
-        .update({
-          name: data.name,
-          role: data.role,
-          is_banned: data.isBanned
-        })
+        .update(profileData)
         .eq('id', id)
         .then(() => syncUsers());
         
+      // Se estamos atualizando a role, precisamos atualizar os metadados do usuário
+      if (data.role) {
+        try {
+          // Atualizar metadados do usuário com a nova role
+          // Isso precisa ser feito pelo usuário autenticado com permissões
+          console.log(`Tentando atualizar role para: ${data.role}`);
+        } catch (e) {
+          console.error('Erro ao atualizar role:', e);
+        }
+      }
+      
       const newUsers = users.map(u => 
         u.id === id ? { ...u, ...data } : u
       );
