@@ -1,9 +1,13 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
-  name: string;
-  email: string;
+  name: string | null;
+  email: string | null;
   role: 'admin' | 'user';
   createdAt: string;
   lastLogin?: string;
@@ -18,7 +22,7 @@ interface AuthContextType {
   isInitialized: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   deleteUser: (id: string) => void;
   updateUser: (id: string, data: Partial<User>) => void;
   getAllUsers: () => User[];
@@ -30,112 +34,212 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const { toast } = useToast();
 
-  useEffect(() => {
+  // Converte um usuário do Supabase para o formato interno do app
+  const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<User> => {
     try {
-      // Carregar usuário atual
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-      }
+      // Buscar profile no Supabase
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
 
-      // Carregar lista de usuários
-      const storedUsers = localStorage.getItem('users');
-      if (storedUsers) {
-        const parsedUsers = JSON.parse(storedUsers);
-        setUsers(parsedUsers);
-      }
+      return {
+        id: supabaseUser.id,
+        name: profile?.name || supabaseUser.user_metadata?.name || 'Usuário',
+        email: supabaseUser.email,
+        role: profile?.role || 'user',
+        createdAt: supabaseUser.created_at || new Date().toISOString(),
+        lastLogin: supabaseUser.last_sign_in_at,
+        isBanned: profile?.is_banned || false
+      };
     } catch (error) {
-      console.error('Erro ao carregar dados do localStorage:', error);
-      // Em caso de erro, limpar os dados corrompidos
-      localStorage.removeItem('user');
-      localStorage.removeItem('users');
-    } finally {
-      setIsInitialized(true);
-    }
-  }, []);
-
-  // Monitorar mudanças nos usuários para verificar banimento
-  useEffect(() => {
-    if (user) {
-      const currentUser = users.find(u => u.id === user.id);
-      if (currentUser?.isBanned) {
-        // Se o usuário atual foi banido, fazer logout
-        logout();
-      }
-    }
-  }, [users, user]);
-
-  const saveUsers = (newUsers: User[]) => {
-    try {
-      setUsers(newUsers);
-      localStorage.setItem('users', JSON.stringify(newUsers));
-    } catch (error) {
-      console.error('Erro ao salvar usuários:', error);
-      throw new Error('Falha ao salvar dados dos usuários');
+      console.error('Erro ao converter usuário do Supabase:', error);
+      return {
+        id: supabaseUser.id,
+        name: supabaseUser.user_metadata?.name || 'Usuário',
+        email: supabaseUser.email,
+        role: 'user',
+        createdAt: supabaseUser.created_at || new Date().toISOString(),
+        lastLogin: supabaseUser.last_sign_in_at,
+      };
     }
   };
 
+  // Função para sincronizar usuários locais com dados do Supabase
+  const syncUsers = async () => {
+    try {
+      const { data: supabaseUsers, error } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (error) throw error;
+
+      // Converter para o formato interno da aplicação
+      const formattedUsers = supabaseUsers.map(profile => ({
+        id: profile.id,
+        name: profile.name,
+        email: null, // Não temos o email no perfil
+        role: profile.role || 'user',
+        createdAt: profile.created_at,
+        lastLogin: profile.last_login || undefined,
+        isBanned: profile.is_banned
+      }));
+
+      setUsers(formattedUsers);
+    } catch (error) {
+      console.error('Erro ao sincronizar usuários:', error);
+    }
+  };
+
+  useEffect(() => {
+    const initialize = async () => {
+      try {
+        // Verificar se há sessão ativa
+        const { data: session } = await supabase.auth.getSession();
+        
+        if (session.session?.user) {
+          const currentUser = await convertSupabaseUser(session.session.user);
+          setUser(currentUser);
+          
+          // Verificar se o usuário está banido
+          if (currentUser.isBanned) {
+            toast({
+              title: "Conta suspensa",
+              description: "Sua conta foi suspensa. Entre em contato com o administrador.",
+              variant: "destructive",
+            });
+            await logout();
+            return;
+          }
+        }
+
+        // Sincronizar lista de usuários
+        await syncUsers();
+      } catch (error) {
+        console.error('Erro na inicialização do AuthContext:', error);
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+
+    initialize();
+
+    // Configurar listener para mudanças de autenticação
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        const newUser = await convertSupabaseUser(session.user);
+        setUser(newUser);
+        await syncUsers();
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   const login = async (email: string, password: string) => {
     try {
-      const foundUser = users.find(u => u.email === email);
-      
-      if (!foundUser) {
-        throw new Error('Usuário não encontrado');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const currentUser = await convertSupabaseUser(data.user);
+        
+        // Verificar banimento
+        if (currentUser.isBanned) {
+          toast({
+            title: "Conta suspensa",
+            description: "Sua conta foi suspensa. Entre em contato com o administrador.",
+            variant: "destructive",
+          });
+          await logout();
+          throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
+        }
+
+        // Atualizar último login
+        await supabase
+          .from('profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', currentUser.id);
+          
+        setUser(currentUser);
+        await syncUsers();
       }
-
-      // Verificar se o usuário está banido
-      if (foundUser.isBanned) {
-        throw new Error('Usuário banido');
-      }
-
-      // Em um sistema real, você verificaria a senha aqui
-      const updatedUser = {
-        ...foundUser,
-        lastLogin: new Date().toISOString()
-      };
-
-      // Atualizar o último login do usuário
-      const updatedUsers = users.map(u => 
-        u.id === updatedUser.id ? updatedUser : u
-      );
-
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      saveUsers(updatedUsers);
     } catch (error) {
       console.error('Erro ao fazer login:', error);
-      if (error instanceof Error && error.message === 'Usuário banido') {
-        throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
+      if (error instanceof Error) {
+        if (error.message.includes('banida')) {
+          throw error;
+        } else if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Email ou senha inválidos');
+        } else {
+          throw new Error('Falha ao fazer login');
+        }
+      } else {
+        throw new Error('Falha ao fazer login');
       }
-      throw new Error('Falha ao fazer login');
     }
   };
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      // Verificar se o email já existe
-      if (users.some(u => u.email === email)) {
-        throw new Error('Email já cadastrado');
-      }
-
-      const newUser: User = {
-        id: Date.now().toString(),
-        name,
+      // Criar usuário no Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
         email,
-        role: users.length === 0 ? 'admin' : 'user', // Primeiro usuário é admin
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
-      };
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
 
-      const newUsers = [...users, newUser];
-      saveUsers(newUsers);
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
+      if (error) throw error;
+
+      if (data.user) {
+        // Criar perfil no Supabase
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user.id,
+              name,
+              created_at: new Date().toISOString(),
+              last_login: new Date().toISOString(),
+              role: users.length === 0 ? 'admin' : 'user', // Primeiro usuário é admin
+              is_banned: false
+            }
+          ]);
+
+        if (profileError) throw profileError;
+
+        const newUser = await convertSupabaseUser(data.user);
+        setUser(newUser);
+        await syncUsers();
+      }
     } catch (error) {
       console.error('Erro ao registrar:', error);
-      throw new Error('Falha ao registrar usuário');
+      if (error instanceof Error) {
+        if (error.message.includes('duplicate key')) {
+          throw new Error('Este email já está em uso');
+        } else {
+          throw new Error('Falha ao registrar usuário');
+        }
+      } else {
+        throw new Error('Falha ao registrar usuário');
+      }
     }
   };
 
@@ -143,24 +247,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user?.id === id) {
       throw new Error('Não é possível excluir o usuário atual');
     }
-    const newUsers = users.filter(u => u.id !== id);
-    saveUsers(newUsers);
+    
+    try {
+      // Marcar como banido no Supabase
+      supabase
+        .from('profiles')
+        .update({ is_banned: true })
+        .eq('id', id)
+        .then(() => syncUsers());
+        
+      const newUsers = users.filter(u => u.id !== id);
+      setUsers(newUsers);
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      throw new Error('Falha ao excluir usuário');
+    }
   };
 
   const updateUser = (id: string, data: Partial<User>) => {
-    const newUsers = users.map(u => 
-      u.id === id ? { ...u, ...data } : u
-    );
-    saveUsers(newUsers);
+    try {
+      // Atualizar no Supabase
+      supabase
+        .from('profiles')
+        .update({
+          name: data.name,
+          role: data.role,
+          is_banned: data.isBanned
+        })
+        .eq('id', id)
+        .then(() => syncUsers());
+        
+      const newUsers = users.map(u => 
+        u.id === id ? { ...u, ...data } : u
+      );
+      setUsers(newUsers);
 
-    // Se o usuário atualizado for o atual e estiver sendo banido, fazer logout
-    if (user?.id === id && data.isBanned) {
-      logout();
-    } else if (user?.id === id) {
-      // Se não estiver sendo banido, atualizar o estado do usuário
-      const updatedUser = { ...user, ...data };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      // Se o usuário atualizado for o atual e estiver sendo banido, fazer logout
+      if (user?.id === id && data.isBanned) {
+        logout();
+      } else if (user?.id === id) {
+        // Se não estiver sendo banido, atualizar o estado do usuário
+        const updatedUser = { ...user, ...data };
+        setUser(updatedUser);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      throw new Error('Falha ao atualizar usuário');
     }
   };
 
@@ -168,9 +300,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return users;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('user');
   };
 
   return (
@@ -200,4 +332,4 @@ export function useAuth() {
     throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
-} 
+}

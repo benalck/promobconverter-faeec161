@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Lock, Mail, User } from "lucide-react";
+import { ShoppingBag, Lock, Mail, User, EyeOff, Eye } from "lucide-react";
 import HowItWorksButton from "@/components/HowItWorksButton";
 
 export default function Register() {
@@ -17,6 +17,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { register, login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -82,19 +83,23 @@ export default function Register() {
         await register(name, email, password);
         toast({
           title: "Conta criada com sucesso!",
-          description: "Seu cadastro foi realizado. Bem-vindo à nossa loja.",
+          description: "Seu cadastro foi realizado. Bem-vindo à nossa aplicação.",
         });
         navigate("/");
       } catch (error) {
         toast({
           title: "Erro ao registrar",
-          description: "Ocorreu um erro ao criar sua conta. Tente novamente.",
+          description: error instanceof Error ? error.message : "Ocorreu um erro ao criar sua conta. Tente novamente.",
           variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -190,13 +195,24 @@ export default function Register() {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
                     className="pl-10"
                   />
+                  <button
+                    type="button"
+                    onClick={togglePasswordVisibility}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
               
@@ -207,7 +223,7 @@ export default function Register() {
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
                       id="confirmPassword"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
