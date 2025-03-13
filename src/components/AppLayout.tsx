@@ -19,10 +19,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
       <div className="w-full max-w-6xl mx-auto relative z-10 animate-fade-in">
         <Navbar />
         
-        <header className="text-center mb-8 md:mb-12">
-          {/* Cabeçalho vazio, texto removido */}
-        </header>
-        
         <main className={cn("w-full", className)}>
           {children}
         </main>

@@ -21,7 +21,7 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             <Link to="/">
               <h1 className="text-xl font-semibold text-gray-800 hover:text-gray-600 transition-colors">
-                Conversor XML para Excel
+                {/* Empty title as requested */}
               </h1>
             </Link>
           </div>
