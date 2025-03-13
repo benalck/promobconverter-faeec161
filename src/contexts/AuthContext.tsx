@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -113,7 +112,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       for (const profile of supabaseUsers) {
         try {
           let userEmail = null;
-          // Initialize userRole with the default value of 'user'
           let userRole: 'admin' | 'user' = 'user';
           
           try {
@@ -123,7 +121,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('Erro ao buscar metadados do usuário:', error);
           }
           
-          // Only assign 'admin' if the profile role is explicitly 'admin'
           if (profile.role === 'admin') {
             userRole = 'admin';
           }
@@ -177,6 +174,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addInitialCreditsIfNeeded = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('last_login, credits')
+        .eq('id', userId)
+        .single();
+        
+      if (error) throw error;
+      
+      if (profile && profile.credits === 0) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ credits: 3 })
+          .eq('id', userId);
+          
+        if (updateError) throw updateError;
+        
+        toast({
+          title: "Boas-vindas!",
+          description: "Você recebeu 3 créditos gratuitos para começar a usar o conversor.",
+          variant: "default",
+        });
+        
+        await refreshUserCredits();
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar créditos iniciais:', error);
+    }
+  };
+
   useEffect(() => {
     const initialize = async () => {
       try {
@@ -195,6 +223,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await logout();
             return;
           }
+          
+          await addInitialCreditsIfNeeded(currentUser.id);
         }
 
         await syncUsers();
@@ -213,6 +243,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' && session?.user) {
         const newUser = await convertSupabaseUser(session.user);
         setUser(newUser);
+        
+        await addInitialCreditsIfNeeded(newUser.id);
+        
         await syncUsers();
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
