@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, ErrorBoundary } from "react";
 import { cn } from "@/lib/utils";
 import Navbar from "./Navbar";
 
@@ -10,15 +10,15 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
   useEffect(() => {
-    console.log("AppLayout montado");
-    return () => console.log("AppLayout desmontado");
+    console.log("AppLayout mounted");
+    return () => console.log("AppLayout unmounted");
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className={cn("w-full max-w-6xl mx-auto px-4 py-4", className)}>
+      <main className={cn("flex-grow w-full max-w-6xl mx-auto px-4 py-4", className)}>
         {children}
       </main>
       

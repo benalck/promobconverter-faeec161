@@ -11,18 +11,18 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("Navbar montado, user:", user ? "Existe" : "Não existe");
-    return () => console.log("Navbar desmontado");
+    console.log("Navbar mounted, user:", user ? "Exists" : "Not exists");
+    return () => console.log("Navbar unmounted");
   }, [user]);
 
   const handleLogout = async () => {
     try {
-      console.log("Iniciando logout");
+      console.log("Starting logout");
       await logout();
-      console.log("Logout completo, redirecionando");
+      console.log("Logout complete, redirecting");
       navigate("/register");
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.error("Error logging out:", error);
     }
   };
 
