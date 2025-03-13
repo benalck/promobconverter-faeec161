@@ -54,6 +54,28 @@ export default function Plans() {
     };
     
     fetchPlans();
+
+    // Verificar se há uma sessão de checkout completa
+    const checkSession = async () => {
+      const url = new URL(window.location.href);
+      const sessionId = url.searchParams.get("session_id");
+      
+      if (sessionId) {
+        // Remover o parâmetro da URL para evitar recarregar a confirmação
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Atualizar os créditos do usuário após o pagamento bem-sucedido
+        await refreshUserCredits();
+        
+        toast({
+          title: "Pagamento processado com sucesso!",
+          description: "Seus créditos foram adicionados à sua conta.",
+          variant: "default",
+        });
+      }
+    };
+    
+    checkSession();
   }, []);
 
   const handlePurchase = async (planId: string) => {
@@ -70,62 +92,36 @@ export default function Plans() {
     try {
       setPurchasingPlanId(planId);
       
-      // Buscar detalhes do plano
-      const { data: plan, error: planError } = await supabase
-        .from('plans')
-        .select('*')
-        .eq('id', planId)
-        .single();
-        
-      if (planError) throw planError;
-      
-      // Calcular data de expiração
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + plan.duration_days);
-      
-      // Registrar a compra
-      const { error: purchaseError } = await supabase
-        .from('credit_purchases')
-        .insert([
-          {
-            user_id: user.id,
-            plan_id: planId,
-            amount: plan.price,
-            credits: plan.credits,
-            expiry_date: expiryDate.toISOString()
-          }
-        ]);
-        
-      if (purchaseError) throw purchaseError;
-      
-      // Atualizar os créditos e o plano ativo do usuário
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          credits: (user.credits || 0) + plan.credits,
-          active_plan: planId,
-          plan_expiry_date: expiryDate.toISOString()
+      // Iniciar o checkout do Stripe
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout/create-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          planId,
+          userId: user.id,
+          successUrl: `${window.location.origin}/plans`,
+          cancelUrl: `${window.location.origin}/plans`
         })
-        .eq('id', user.id);
-        
-      if (profileError) throw profileError;
-      
-      // Atualizar o contexto de usuário
-      await refreshUserCredits();
-      
-      toast({
-        title: "Plano adquirido com sucesso!",
-        description: `Você adquiriu o plano ${plan.name} e recebeu ${plan.credits} créditos.`,
       });
       
-      // Em um ambiente real, você redirecionaria para um gateway de pagamento
-      // Por agora, vamos apenas simular uma compra bem-sucedida
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
+      }
+      
+      const { url } = await response.json();
+      
+      // Redirecionar para o checkout do Stripe
+      window.location.href = url;
       
     } catch (error) {
-      console.error('Erro ao adquirir plano:', error);
+      console.error('Erro ao iniciar checkout:', error);
       toast({
-        title: "Erro ao adquirir plano",
-        description: "Não foi possível processar sua compra. Tente novamente mais tarde.",
+        title: "Erro ao processar pagamento",
+        description: "Não foi possível iniciar o processo de pagamento. Tente novamente mais tarde.",
         variant: "destructive",
       });
     } finally {
@@ -261,10 +257,10 @@ export default function Plans() {
         <div className="flex gap-4">
           <AlertCircle className="h-6 w-6 text-amber-500 shrink-0" />
           <div>
-            <h3 className="font-semibold mb-1">Aviso</h3>
+            <h3 className="font-semibold mb-1">Informação sobre pagamentos</h3>
             <p className="text-sm text-gray-600">
-              Esta é uma simulação. Em um ambiente real, você seria redirecionado para um gateway de pagamento.
-              Para o propósito desta demonstração, as "compras" são processadas automaticamente.
+              Os pagamentos são processados de forma segura através do Stripe. Após a confirmação do pagamento, 
+              os créditos serão automaticamente adicionados à sua conta.
             </p>
           </div>
         </div>
