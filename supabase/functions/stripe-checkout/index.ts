@@ -136,8 +136,8 @@ serve(async (req) => {
         );
       }
 
-      // Usar a chave de webhook fornecida
-      const webhookSecret = "whsec_WWKyjHEh36klduEPE3IwxRA1khPne1jE";
+      // Usar a variável de ambiente para o webhook secret
+      const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
       const body = await req.text();
       
       let event;
