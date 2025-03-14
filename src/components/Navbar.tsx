@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -7,13 +7,8 @@ import UserCredits from "./UserCredits";
 import { LogOut } from "lucide-react";
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log("Navbar mounted, user:", user ? "Exists" : "Not exists");
-    return () => console.log("Navbar unmounted");
-  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -41,6 +36,15 @@ export default function Navbar() {
                 <span className="text-sm text-gray-600">
                   Olá, {user.name || user.email?.split('@')[0] || 'Usuário'}
                 </span>
+                
+                {isAdmin && (
+                  <Link to="/adminaccess">
+                    <Button variant="outline" size="sm" className="font-bold text-blue-600 border-blue-600">
+                      Administração
+                    </Button>
+                  </Link>
+                )}
+                
                 <Button
                   variant="outline"
                   size="sm"

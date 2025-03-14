@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CreditPurchase from "./pages/CreditPurchase";
+import AdminRedirect from "./components/AdminRedirect";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const router = createBrowserRouter([
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       { path: "admin", element: <AdminRoute><Admin /></AdminRoute> },
+      { path: "adminaccess", element: <AdminRedirect /> },
       { path: "creditos", element: <CreditPurchase /> },
       { path: "*", element: <NotFound /> },
     ],
