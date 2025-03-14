@@ -1,97 +1,50 @@
 
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, Check, Loader2 } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
 
-interface Plan {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  credits: number;
-  duration_days: number;
-  is_active: boolean;
-  created_at: string;
-}
+// Mock plans data
+const MOCK_PLANS = [
+  {
+    id: "plan_basic",
+    name: "Básico",
+    description: "Ideal para uso ocasional",
+    price: 29.90,
+    credits: 10,
+    duration_days: 30,
+    is_active: true
+  },
+  {
+    id: "plan_standard",
+    name: "Padrão",
+    description: "Para uso regular",
+    price: 59.90,
+    credits: 25,
+    duration_days: 30,
+    is_active: true
+  },
+  {
+    id: "plan_premium",
+    name: "Premium",
+    description: "Para uso intensivo",
+    price: 99.90,
+    credits: 50,
+    duration_days: 30,
+    is_active: true
+  }
+];
 
 export default function CreditPurchase() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, refreshUserCredits } = useAuth();
+  const { user, updateUser } = useAuth();
   const { toast } = useToast();
-  const [processingSessionId, setProcessingSessionId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Get query params
-  const searchParams = new URLSearchParams(location.search);
-  const sessionId = searchParams.get("session_id");
-  const planId = searchParams.get("plan_id");
-  
-  const { data: plans, isLoading, error } = useQuery({
-    queryKey: ["plans"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("plans")
-        .select("*")
-        .eq("is_active", true)
-        .order("price", { ascending: true });
-        
-      if (error) throw error;
-      return data as Plan[];
-    },
-  });
-  
-  useEffect(() => {
-    // Check if user is coming back from successful payment
-    if (sessionId && planId && !processingSessionId) {
-      handlePaymentSuccess(sessionId, planId);
-    }
-  }, [sessionId, planId]);
-  
-  const handlePaymentSuccess = async (sessionId: string, planId: string) => {
-    setProcessingSessionId(sessionId);
-    setIsProcessing(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke("process-payment", {
-        body: { sessionId },
-      });
-      
-      if (error) throw error;
-      
-      if (data.success) {
-        await refreshUserCredits();
-        
-        toast({
-          title: "Pagamento processado com sucesso!",
-          description: `Seus créditos foram adicionados. Você agora tem ${data.credits} créditos.`,
-          variant: "default",
-        });
-        
-        // Clear query params
-        window.history.replaceState({}, document.title, window.location.pathname);
-      } else {
-        throw new Error(data.error || "Erro ao processar o pagamento");
-      }
-    } catch (error) {
-      console.error("Erro ao processar pagamento:", error);
-      toast({
-        title: "Erro ao processar pagamento",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao processar seu pagamento",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
   
   const handleBuyCredits = async (planId: string) => {
     if (!user) {
@@ -104,68 +57,38 @@ export default function CreditPurchase() {
       return;
     }
     
+    setIsProcessing(true);
+    
     try {
-      const origin = window.location.origin;
-      const successUrl = `${origin}/creditos`;
-      const cancelUrl = `${origin}/creditos`;
-      
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: {
-          planId,
-          userId: user.id,
-          successUrl,
-          cancelUrl,
-        },
-      });
-      
-      if (error) throw error;
-      
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("Não foi possível criar a sessão de checkout");
-      }
+      // In a real implementation, this would call a payment API
+      // For now, we'll simulate a purchase
+      setTimeout(() => {
+        const plan = MOCK_PLANS.find(p => p.id === planId);
+        
+        if (plan) {
+          // Update user credits
+          const newCredits = (user.credits || 0) + plan.credits;
+          updateUser(user.id, { credits: newCredits });
+          
+          toast({
+            title: "Compra realizada com sucesso!",
+            description: `Foram adicionados ${plan.credits} créditos à sua conta.`,
+            variant: "default",
+          });
+        }
+        
+        setIsProcessing(false);
+      }, 1500);
     } catch (error) {
-      console.error("Erro ao criar sessão de checkout:", error);
+      console.error("Erro ao processar pagamento:", error);
       toast({
-        title: "Erro ao iniciar pagamento",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao iniciar o pagamento",
+        title: "Erro ao processar pagamento",
+        description: "Ocorreu um erro ao processar seu pagamento. Tente novamente mais tarde.",
         variant: "destructive",
       });
+      setIsProcessing(false);
     }
   };
-  
-  if (isLoading) {
-    return (
-      <div className="container max-w-4xl py-10 flex flex-col items-center justify-center min-h-[50vh]">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Carregando planos...</p>
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="container max-w-4xl py-10">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Erro</AlertTitle>
-          <AlertDescription>
-            Ocorreu um erro ao carregar os planos de créditos. Por favor, tente novamente mais tarde.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-  
-  if (isProcessing) {
-    return (
-      <div className="container max-w-4xl py-10 flex flex-col items-center justify-center min-h-[50vh]">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Processando seu pagamento...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="container max-w-4xl py-10">
@@ -185,7 +108,7 @@ export default function CreditPurchase() {
       )}
       
       <div className="grid md:grid-cols-3 gap-6">
-        {plans?.map((plan) => (
+        {MOCK_PLANS.map((plan) => (
           <Card key={plan.id} className="flex flex-col">
             <CardHeader>
               <CardTitle>{plan.name}</CardTitle>
@@ -218,9 +141,9 @@ export default function CreditPurchase() {
               <Button 
                 className="w-full" 
                 onClick={() => handleBuyCredits(plan.id)}
-                disabled={!user}
+                disabled={!user || isProcessing}
               >
-                Comprar agora
+                {isProcessing ? "Processando..." : "Comprar agora"}
               </Button>
             </CardFooter>
           </Card>

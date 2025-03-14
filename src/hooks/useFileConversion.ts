@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { convertXMLToCSV } from "@/utils/xmlParser";
 import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 
@@ -72,19 +71,11 @@ export const useFileConversion = () => {
           link.click();
           document.body.removeChild(link);
 
-          const { data, error } = await supabase
-            .from('profiles')
-            .update({ credits: user.credits - 1 })
-            .eq('id', user.id);
-
-          if (error) {
-            console.error("Erro ao atualizar créditos:", error);
-            toast({
-              title: "Erro ao atualizar créditos",
-              description: "Ocorreu um erro ao atualizar seus créditos.",
-              variant: "destructive",
-            });
-          } else {
+          // Update user credits locally
+          if (user) {
+            // In a real implementation, this would be an API call
+            const { updateUser } = await import('@/contexts/AuthContext');
+            await updateUser(user.id, { credits: user.credits - 1 });
             await refreshUserCredits();
             
             toast({
