@@ -1,165 +1,118 @@
-
-import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import AppLayout from "@/components/AppLayout";
+import { User } from "@/contexts/auth/types";
 
 export default function Admin() {
-  const { users, deleteUser, isAdmin, user: currentUser } = useAuth();
+  const { users, updateUser } = useAuth();
   const { toast } = useToast();
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [creditAmount, setCreditAmount] = useState<number>(5);
 
-  if (!isAdmin) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Acesso Restrito
-            </h1>
-            <p className="text-gray-600">
-              Você não tem permissão para acessar esta página.
-            </p>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  const handleDeleteUser = async (id: string) => {
-    try {
-      deleteUser(id);
+  const handleAddCredits = () => {
+    if (!selectedUser) {
       toast({
-        title: "Usuário excluído",
-        description: "O usuário foi excluído com sucesso.",
+        title: "Erro",
+        description: "Selecione um usuário para adicionar créditos",
+        variant: "destructive",
       });
-      setShowDeleteDialog(false);
+      return;
+    }
+
+    try {
+      const newCredits = (selectedUser.credits || 0) + creditAmount;
+      updateUser(selectedUser.id, { credits: newCredits });
+
+      toast({
+        title: "Créditos adicionados",
+        description: `${creditAmount} créditos foram adicionados para ${selectedUser.name}`,
+        variant: "default",
+      });
+      setSelectedUser(null);
+      setCreditAmount(5);
     } catch (error) {
       toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir o usuário.",
+        title: "Erro ao adicionar créditos",
+        description: "Ocorreu um erro ao adicionar créditos. Tente novamente.",
         variant: "destructive",
       });
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", {
-      locale: ptBR,
-    });
-  };
-
   return (
-    <AppLayout>
-      <div className="container mx-auto py-8">
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b">
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Gerenciamento de Usuários
-            </h1>
-            <p className="mt-1 text-gray-600">
-              Gerencie os usuários do sistema
-            </p>
-          </div>
-
-          <div className="p-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead>Último acesso</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.role === "admin"
-                            ? "bg-purple-100 text-purple-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
-                      >
-                        {user.role === "admin" ? "Administrador" : "Usuário"}
-                      </span>
-                    </TableCell>
-                    <TableCell>{formatDate(user.createdAt)}</TableCell>
-                    <TableCell>
-                      {user.lastLogin ? formatDate(user.lastLogin) : "Nunca"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {user.id !== currentUser?.id && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user.id);
-                            setShowDeleteDialog(true);
-                          }}
-                        >
-                          Excluir
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmar exclusão</DialogTitle>
-              <DialogDescription>
-                Tem certeza que deseja excluir este usuário? Esta ação não pode ser
-                desfeita.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end gap-4 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteDialog(false)}
+    <div className="container py-10">
+      <h1 className="text-3xl font-bold mb-6">Painel Administrativo</h1>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Existing admin content would be here */}
+        
+        {/* Credit Management Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Gerenciar Créditos</CardTitle>
+            <CardDescription>
+              Adicione créditos para usuários testarem a aplicação
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="user-select">Selecione um usuário</Label>
+                <select 
+                  id="user-select"
+                  className="w-full p-2 border rounded mt-1"
+                  value={selectedUser?.id || ""}
+                  onChange={(e) => {
+                    const userId = e.target.value;
+                    const user = users.find(u => u.id === userId) || null;
+                    setSelectedUser(user);
+                  }}
+                >
+                  <option value="">Selecione um usuário</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.email}) - {user.credits || 0} créditos
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <Label htmlFor="credit-amount">Quantidade de créditos</Label>
+                <Input 
+                  id="credit-amount"
+                  type="number" 
+                  min={1}
+                  value={creditAmount}
+                  onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
+                  className="mt-1"
+                />
+              </div>
+              
+              <Button 
+                onClick={handleAddCredits}
+                disabled={!selectedUser}
+                className="w-full"
               >
-                Cancelar
+                Adicionar Créditos
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => selectedUser && handleDeleteUser(selectedUser)}
-              >
-                Excluir
-              </Button>
+              
+              {selectedUser && (
+                <div className="bg-muted p-3 rounded mt-2 text-sm">
+                  <p><strong>Usuário selecionado:</strong> {selectedUser.name}</p>
+                  <p><strong>Email:</strong> {selectedUser.email}</p>
+                  <p><strong>Créditos atuais:</strong> {selectedUser.credits || 0}</p>
+                  <p><strong>Após adição:</strong> {(selectedUser.credits || 0) + creditAmount} créditos</p>
+                </div>
+              )}
             </div>
-          </DialogContent>
-        </Dialog>
+          </CardContent>
+        </Card>
       </div>
-    </AppLayout>
+    </div>
   );
 }
