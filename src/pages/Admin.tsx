@@ -15,11 +15,28 @@ export default function Admin() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [creditAmount, setCreditAmount] = useState<number>(5);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch the latest users when component mounts
-    syncUsers();
-  }, [syncUsers]);
+    const loadUsers = async () => {
+      setLoading(true);
+      try {
+        await syncUsers();
+        console.log("Users loaded:", users);
+      } catch (error) {
+        console.error("Error loading users:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os usuários. Tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadUsers();
+  }, [syncUsers, toast]);
 
   const handleAddCredits = () => {
     if (!selectedUser) {
@@ -52,8 +69,9 @@ export default function Admin() {
   };
 
   const filteredUsers = users.filter(user => 
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    user.id !== "00000000-0000-0000-0000-000000000000" // Filter out system users if any
   );
 
   return (
@@ -90,7 +108,13 @@ export default function Admin() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.length > 0 ? (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">
+                        Carregando usuários...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredUsers.length > 0 ? (
                     filteredUsers.map((user) => (
                       <TableRow 
                         key={user.id}

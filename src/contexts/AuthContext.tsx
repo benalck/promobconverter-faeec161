@@ -42,9 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initialize = async () => {
       try {
+        console.log("AuthContext initializing...");
         const { data: session } = await supabase.auth.getSession();
         
         if (session.session?.user) {
+          console.log("User session found:", session.session.user.id);
           const currentUser = await convertSupabaseUser(session.session.user);
           setUser(currentUser);
           
@@ -59,13 +61,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           await addInitialCreditsIfNeeded(currentUser.id);
+        } else {
+          console.log("No user session found");
         }
 
+        console.log("Syncing users...");
         await syncUsers();
+        console.log("Users synced");
       } catch (error) {
-        console.error('Erro na inicialização do AuthContext:', error);
+        console.error('Error initializing AuthContext:', error);
       } finally {
         setIsInitialized(true);
+        console.log("AuthContext initialized");
       }
     };
 

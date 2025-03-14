@@ -15,13 +15,20 @@ export const useUserManagement = (
 
   const syncUsers = async () => {
     try {
+      console.log('Fetching profiles from Supabase...');
       const { data: supabaseUsers, error } = await supabase
         .from('profiles')
         .select('*');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profiles:', error);
+        throw error;
+      }
+
+      console.log('Profiles data:', supabaseUsers);
 
       if (!supabaseUsers || supabaseUsers.length === 0) {
+        console.log('No profiles found');
         setUsers([]);
         return;
       }
@@ -30,23 +37,25 @@ export const useUserManagement = (
       
       for (const profile of supabaseUsers) {
         try {
-          let userEmail = null;
-          let userRole: 'admin' | 'user' = 'user';
+          // Get the user email from auth.users
+          const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(profile.id);
           
-          try {
-            const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
-            userEmail = userData?.user?.email || null;
-          } catch (error) {
-            console.log('Erro ao buscar metadados do usuário:', error);
+          if (authError) {
+            console.log('Error fetching auth user:', authError);
+            // Continue with available data
           }
           
+          const userEmail = authUser?.user?.email || null;
+          console.log(`User ${profile.id} email:`, userEmail);
+          
+          let userRole: 'admin' | 'user' = 'user';
           if (profile.role === 'admin') {
             userRole = 'admin';
           }
           
           formattedUsers.push({
             id: profile.id,
-            name: profile.name,
+            name: profile.name || 'Usuário',
             email: userEmail,
             role: userRole,
             createdAt: profile.created_at,
@@ -55,13 +64,14 @@ export const useUserManagement = (
             credits: profile.credits || 0
           });
         } catch (error) {
-          console.error('Erro ao processar usuário:', error);
+          console.error('Error processing user:', error);
         }
       }
 
+      console.log('Formatted users:', formattedUsers);
       setUsers(formattedUsers);
     } catch (error) {
-      console.error('Erro ao sincronizar usuários:', error);
+      console.error('Error syncing users:', error);
     }
   };
 
@@ -85,7 +95,7 @@ export const useUserManagement = (
         };
       });
     } catch (error) {
-      console.error('Erro ao atualizar créditos:', error);
+      console.error('Error updating credits:', error);
     }
   };
 
@@ -116,7 +126,7 @@ export const useUserManagement = (
         await refreshUserCredits();
       }
     } catch (error) {
-      console.error('Erro ao adicionar créditos iniciais:', error);
+      console.error('Error adding initial credits:', error);
     }
   };
 
@@ -135,7 +145,7 @@ export const useUserManagement = (
       const newUsers = users.filter(u => u.id !== id);
       setUsers(newUsers);
     } catch (error) {
-      console.error('Erro ao excluir usuário:', error);
+      console.error('Error deleting user:', error);
       throw new Error('Falha ao excluir usuário');
     }
   };
@@ -173,12 +183,14 @@ export const useUserManagement = (
         
       if (data.role) {
         try {
-          console.log(`Tentando atualizar role para: ${data.role}`);
+          console.log(`Trying to update role to: ${data.role}`);
           supabase.auth.updateUser({
             data: { role: data.role }
+          }).then(response => {
+            console.log("Role update response:", response);
           });
         } catch (e) {
-          console.error('Erro ao atualizar role:', e);
+          console.error('Error updating role:', e);
         }
       }
       
@@ -194,7 +206,7 @@ export const useUserManagement = (
         setUser(updatedUser);
       }
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
+      console.error('Error updating user:', error);
       throw new Error('Falha ao atualizar usuário');
     }
   };
