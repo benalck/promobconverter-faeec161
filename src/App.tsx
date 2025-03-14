@@ -68,6 +68,8 @@ function App() {
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+            {/* Redirect /plans to home page since plans functionality was removed */}
+            <Route path="/plans" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
