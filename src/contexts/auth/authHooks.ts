@@ -3,21 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
 
-interface VerificationCodeResponse {
-  id: string;
-  user_id: string;
-  email: string;
-  code: string;
-  created_at: string;
-}
-
-// Define parameter types for RPC functions
-type InsertVerificationCodeParams = {
-  p_user_id: string;
-  p_email: string;
-  p_code: string;
-}
-
 export const useAuthentication = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
   syncUsers: () => Promise<void>,
@@ -39,18 +24,6 @@ export const useAuthentication = (
           throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
         }
 
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('email_verified')
-          .eq('id', currentUser.id)
-          .single();
-
-        if (profileError) {
-          console.error('Erro ao verificar status do email:', profileError);
-        } else if (profileData && profileData.email_verified === false) {
-          throw new Error('Por favor, verifique seu email antes de fazer login.');
-        }
-
         await supabase
           .from('profiles')
           .update({ last_login: new Date().toISOString() })
@@ -63,8 +36,6 @@ export const useAuthentication = (
       console.error('Erro ao fazer login:', error);
       if (error instanceof Error) {
         if (error.message.includes('banida')) {
-          throw error;
-        } else if (error.message.includes('verifique seu email')) {
           throw error;
         } else if (error.message.includes('Invalid login credentials')) {
           throw new Error('Email ou senha inválidos');
@@ -119,47 +90,6 @@ export const useAuthentication = (
         console.error('Erro ao definir role nos metadados:', roleError);
       }
 
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      console.log(`Código de verificação gerado: ${verificationCode}`);
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      try {
-        const { error: codeError } = await supabase.rpc<null, InsertVerificationCodeParams>('insert_verification_code', {
-          p_user_id: data.user.id,
-          p_email: email,
-          p_code: verificationCode
-        });
-
-        if (codeError) {
-          console.error('Erro ao salvar código de verificação:', codeError);
-          throw new Error('Erro ao gerar código de verificação');
-        }
-      } catch (insertError) {
-        console.error('Erro ao inserir código:', insertError);
-        throw new Error('Erro ao salvar código de verificação');
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          email,
-          name,
-          code: verificationCode,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro ao enviar email:', errorData);
-        throw new Error('Erro ao enviar email de verificação');
-      }
-
-      console.log('Email de verificação enviado com sucesso');
       return { email, name };
 
     } catch (error) {
