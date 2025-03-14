@@ -105,7 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         deleteUser,
         updateUser,
         getAllUsers,
-        refreshUserCredits
+        refreshUserCredits,
+        syncUsers
       }}
     >
       {isInitialized ? children : null}

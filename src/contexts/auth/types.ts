@@ -25,4 +25,5 @@ export interface AuthContextType {
   updateUser: (id: string, data: Partial<User>) => void;
   getAllUsers: () => User[];
   refreshUserCredits: () => Promise<void>;
+  syncUsers: () => Promise<void>;
 }
