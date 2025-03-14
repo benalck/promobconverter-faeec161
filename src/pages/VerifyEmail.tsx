@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +7,34 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, CheckCircle } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+
+// Define parameter types for RPC functions
+type VerifyCodeParams = {
+  p_email: string;
+  p_code: string;
+}
+
+type UpdateEmailVerifiedParams = {
+  p_user_id: string;
+}
+
+type DeleteVerificationCodeParams = {
+  p_id: string;
+}
+
+type GetUserIdByEmailParams = {
+  p_email: string;
+}
+
+type DeleteVerificationCodesByEmailParams = {
+  p_email: string;
+}
+
+type InsertVerificationCodeParams = {
+  p_user_id: string;
+  p_email: string;
+  p_code: string;
+}
 
 // Define the type for verification code response
 interface VerificationCode {
@@ -59,7 +88,7 @@ export default function VerifyEmail() {
       setIsLoading(true);
       
       // Use RPC to verify code
-      const { data, error } = await supabase.rpc('verify_code', {
+      const { data, error } = await supabase.rpc<VerificationCode, VerifyCodeParams>('verify_code', {
         p_email: email,
         p_code: code
       });
@@ -75,7 +104,7 @@ export default function VerifyEmail() {
       }
       
       // Check if code is expired (30 minutes)
-      const verificationData = data as unknown as VerificationCode;
+      const verificationData = data as VerificationCode;
       const createdAt = new Date(verificationData.created_at);
       const now = new Date();
       const diffInMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
@@ -90,12 +119,12 @@ export default function VerifyEmail() {
       }
       
       // Update user's email_verified status
-      await supabase.rpc('update_email_verified_status', {
+      await supabase.rpc<null, UpdateEmailVerifiedParams>('update_email_verified_status', {
         p_user_id: verificationData.user_id
       });
       
       // Remove the verification code
-      await supabase.rpc('delete_verification_code', {
+      await supabase.rpc<null, DeleteVerificationCodeParams>('delete_verification_code', {
         p_id: verificationData.id
       });
       
@@ -135,7 +164,7 @@ export default function VerifyEmail() {
       const newCode = Math.floor(100000 + Math.random() * 900000).toString();
       
       // Get user_id from email
-      const { data: userData, error: userError } = await supabase.rpc('get_user_id_by_email', {
+      const { data: userData, error: userError } = await supabase.rpc<UserIdResponse, GetUserIdByEmailParams>('get_user_id_by_email', {
         p_email: email
       });
       
@@ -143,15 +172,15 @@ export default function VerifyEmail() {
         throw new Error("Usuário não encontrado");
       }
       
-      const userIdData = userData as unknown as UserIdResponse;
+      const userIdData = userData as UserIdResponse;
       
       // Delete any existing codes
-      await supabase.rpc('delete_verification_codes_by_email', {
+      await supabase.rpc<null, DeleteVerificationCodesByEmailParams>('delete_verification_codes_by_email', {
         p_email: email
       });
       
       // Store new code
-      await supabase.rpc('insert_verification_code', {
+      await supabase.rpc<null, InsertVerificationCodeParams>('insert_verification_code', {
         p_user_id: userIdData.id,
         p_email: email,
         p_code: newCode

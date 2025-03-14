@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -8,6 +9,13 @@ interface VerificationCodeResponse {
   email: string;
   code: string;
   created_at: string;
+}
+
+// Define parameter types for RPC functions
+type InsertVerificationCodeParams = {
+  p_user_id: string;
+  p_email: string;
+  p_code: string;
 }
 
 export const useAuthentication = (
@@ -117,7 +125,7 @@ export const useAuthentication = (
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       try {
-        const { error: codeError } = await supabase.rpc('insert_verification_code', {
+        const { error: codeError } = await supabase.rpc<null, InsertVerificationCodeParams>('insert_verification_code', {
           p_user_id: data.user.id,
           p_email: email,
           p_code: verificationCode
