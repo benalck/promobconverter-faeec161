@@ -1,10 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { User, AuthContextType } from './auth/types';
-import { convertSupabaseUser } from './auth/userUtils';
-import { useUserManagement } from './auth/userManagement';
-import { useAuthentication } from './auth/authHooks';
+import { getAllUsers, getCurrentUser, loginUser, logoutUser, registerUser, updateUser, addCredits, banUser, unbanUser } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,44 +12,136 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
 
-  // We need to partially initialize logout to break the circular dependency
+  // Sincronizar usuários
+  const syncUsers = async () => {
+    try {
+      const allUsers = getAllUsers();
+      setUsers(allUsers);
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Erro ao sincronizar usuários:', error);
+      return Promise.reject(error);
+    }
+  };
+
+  // Atualizar créditos do usuário atual
+  const refreshUserCredits = async () => {
+    if (!user) return Promise.resolve();
+    
+    try {
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+      }
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Erro ao atualizar créditos:', error);
+      return Promise.reject(error);
+    }
+  };
+
+  // Adicionar créditos iniciais se necessário
+  const addInitialCreditsIfNeeded = async (userId: string) => {
+    try {
+      // No nosso sistema local, os créditos iniciais já são adicionados ao criar o usuário
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Erro ao adicionar créditos iniciais:', error);
+      return Promise.reject(error);
+    }
+  };
+
+  // Login
+  const login = async (email: string, password: string) => {
+    try {
+      const loggedUser = loginUser(email, password);
+      setUser(loggedUser);
+      await syncUsers();
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Falha ao fazer login');
+      }
+    }
+  };
+
+  // Registro
+  const register = async (name: string, email: string, password: string) => {
+    try {
+      registerUser({ name, email, password });
+      return { email, name };
+    } catch (error) {
+      console.error('Erro ao registrar:', error);
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error('Falha ao registrar usuário');
+      }
+    }
+  };
+
+  // Logout
   const logout = async () => {
-    await supabase.auth.signOut();
+    logoutUser();
     setUser(null);
   };
 
-  const {
-    syncUsers,
-    refreshUserCredits,
-    addInitialCreditsIfNeeded,
-    deleteUser,
-    updateUser,
-    getAllUsers
-  } = useUserManagement(setUser, setUsers, user, users, logout);
-
-  const {
-    login,
-    register: authRegister,
-    logout: authLogout
-  } = useAuthentication(setUser, syncUsers, addInitialCreditsIfNeeded);
-
-  // Override the partial logout with the complete one
-  const completeLogout = authLogout;
-
-  // Wrap register to match the expected return type
-  const register = async (name: string, email: string, password: string): Promise<{email: string, name: string} | undefined> => {
-    return authRegister(name, email, password);
+  // Excluir usuário (banir)
+  const deleteUser = (id: string) => {
+    if (user?.id === id) {
+      throw new Error('Não é possível excluir o usuário atual');
+    }
+    
+    try {
+      const bannedUser = banUser(id);
+      if (bannedUser) {
+        setUsers(prevUsers => prevUsers.map(u => 
+          u.id === id ? { ...u, isBanned: true } : u
+        ));
+      }
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      throw new Error('Falha ao excluir usuário');
+    }
   };
 
+  // Atualizar usuário
+  const userManagementUpdate = (id: string, data: Partial<User>) => {
+    try {
+      const updatedUser = updateUser(id, data);
+      
+      if (updatedUser) {
+        // Atualizar lista de usuários
+        setUsers(prevUsers => prevUsers.map(u => 
+          u.id === id ? updatedUser : u
+        ));
+        
+        // Se for o usuário atual, atualizar também o estado do usuário
+        if (user?.id === id) {
+          setUser(updatedUser);
+          
+          if (updatedUser.isBanned) {
+            logout();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      throw new Error('Falha ao atualizar usuário');
+    }
+  };
+
+  // Inicialização
   useEffect(() => {
     const initialize = async () => {
       try {
         console.log("AuthContext initializing...");
-        const { data: session } = await supabase.auth.getSession();
+        const currentUser = getCurrentUser();
         
-        if (session.session?.user) {
-          console.log("User session found:", session.session.user.id);
-          const currentUser = await convertSupabaseUser(session.session.user);
+        if (currentUser) {
+          console.log("User session found:", currentUser.id);
           setUser(currentUser);
           
           if (currentUser.isBanned) {
@@ -61,11 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               description: "Sua conta foi suspensa. Entre em contato com o administrador.",
               variant: "destructive",
             });
-            await completeLogout();
+            await logout();
             return;
           }
-          
-          await addInitialCreditsIfNeeded(currentUser.id);
         } else {
           console.log("No user session found");
         }
@@ -82,25 +169,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initialize();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        const newUser = await convertSupabaseUser(session.user);
-        setUser(newUser);
-        
-        await addInitialCreditsIfNeeded(newUser.id);
-        
-        await syncUsers();
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
   }, []);
 
   return (
@@ -113,10 +181,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isInitialized,
         login, 
         register, 
-        logout: completeLogout,
+        logout,
         deleteUser,
-        updateUser,
-        getAllUsers,
+        updateUser: userManagementUpdate,
+        getAllUsers: () => users,
         refreshUserCredits,
         syncUsers
       }}

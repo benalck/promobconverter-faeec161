@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,7 +92,7 @@ export default function Admin() {
 
   return (
     <div className="container py-10">
-      <h1 className="text-3xl font-bold mb-6">Painel Administrativo</h1>
+      <h1 className="text-3xl font-bold mb-6">Painel Administrativo (Local)</h1>
       
       <div className="grid gap-6 md:grid-cols-2">
         {/* Users Table Card */}

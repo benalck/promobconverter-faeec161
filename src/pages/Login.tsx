@@ -1,18 +1,19 @@
 
-import React from 'react';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import BanCheck from '@/components/BanCheck';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Info, Lock, Mail, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -22,112 +23,132 @@ export default function Login() {
     
     if (!email || !password) {
       toast({
-        title: "Campos vazios",
+        title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsLoading(true);
-
     try {
+      setIsLoading(true);
       await login(email, password);
-      navigate('/');
-    } catch (error) {
-      console.error('Login error:', error);
       toast({
-        title: "Erro ao fazer login",
-        description: "Email ou senha incorretos. Por favor, tente novamente.",
-        variant: "destructive",
+        title: "Login realizado com sucesso!",
+        description: "Bem-vindo ao sistema.",
       });
+      navigate("/");
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          title: "Erro ao fazer login",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao fazer login",
+          description: "Verifique suas credenciais e tente novamente.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <BanCheck>
-      <div className="flex justify-center items-center px-4 py-8">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">Login</CardTitle>
-            <CardDescription>
-              Entre com suas credenciais para acessar sua conta
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </label>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Entrar</CardTitle>
+          <CardDescription className="text-center">
+            Entre com seu email e senha para acessar o sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
+                  disabled={isLoading}
+                  className="pl-10"
                 />
               </div>
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Senha
-                </label>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Senha</Label>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
+                  disabled={isLoading}
+                  className="pl-10"
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Processando...
-                  </span>
-                ) : (
-                  "Entrar"
-                )}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-2">
-            <div className="text-sm text-center text-gray-500">
-              Ainda não tem uma conta?{" "}
-              <Button
-                variant="link"
-                className="p-0 h-auto font-semibold"
-                onClick={() => navigate('/register')}
-              >
-                Criar uma conta
-              </Button>
             </div>
-          </CardFooter>
-        </Card>
-      </div>
-    </BanCheck>
+            
+            <Button
+              type="submit"
+              className="w-full py-2"
+              disabled={isLoading}
+            >
+              {isLoading ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
+
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div className="flex items-start">
+              <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2" />
+              <div>
+                <h4 className="text-sm font-medium text-blue-800">Credenciais de Acesso</h4>
+                <p className="text-xs text-blue-700 mt-1">
+                  Administrador padrão: <br />
+                  Email: admin@sistema.com <br />
+                  Senha: admin123
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-gray-600">
+            Não tem uma conta?{" "}
+            <Link to="/register" className="text-primary font-medium hover:underline">
+              Cadastre-se
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
