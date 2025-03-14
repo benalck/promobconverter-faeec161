@@ -1,7 +1,14 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
+
+interface VerificationCodeResponse {
+  id: string;
+  user_id: string;
+  email: string;
+  code: string;
+  created_at: string;
+}
 
 export const useAuthentication = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -24,7 +31,6 @@ export const useAuthentication = (
           throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
         }
 
-        // Check if email is verified in profiles table
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('email_verified')
@@ -65,7 +71,6 @@ export const useAuthentication = (
 
   const register = async (name: string, email: string, password: string): Promise<{email: string, name: string} | undefined> => {
     try {
-      // Step 1: Create the user in Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -73,7 +78,6 @@ export const useAuthentication = (
           data: {
             name
           },
-          // Disable email confirmation through Supabase
           emailRedirectTo: undefined
         }
       });
@@ -86,7 +90,6 @@ export const useAuthentication = (
       
       console.log('Usuário criado:', data.user.id);
 
-      // Step 2: Determine if this is the first user (admin)
       const { count, error: countError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
@@ -96,7 +99,6 @@ export const useAuthentication = (
       
       console.log(`Usuário será registrado com role: ${userRole}, isFirstUser: ${isFirstUser}`);
 
-      // Step 3: Update auth metadata
       try {
         await supabase.auth.updateUser({
           data: { 
@@ -109,16 +111,12 @@ export const useAuthentication = (
         console.error('Erro ao definir role nos metadados:', roleError);
       }
 
-      // Step 4: Generate a 6-digit verification code
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
       console.log(`Código de verificação gerado: ${verificationCode}`);
 
-      // Wait for the profile to be created by the trigger
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Step 5: Insert verification code
       try {
-        // We need to use rpc for accessing tables not in the type definition
         const { error: codeError } = await supabase.rpc('insert_verification_code', {
           p_user_id: data.user.id,
           p_email: email,
@@ -134,7 +132,6 @@ export const useAuthentication = (
         throw new Error('Erro ao salvar código de verificação');
       }
 
-      // Step 6: Send email with verification code
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
         method: 'POST',
         headers: {
@@ -163,8 +160,6 @@ export const useAuthentication = (
         if (error.message.includes('duplicate key')) {
           throw new Error('Este email já está em uso');
         } else if (error.message.includes('violates row-level security policy')) {
-          // This error means the RLS policy is preventing the insert
-          // We'll just log it and continue - profile creation should be handled by a trigger
           console.log('Aviso de RLS ignorado - o trigger deve criar o perfil');
         } else {
           throw new Error('Falha ao registrar usuário');
