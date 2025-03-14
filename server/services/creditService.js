@@ -1,57 +1,21 @@
 
 const { query } = require('../config/database');
 
-// Verificar se o usuário tem créditos suficientes
+// Verificar créditos do usuário
 const checkUserCredits = async (userId) => {
   try {
-    const [user] = await query(
-      'SELECT credits FROM users WHERE id = ?',
-      [userId]
-    );
+    const users = await query('SELECT credits FROM users WHERE id = ?', [userId]);
     
-    if (!user) {
+    if (users.length === 0) {
       throw new Error('Usuário não encontrado');
     }
     
-    return {
-      userId,
-      credits: user.credits,
-      hasCredits: user.credits > 0
+    return { 
+      credits: users[0].credits,
+      userId
     };
   } catch (error) {
     console.error('Erro ao verificar créditos do usuário:', error);
-    throw new Error('Falha ao verificar créditos');
-  }
-};
-
-// Usar crédito (descontar 1)
-const useCredit = async (userId) => {
-  try {
-    // Verificar se o usuário tem créditos
-    const creditCheck = await checkUserCredits(userId);
-    
-    if (!creditCheck.hasCredits) {
-      throw new Error('Créditos insuficientes');
-    }
-    
-    // Descontar um crédito
-    await query(
-      'UPDATE users SET credits = credits - 1 WHERE id = ? AND credits > 0',
-      [userId]
-    );
-    
-    const [user] = await query(
-      'SELECT credits FROM users WHERE id = ?',
-      [userId]
-    );
-    
-    return {
-      userId,
-      credits: user.credits,
-      success: true
-    };
-  } catch (error) {
-    console.error('Erro ao usar crédito:', error);
     throw error;
   }
 };
@@ -59,34 +23,65 @@ const useCredit = async (userId) => {
 // Adicionar créditos a um usuário
 const addCredits = async (userId, amount) => {
   try {
-    if (!amount || amount <= 0) {
-      throw new Error('Quantidade de créditos inválida');
+    // Verificar se o usuário existe
+    const users = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    
+    if (users.length === 0) {
+      throw new Error('Usuário não encontrado');
     }
     
-    await query(
-      'UPDATE users SET credits = credits + ? WHERE id = ?',
-      [amount, userId]
-    );
+    // Adicionar créditos
+    await query('UPDATE users SET credits = credits + ? WHERE id = ?', [amount, userId]);
     
-    const [user] = await query(
-      'SELECT credits FROM users WHERE id = ?',
-      [userId]
-    );
+    // Obter saldo atualizado
+    const updatedUsers = await query('SELECT credits FROM users WHERE id = ?', [userId]);
     
     return {
       userId,
-      credits: user.credits,
-      added: amount,
-      success: true
+      credits: updatedUsers[0].credits,
+      added: amount
     };
   } catch (error) {
     console.error('Erro ao adicionar créditos:', error);
-    throw new Error('Falha ao adicionar créditos');
+    throw error;
+  }
+};
+
+// Consumir créditos do usuário
+const consumeCredits = async (userId, amount = 1) => {
+  try {
+    // Verificar se o usuário existe e tem créditos suficientes
+    const users = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    
+    if (users.length === 0) {
+      throw new Error('Usuário não encontrado');
+    }
+    
+    const currentCredits = users[0].credits;
+    
+    if (currentCredits < amount) {
+      throw new Error('Créditos insuficientes');
+    }
+    
+    // Consumir créditos
+    await query('UPDATE users SET credits = credits - ? WHERE id = ?', [amount, userId]);
+    
+    // Obter saldo atualizado
+    const updatedUsers = await query('SELECT credits FROM users WHERE id = ?', [userId]);
+    
+    return {
+      userId,
+      credits: updatedUsers[0].credits,
+      consumed: amount
+    };
+  } catch (error) {
+    console.error('Erro ao consumir créditos:', error);
+    throw error;
   }
 };
 
 module.exports = {
   checkUserCredits,
-  useCredit,
-  addCredits
+  addCredits,
+  consumeCredits
 };
