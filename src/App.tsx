@@ -1,3 +1,4 @@
+
 import { ReactNode, Suspense } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./App.css";
@@ -46,7 +47,9 @@ function App() {
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <AppLayout />,
+    element: <AppLayout>
+      {/* This is the outlet for nested routes */}
+    </AppLayout>,
     errorElement: <NotFound />,
     children: [
       { index: true, element: <Index /> },
