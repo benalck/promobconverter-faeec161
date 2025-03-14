@@ -82,14 +82,14 @@ export default function Register() {
 
       try {
         setIsLoading(true);
-        await register(name, email, password);
+        const result = await register(name, email, password);
         
         // Show success message after registration
         setRegistrationSuccess(true);
         
         toast({
           title: "Conta criada com sucesso!",
-          description: "Um email de confirmação foi enviado para o seu endereço. Por favor, verifique sua caixa de entrada.",
+          description: "Por favor, verifique seu email para o código de confirmação.",
         });
         
         // Clear form fields after successful registration
@@ -97,6 +97,11 @@ export default function Register() {
         setEmail("");
         setPassword("");
         setConfirmPassword("");
+        
+        // Redirect to verification page
+        if (result && result.email && result.name) {
+          navigate(`/verify-email?email=${encodeURIComponent(result.email)}&name=${encodeURIComponent(result.name)}`);
+        }
         
       } catch (error) {
         console.error("Erro de registro:", error);

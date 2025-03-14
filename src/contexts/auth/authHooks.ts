@@ -24,6 +24,19 @@ export const useAuthentication = (
           throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
         }
 
+        // Check if email is verified in profiles table
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('email_verified')
+          .eq('id', currentUser.id)
+          .single();
+
+        if (profileError) {
+          console.error('Erro ao verificar status do email:', profileError);
+        } else if (profileData && !profileData.email_verified) {
+          throw new Error('Por favor, verifique seu email antes de fazer login.');
+        }
+
         await supabase
           .from('profiles')
           .update({ last_login: new Date().toISOString() })
@@ -36,6 +49,8 @@ export const useAuthentication = (
       console.error('Erro ao fazer login:', error);
       if (error instanceof Error) {
         if (error.message.includes('banida')) {
+          throw error;
+        } else if (error.message.includes('verifique seu email')) {
           throw error;
         } else if (error.message.includes('Invalid login credentials')) {
           throw new Error('Email ou senha inválidos');
@@ -58,7 +73,8 @@ export const useAuthentication = (
           data: {
             name
           },
-          emailRedirectTo: window.location.origin // Ensure email confirmation redirects to our app
+          // Disable email confirmation through Supabase
+          emailRedirectTo: undefined
         }
       });
 
@@ -80,11 +96,8 @@ export const useAuthentication = (
       
       console.log(`Usuário será registrado com role: ${userRole}, isFirstUser: ${isFirstUser}`);
 
-      // Step 3: Create the user profile using service role if needed
-      // This part may be handled by a database trigger instead, let's log and see if the profile gets created
-
+      // Step 3: Update auth metadata
       try {
-        // Try to update auth metadata immediately
         await supabase.auth.updateUser({
           data: { 
             role: userRole 
@@ -96,8 +109,51 @@ export const useAuthentication = (
         console.error('Erro ao definir role nos metadados:', roleError);
       }
 
-      // Note: User will need to confirm email before logging in
-      console.log('Registro realizado, aguardando confirmação de email');
+      // Step 4: Generate a 6-digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log(`Código de verificação gerado: ${verificationCode}`);
+
+      // Wait for the profile to be created by the trigger
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Step 5: Store the verification code in Supabase
+      const { error: codeError } = await supabase
+        .from('verification_codes')
+        .insert([
+          {
+            user_id: data.user.id,
+            email,
+            code: verificationCode,
+          }
+        ]);
+
+      if (codeError) {
+        console.error('Erro ao salvar código de verificação:', codeError);
+        throw new Error('Erro ao gerar código de verificação');
+      }
+
+      // Step 6: Send email with verification code
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          email,
+          name,
+          code: verificationCode,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erro ao enviar email:', errorData);
+        throw new Error('Erro ao enviar email de verificação');
+      }
+
+      console.log('Email de verificação enviado com sucesso');
+      return { email, name };
 
     } catch (error) {
       console.error('Erro ao registrar:', error);
