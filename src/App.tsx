@@ -19,6 +19,9 @@ const queryClient = new QueryClient();
 function AdminRoute({ children }: { children: ReactNode }) {
   const { isAdmin, isAuthenticated } = useAuth();
 
+  // Log the authentication status for debugging
+  console.log("AdminRoute - isAuthenticated:", isAuthenticated, "isAdmin:", isAdmin);
+
   if (!isAuthenticated) {
     window.location.href = "/login";
     return null;

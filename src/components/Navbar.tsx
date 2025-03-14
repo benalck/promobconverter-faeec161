@@ -49,6 +49,7 @@ export default function Navbar() {
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
+                  className="flex items-center"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Sair

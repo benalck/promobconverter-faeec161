@@ -10,6 +10,9 @@ export default function AdminRedirect() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Log the status for debugging
+    console.log("AdminRedirect - isAuthenticated:", isAuthenticated, "isAdmin:", isAdmin);
+    
     if (!isAuthenticated) {
       toast({
         title: "Acesso negado",
