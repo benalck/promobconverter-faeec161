@@ -60,7 +60,10 @@ export default function VerifyEmail() {
       setIsLoading(true);
       
       // Use RPC to verify code with proper type
-      const { data, error } = await supabase.rpc<VerificationCode>('verify_code', {
+      const { data, error } = await supabase.rpc<VerificationCode, {
+        p_email: string;
+        p_code: string;
+      }>('verify_code', {
         p_email: email,
         p_code: code
       });
@@ -90,12 +93,16 @@ export default function VerifyEmail() {
       }
       
       // Update user's email_verified status
-      await supabase.rpc<void>('update_email_verified_status', {
+      await supabase.rpc<void, {
+        p_user_id: string;
+      }>('update_email_verified_status', {
         p_user_id: data.user_id
       });
       
       // Remove the verification code
-      await supabase.rpc<void>('delete_verification_code', {
+      await supabase.rpc<void, {
+        p_id: string;
+      }>('delete_verification_code', {
         p_id: data.id
       });
       
@@ -135,7 +142,9 @@ export default function VerifyEmail() {
       const newCode = Math.floor(100000 + Math.random() * 900000).toString();
       
       // Get user_id from email
-      const { data: userData, error: userError } = await supabase.rpc<UserIdResponse>('get_user_id_by_email', {
+      const { data: userData, error: userError } = await supabase.rpc<UserIdResponse, {
+        p_email: string;
+      }>('get_user_id_by_email', {
         p_email: email
       });
       
@@ -144,12 +153,18 @@ export default function VerifyEmail() {
       }
       
       // Delete any existing codes
-      await supabase.rpc<void>('delete_verification_codes_by_email', {
+      await supabase.rpc<void, {
+        p_email: string;
+      }>('delete_verification_codes_by_email', {
         p_email: email
       });
       
       // Store new code
-      await supabase.rpc<void>('insert_verification_code', {
+      await supabase.rpc<void, {
+        p_user_id: string;
+        p_email: string;
+        p_code: string;
+      }>('insert_verification_code', {
         p_user_id: userData.id,
         p_email: email,
         p_code: newCode
