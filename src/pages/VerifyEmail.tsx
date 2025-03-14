@@ -8,6 +8,20 @@ import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, CheckCircle } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
+// Define the type for verification code response
+interface VerificationCode {
+  id: string;
+  user_id: string;
+  email: string;
+  code: string;
+  created_at: string;
+}
+
+// Define the type for user ID response
+interface UserIdResponse {
+  id: string;
+}
+
 export default function VerifyEmail() {
   const [isLoading, setIsLoading] = useState(false);
   const [code, setCode] = useState("");
@@ -46,7 +60,7 @@ export default function VerifyEmail() {
       setIsLoading(true);
       
       // Use RPC to verify code
-      const { data, error } = await supabase.rpc('verify_code', {
+      const { data, error } = await supabase.rpc<VerificationCode>('verify_code', {
         p_email: email,
         p_code: code
       });
@@ -121,11 +135,11 @@ export default function VerifyEmail() {
       const newCode = Math.floor(100000 + Math.random() * 900000).toString();
       
       // Get user_id from email
-      const { data: userData } = await supabase.rpc('get_user_id_by_email', {
+      const { data: userData, error: userError } = await supabase.rpc<UserIdResponse>('get_user_id_by_email', {
         p_email: email
       });
       
-      if (!userData) {
+      if (!userData || userError) {
         throw new Error("Usuário não encontrado");
       }
       
@@ -221,8 +235,8 @@ export default function VerifyEmail() {
                       disabled={isLoading}
                       render={({ slots }) => (
                         <InputOTPGroup>
-                          {slots.map((slot, i) => (
-                            <InputOTPSlot key={i} {...slot} />
+                          {slots.map((slot, index) => (
+                            <InputOTPSlot key={index} {...slot} index={index} />
                           ))}
                         </InputOTPGroup>
                       )}
