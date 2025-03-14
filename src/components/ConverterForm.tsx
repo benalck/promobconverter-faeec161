@@ -185,13 +185,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             />
           </div>
 
-          {user && (
-            <div className="text-center text-sm bg-primary/10 py-2 px-4 rounded-md animate-fade-in">
-              <p>Você possui <span className="font-bold">{user.credits}</span> créditos disponíveis</p>
-              <p>Cada conversão utiliza 1 crédito</p>
-            </div>
-          )}
-
           <Button
             onClick={handleConvert}
             disabled={!xmlFile || isConverting || !user || user.credits <= 0}
@@ -238,4 +231,3 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 }
 
 export default ConverterForm;
-

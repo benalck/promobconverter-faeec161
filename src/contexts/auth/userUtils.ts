@@ -7,7 +7,7 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
   try {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('*, plans(*)')
+      .select('*')
       .eq('id', supabaseUser.id)
       .single();
 
@@ -19,8 +19,6 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
       userRole = 'admin';
     }
 
-    const planExpiryDate = profile?.plan_expiry_date || null;
-
     return {
       id: supabaseUser.id,
       name: profile?.name || supabaseUser.user_metadata?.name || 'Usuário',
@@ -29,9 +27,7 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
       createdAt: supabaseUser.created_at || new Date().toISOString(),
       lastLogin: supabaseUser.last_sign_in_at,
       isBanned: profile?.is_banned || false,
-      credits: profile?.credits || 0,
-      activePlan: profile?.plans || null,
-      planExpiryDate
+      credits: profile?.credits || 0
     };
   } catch (error) {
     console.error('Erro ao converter usuário do Supabase:', error);

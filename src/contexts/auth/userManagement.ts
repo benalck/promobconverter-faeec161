@@ -17,7 +17,7 @@ export const useUserManagement = (
     try {
       const { data: supabaseUsers, error } = await supabase
         .from('profiles')
-        .select('*, plans(*)');
+        .select('*');
 
       if (error) throw error;
 
@@ -52,9 +52,7 @@ export const useUserManagement = (
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
             isBanned: profile.is_banned,
-            credits: profile.credits || 0,
-            activePlan: profile.plans || null,
-            planExpiryDate: profile.plan_expiry_date || null
+            credits: profile.credits || 0
           });
         } catch (error) {
           console.error('Erro ao processar usuário:', error);
@@ -73,7 +71,7 @@ export const useUserManagement = (
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('*, plans(*)')
+        .select('*')
         .eq('id', user.id)
         .single();
         
@@ -83,9 +81,7 @@ export const useUserManagement = (
         if (!prevUser) return null;
         return {
           ...prevUser,
-          credits: profile?.credits || 0,
-          activePlan: profile?.plans || null,
-          planExpiryDate: profile?.plan_expiry_date || null
+          credits: profile?.credits || 0
         };
       });
     } catch (error) {
@@ -151,8 +147,6 @@ export const useUserManagement = (
         is_banned?: boolean;
         role?: string;
         credits?: number;
-        active_plan?: string | null;
-        plan_expiry_date?: string | null;
       } = {};
       
       if (data.name !== undefined) profileData.name = data.name;
@@ -168,8 +162,6 @@ export const useUserManagement = (
       }
       
       if (data.credits !== undefined) profileData.credits = data.credits;
-      if (data.activePlan !== undefined) profileData.active_plan = data.activePlan?.id || null;
-      if (data.planExpiryDate !== undefined) profileData.plan_expiry_date = data.planExpiryDate;
       
       if (Object.keys(profileData).length > 0) {
         supabase
