@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Lock, Mail, User, EyeOff, Eye } from "lucide-react";
+import { ShoppingBag, Lock, Mail, User, EyeOff, Eye, CheckCircle } from "lucide-react";
 import HowItWorksButton from "@/components/HowItWorksButton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Register() {
   const [isLoginMode, setIsLoginMode] = useState(false);
@@ -18,6 +19,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const { register, login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -81,11 +83,22 @@ export default function Register() {
       try {
         setIsLoading(true);
         await register(name, email, password);
+        
+        // Show success message after registration
+        setRegistrationSuccess(true);
+        
         toast({
           title: "Conta criada com sucesso!",
-          description: "Seu cadastro foi realizado. Bem-vindo à nossa aplicação.",
+          description: "Um email de confirmação foi enviado para o seu endereço. Por favor, verifique sua caixa de entrada.",
         });
-        navigate("/");
+        
+        // Clear form fields after successful registration
+        setName("");
+        setEmail("");
+        setPassword("");
+        setConfirmPassword("");
+        
+        // Don't navigate away immediately so the user can see the success message
       } catch (error) {
         toast({
           title: "Erro ao registrar",
@@ -155,122 +168,159 @@ export default function Register() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLoginMode && (
+            {registrationSuccess && !isLoginMode ? (
+              <div className="space-y-4">
+                <Alert className="bg-green-50 border-green-200">
+                  <div className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <div>
+                      <h4 className="font-medium text-green-800">Cadastro realizado com sucesso!</h4>
+                      <AlertDescription className="text-green-700 mt-1">
+                        Enviamos um email de confirmação para o endereço fornecido.
+                        Por favor, verifique sua caixa de entrada e siga as instruções para ativar sua conta.
+                      </AlertDescription>
+                    </div>
+                  </div>
+                </Alert>
+                <div className="flex flex-col space-y-2">
+                  <Button 
+                    onClick={() => setIsLoginMode(true)}
+                    className="w-full py-6 font-medium transition-all duration-300 bg-primary hover:bg-primary/90"
+                  >
+                    Ir para o login
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setRegistrationSuccess(false);
+                      setIsLoginMode(false);
+                    }}
+                    className="w-full py-6 font-medium"
+                  >
+                    Registrar outra conta
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {!isLoginMode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome completo</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        id="name"
+                        placeholder="Seu nome completo"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={isLoading}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome completo</Label>
+                  <Label htmlFor="email">E-mail</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      id="name"
-                      placeholder="Seu nome completo"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       disabled={isLoading}
                       className="pl-10"
                     />
                   </div>
                 </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                    className="pl-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-              
-              {!isLoginMode && (
+                
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                  <Label htmlFor="password">Senha</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      id="confirmPassword"
+                      id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       disabled={isLoading}
                       className="pl-10"
                     />
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
-              )}
-              
-              <Button
-                type="submit"
-                className="w-full py-6 font-medium transition-all duration-300 bg-primary hover:bg-primary/90 mt-4"
-                disabled={isLoading}
-              >
-                {isLoading 
-                  ? (isLoginMode ? "Entrando..." : "Registrando...") 
-                  : (isLoginMode ? "Entrar" : "Criar conta")}
-              </Button>
-            </form>
+                
+                {!isLoginMode && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        id="confirmPassword"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isLoading}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <Button
+                  type="submit"
+                  className="w-full py-6 font-medium transition-all duration-300 bg-primary hover:bg-primary/90 mt-4"
+                  disabled={isLoading}
+                >
+                  {isLoading 
+                    ? (isLoginMode ? "Entrando..." : "Registrando...") 
+                    : (isLoginMode ? "Entrar" : "Criar conta")}
+                </Button>
+              </form>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4 pb-12">
-            <p className="text-center text-sm text-gray-600">
-              {isLoginMode ? (
-                <>
-                  Novo cliente?{" "}
-                  <button 
-                    type="button" 
-                    onClick={() => setIsLoginMode(false)}
-                    className="text-primary font-medium hover:underline"
-                  >
-                    Crie sua conta
-                  </button>
-                </>
-              ) : (
-                <>
-                  Já tem uma conta?{" "}
-                  <button 
-                    type="button" 
-                    onClick={() => setIsLoginMode(true)}
-                    className="text-primary font-medium hover:underline"
-                  >
-                    Faça login
-                  </button>
-                </>
-              )}
-            </p>
+            {!registrationSuccess && (
+              <p className="text-center text-sm text-gray-600">
+                {isLoginMode ? (
+                  <>
+                    Novo cliente?{" "}
+                    <button 
+                      type="button" 
+                      onClick={() => setIsLoginMode(false)}
+                      className="text-primary font-medium hover:underline"
+                    >
+                      Crie sua conta
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Já tem uma conta?{" "}
+                    <button 
+                      type="button" 
+                      onClick={() => setIsLoginMode(true)}
+                      className="text-primary font-medium hover:underline"
+                    >
+                      Faça login
+                    </button>
+                  </>
+                )}
+              </p>
+            )}
             <HowItWorksButton />
           </CardFooter>
         </Card>

@@ -56,7 +56,8 @@ export const useAuthentication = (
         options: {
           data: {
             name
-          }
+          },
+          emailRedirectTo: window.location.origin // Ensure email confirmation redirects to our app
         }
       });
 
@@ -98,10 +99,9 @@ export const useAuthentication = (
           console.error('Erro ao definir role nos metadados:', roleError);
         }
 
-        const newUser = await convertSupabaseUser(data.user);
-        newUser.role = userRole;
-        setUser(newUser);
-        await syncUsers();
+        // NOTE: We don't set the user here because email confirmation is required
+        // User will be set after they confirm their email and log in
+        console.log('Registro realizado, aguardando confirmação de email');
       }
     } catch (error) {
       console.error('Erro ao registrar:', error);
