@@ -98,8 +98,8 @@ export default function Register() {
         setPassword("");
         setConfirmPassword("");
         
-        // Don't navigate away immediately so the user can see the success message
       } catch (error) {
+        console.error("Erro de registro:", error);
         toast({
           title: "Erro ao registrar",
           description: error instanceof Error ? error.message : "Ocorreu um erro ao criar sua conta. Tente novamente.",
