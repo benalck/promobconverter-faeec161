@@ -9,6 +9,8 @@ require('dotenv').config();
 // Importar rotas
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const converterRoutes = require('./routes/converterRoutes');
+const creditRoutes = require('./routes/creditRoutes');
 
 // Inicializar express
 const app = express();
@@ -16,11 +18,14 @@ const port = process.env.PORT || 5000;
 
 // Middlewares
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
 // Configurar rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/converter', converterRoutes);
+app.use('/api/credits', creditRoutes);
 
 // Rota básica para verificar se o servidor está funcionando
 app.get('/', (req, res) => {
