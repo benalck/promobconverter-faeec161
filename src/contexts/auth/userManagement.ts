@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -32,32 +33,25 @@ export const useUserManagement = (
         return;
       }
 
-      // Fetch auth users to get emails - this approach avoids using admin API
-      const { data: authUsers, error: authError } = await supabase
-        .from('auth.users')
-        .select('id, email')
-        .throwOnError();
-        
-      // Create a map of user IDs to emails for faster lookup
-      const emailMap = new Map();
-      if (authUsers) {
-        authUsers.forEach(authUser => {
-          emailMap.set(authUser.id, authUser.email);
-        });
-      } else {
-        console.log('No auth users found or error fetching them:', authError);
-      }
-
+      // We can't directly query auth.users with the client
+      // Instead, we'll use what we have in profiles and user_metadata
       const formattedUsers: User[] = supabaseUsers.map(profile => {
         let userRole: 'admin' | 'user' = 'user';
         if (profile.role === 'admin') {
           userRole = 'admin';
         }
         
+        // Email might need to be retrieved from session for the current user
+        // For other users, we might not have access to their emails
+        let email = null;
+        if (user && user.id === profile.id) {
+          email = user.email;
+        }
+        
         return {
           id: profile.id,
           name: profile.name || 'Usuário',
-          email: emailMap.get(profile.id) || null,
+          email: email,
           role: userRole,
           createdAt: profile.created_at,
           lastLogin: profile.last_login || undefined,
@@ -130,7 +124,7 @@ export const useUserManagement = (
 
   const deleteUser = (id: string) => {
     if (user?.id === id) {
-      throw new Error('Não é possível excluir o usu��rio atual');
+      throw new Error('Não é possível excluir o usuário atual');
     }
     
     try {
