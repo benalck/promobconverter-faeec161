@@ -2,9 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { testConnection } = require('./config/database');
-const { initDatabase } = require('./config/init-db');
-const { initializeMySQLDatabase } = require('./script/init-mysql');
+const storage = require('./config/storage');
 require('dotenv').config();
 
 // Importar rotas
@@ -36,23 +34,13 @@ app.get('/', (req, res) => {
 // Iniciar servidor
 async function startServer() {
   try {
-    // Inicializar o banco de dados MySQL (criar se não existir)
-    await initializeMySQLDatabase();
+    // Inicializar o armazenamento local
+    await storage.initStorage();
     
-    // Testar conexão com banco de dados
-    const isConnected = await testConnection();
-    
-    if (isConnected) {
-      // Inicializar esquema do banco de dados (tabelas)
-      await initDatabase();
-      
-      // Iniciar servidor
-      app.listen(port, () => {
-        console.log(`Servidor rodando na porta ${port}`);
-      });
-    } else {
-      console.error('Não foi possível iniciar o servidor devido a falha na conexão com o banco de dados');
-    }
+    // Iniciar servidor
+    app.listen(port, () => {
+      console.log(`Servidor rodando na porta ${port}`);
+    });
   } catch (error) {
     console.error('Erro ao iniciar o servidor:', error);
   }

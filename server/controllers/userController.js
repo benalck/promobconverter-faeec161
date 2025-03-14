@@ -1,14 +1,13 @@
 
-const { pool } = require('../config/database');
+const storage = require('../config/storage');
+const bcrypt = require('bcrypt');
 
 // Obter todos os usuários
 const getAllUsers = async (req, res) => {
   try {
-    const [users] = await pool.query(
-      'SELECT id, name, email, role, created_at, last_login, is_banned, credits FROM users'
-    );
-
-    // Formatar dados para o formato esperado pelo frontend
+    const users = await storage.query('users');
+    
+    // Formatar dados para o formato esperado pelo frontend (sem senhas)
     const formattedUsers = users.map(user => ({
       id: user.id,
       name: user.name,
@@ -16,7 +15,7 @@ const getAllUsers = async (req, res) => {
       role: user.role,
       createdAt: user.created_at,
       lastLogin: user.last_login,
-      isBanned: user.is_banned === 1,
+      isBanned: user.is_banned,
       credits: user.credits
     }));
 
@@ -39,43 +38,29 @@ const banUser = async (req, res) => {
 
   try {
     // Verificar se o usuário existe
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE id = ?',
-      [userId]
-    );
+    const users = await storage.query('users', { id: userId });
 
     if (users.length === 0) {
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
 
     // Banir o usuário
-    await pool.query(
-      'UPDATE users SET is_banned = TRUE WHERE id = ?',
-      [userId]
-    );
-
-    // Buscar usuário atualizado
-    const [updatedUsers] = await pool.query(
-      'SELECT id, name, email, role, created_at, last_login, is_banned, credits FROM users WHERE id = ?',
-      [userId]
-    );
-
-    if (updatedUsers.length === 0) {
+    const updatedUser = await storage.update('users', userId, { is_banned: true });
+    
+    if (!updatedUser) {
       return res.status(404).json({ message: 'Usuário não encontrado após atualização' });
     }
-
-    const user = updatedUsers[0];
     
     // Formatar para o padrão do frontend
     const userResponse = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.created_at,
-      lastLogin: user.last_login,
-      isBanned: user.is_banned === 1,
-      credits: user.credits
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      createdAt: updatedUser.created_at,
+      lastLogin: updatedUser.last_login,
+      isBanned: updatedUser.is_banned,
+      credits: updatedUser.credits
     };
 
     res.status(200).json(userResponse);
@@ -91,43 +76,29 @@ const unbanUser = async (req, res) => {
 
   try {
     // Verificar se o usuário existe
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE id = ?',
-      [userId]
-    );
+    const users = await storage.query('users', { id: userId });
 
     if (users.length === 0) {
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
 
     // Desbanir o usuário
-    await pool.query(
-      'UPDATE users SET is_banned = FALSE WHERE id = ?',
-      [userId]
-    );
-
-    // Buscar usuário atualizado
-    const [updatedUsers] = await pool.query(
-      'SELECT id, name, email, role, created_at, last_login, is_banned, credits FROM users WHERE id = ?',
-      [userId]
-    );
-
-    if (updatedUsers.length === 0) {
+    const updatedUser = await storage.update('users', userId, { is_banned: false });
+    
+    if (!updatedUser) {
       return res.status(404).json({ message: 'Usuário não encontrado após atualização' });
     }
-
-    const user = updatedUsers[0];
     
     // Formatar para o padrão do frontend
     const userResponse = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.created_at,
-      lastLogin: user.last_login,
-      isBanned: user.is_banned === 1,
-      credits: user.credits
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      createdAt: updatedUser.created_at,
+      lastLogin: updatedUser.last_login,
+      isBanned: updatedUser.is_banned,
+      credits: updatedUser.credits
     };
 
     res.status(200).json(userResponse);
@@ -150,34 +121,16 @@ const updateUser = async (req, res) => {
   // Garantir que não estamos alterando campos sensíveis
   const allowedUpdates = ['name', 'role', 'credits', 'is_banned'];
   const validUpdates = {};
-  let updateQuery = 'UPDATE users SET ';
-  const updateValues = [];
 
   for (const key in updates) {
     if (allowedUpdates.includes(key)) {
-      // Converter isBanned para formato do banco
-      if (key === 'is_banned') {
-        validUpdates[key] = updates[key] === true ? 1 : 0;
-      } else {
-        validUpdates[key] = updates[key];
-      }
-      
-      updateQuery += `${key} = ?, `;
-      updateValues.push(validUpdates[key]);
+      validUpdates[key] = updates[key];
     }
   }
 
-  // Remover a última vírgula e espaço
-  updateQuery = updateQuery.slice(0, -2);
-  updateQuery += ' WHERE id = ?';
-  updateValues.push(userId);
-
   try {
     // Verificar se o usuário existe
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE id = ?',
-      [userId]
-    );
+    const users = await storage.query('users', { id: userId });
 
     if (users.length === 0) {
       return res.status(404).json({ message: 'Usuário não encontrado' });
@@ -185,34 +138,28 @@ const updateUser = async (req, res) => {
 
     // Executar a atualização se houver campos válidos
     if (Object.keys(validUpdates).length > 0) {
-      await pool.query(updateQuery, updateValues);
+      const updatedUser = await storage.update('users', userId, validUpdates);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'Usuário não encontrado após atualização' });
+      }
+      
+      // Formatar para o padrão do frontend
+      const userResponse = {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        createdAt: updatedUser.created_at,
+        lastLogin: updatedUser.last_login,
+        isBanned: updatedUser.is_banned,
+        credits: updatedUser.credits
+      };
+
+      res.status(200).json(userResponse);
+    } else {
+      res.status(400).json({ message: 'Nenhum campo válido para atualização' });
     }
-
-    // Buscar usuário atualizado
-    const [updatedUsers] = await pool.query(
-      'SELECT id, name, email, role, created_at, last_login, is_banned, credits FROM users WHERE id = ?',
-      [userId]
-    );
-
-    if (updatedUsers.length === 0) {
-      return res.status(404).json({ message: 'Usuário não encontrado após atualização' });
-    }
-
-    const user = updatedUsers[0];
-    
-    // Formatar para o padrão do frontend
-    const userResponse = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.created_at,
-      lastLogin: user.last_login,
-      isBanned: user.is_banned === 1,
-      credits: user.credits
-    };
-
-    res.status(200).json(userResponse);
   } catch (error) {
     console.error('Erro ao atualizar usuário:', error);
     res.status(500).json({ message: 'Erro no servidor ao atualizar usuário' });
@@ -231,34 +178,21 @@ const addCredits = async (req, res) => {
 
   try {
     // Verificar se o usuário existe
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE id = ?',
-      [userId]
-    );
+    const users = await storage.query('users', { id: userId });
 
     if (users.length === 0) {
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
 
     const user = users[0];
+    const newCredits = user.credits + parseInt(amount, 10);
 
     // Adicionar créditos
-    await pool.query(
-      'UPDATE users SET credits = credits + ? WHERE id = ?',
-      [amount, userId]
-    );
-
-    // Buscar usuário atualizado
-    const [updatedUsers] = await pool.query(
-      'SELECT id, name, email, role, created_at, last_login, is_banned, credits FROM users WHERE id = ?',
-      [userId]
-    );
-
-    if (updatedUsers.length === 0) {
+    const updatedUser = await storage.update('users', userId, { credits: newCredits });
+    
+    if (!updatedUser) {
       return res.status(404).json({ message: 'Usuário não encontrado após atualização' });
     }
-
-    const updatedUser = updatedUsers[0];
     
     // Formatar para o padrão do frontend
     const userResponse = {
@@ -268,7 +202,7 @@ const addCredits = async (req, res) => {
       role: updatedUser.role,
       createdAt: updatedUser.created_at,
       lastLogin: updatedUser.last_login,
-      isBanned: updatedUser.is_banned === 1,
+      isBanned: updatedUser.is_banned,
       credits: updatedUser.credits
     };
 

@@ -1,47 +1,52 @@
 
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
+const storage = require('../config/storage');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'sua_chave_secreta_aqui';
 
-// Middleware para verificar autenticação
+// Verificar token JWT
 const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   
   if (!token) {
-    return res.status(401).json({ message: 'Não autorizado: Token não fornecido' });
+    return res.status(401).json({ message: 'Acesso negado. Token não fornecido.' });
   }
 
   try {
+    // Verificar token
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    // Verificar se o usuário existe e não está banido
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE id = ? AND is_banned = FALSE',
-      [decoded.userId]
-    );
-
+    // Buscar usuário pelo ID
+    const users = await storage.query('users', { id: decoded.userId });
+    
     if (users.length === 0) {
-      return res.status(401).json({ message: 'Não autorizado: Usuário não encontrado ou banido' });
+      return res.status(401).json({ message: 'Usuário não encontrado' });
     }
-
-    // Adicionar o usuário ao objeto de requisição
-    req.user = users[0];
+    
+    const user = users[0];
+    
+    // Verificar se o usuário está banido
+    if (user.is_banned) {
+      return res.status(403).json({ message: 'Sua conta foi banida. Entre em contato com o administrador.' });
+    }
+    
+    // Anexar usuário à requisição
+    req.user = user;
+    
     next();
   } catch (error) {
-    console.error('Erro na autenticação:', error);
-    return res.status(401).json({ message: 'Não autorizado: Token inválido' });
+    return res.status(401).json({ message: 'Token inválido ou expirado' });
   }
 };
 
-// Middleware para verificar se é administrador
+// Verificar se o usuário é administrador
 const verifyAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403).json({ message: 'Acesso negado: Permissão de administrador necessária' });
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Acesso negado. Permissão de administrador necessária.' });
   }
+  
+  next();
 };
 
 module.exports = {

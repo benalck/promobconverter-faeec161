@@ -1,15 +1,19 @@
 
-const { checkUserCredits, addCredits } = require('../services/creditService');
+const storage = require('../config/storage');
 
 // Obter saldo de créditos do usuário
 const getUserCredits = async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const result = await checkUserCredits(userId);
+    const users = await storage.query('users', { id: userId });
+    
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
     
     res.status(200).json({
-      credits: result.credits
+      credits: users[0].credits
     });
   } catch (error) {
     console.error('Erro ao obter créditos:', error);
@@ -31,12 +35,23 @@ const addUserCredits = async (req, res) => {
       return res.status(400).json({ message: 'Quantidade de créditos inválida' });
     }
     
-    const result = await addCredits(userId, parseInt(amount));
+    // Verificar se o usuário existe
+    const users = await storage.query('users', { id: userId });
+    
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+    
+    const user = users[0];
+    const newCredits = user.credits + parseInt(amount, 10);
+    
+    // Atualizar créditos do usuário
+    await storage.update('users', userId, { credits: newCredits });
     
     res.status(200).json({
       userId,
-      credits: result.credits,
-      added: result.added,
+      credits: newCredits,
+      added: parseInt(amount, 10),
       message: 'Créditos adicionados com sucesso'
     });
   } catch (error) {
