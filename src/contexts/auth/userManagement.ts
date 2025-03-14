@@ -1,8 +1,12 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
-import { convertSupabaseUser } from './userUtils';
+import { getAllUsers as fetchAllUsers, addCredits, banUser as apiBanUser, unbanUser as apiUnbanUser, updateUser as apiUpdateUser } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
+
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://sua-api-de-producao.com/api' 
+  : 'http://localhost:5000/api';
 
 export const useUserManagement = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -12,58 +16,27 @@ export const useUserManagement = (
   logout: () => Promise<void>
 ) => {
   const { toast } = useToast();
+  
+  // Header de autorização para requisições
+  const authHeader = () => {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   const syncUsers = async () => {
     try {
-      console.log('Fetching profiles from Supabase...');
-      const { data: supabaseUsers, error } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (error) {
-        console.error('Error fetching profiles:', error);
-        throw error;
-      }
-
-      console.log('Profiles data:', supabaseUsers);
-
-      if (!supabaseUsers || supabaseUsers.length === 0) {
-        console.log('No profiles found');
-        setUsers([]);
+      if (!user || user.role !== 'admin') {
+        // Apenas admins podem ver todos os usuários
         return;
       }
-
-      // We can't directly query auth.users with the client
-      // Instead, we'll use what we have in profiles and user_metadata
-      const formattedUsers: User[] = supabaseUsers.map(profile => {
-        let userRole: 'admin' | 'user' = 'user';
-        if (profile.role === 'admin') {
-          userRole = 'admin';
-        }
-        
-        // Email might need to be retrieved from session for the current user
-        // For other users, we might not have access to their emails
-        let email = null;
-        if (user && user.id === profile.id) {
-          email = user.email;
-        }
-        
-        return {
-          id: profile.id,
-          name: profile.name || 'Usuário',
-          email: email,
-          role: userRole,
-          createdAt: profile.created_at,
-          lastLogin: profile.last_login || undefined,
-          isBanned: profile.is_banned,
-          credits: profile.credits || 0
-        };
-      });
-
-      console.log('Formatted users:', formattedUsers);
-      setUsers(formattedUsers);
+      
+      console.log('Buscando usuários...');
+      const allUsers = await fetchAllUsers();
+      console.log('Usuários encontrados:', allUsers);
+      
+      setUsers(allUsers);
     } catch (error) {
-      console.error('Error syncing users:', error);
+      console.error('Erro ao sincronizar usuários:', error);
     }
   };
 
@@ -71,43 +44,32 @@ export const useUserManagement = (
     if (!user) return;
     
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-        
-      if (error) throw error;
-      
-      setUser(prevUser => {
-        if (!prevUser) return null;
-        return {
-          ...prevUser,
-          credits: profile?.credits || 0
-        };
+      const response = await axios.get(`${API_URL}/auth/me`, {
+        headers: authHeader()
       });
+      
+      if (response.data && response.data.user) {
+        setUser(prevUser => {
+          if (!prevUser) return null;
+          return {
+            ...prevUser,
+            credits: response.data.user.credits || 0
+          };
+        });
+      }
     } catch (error) {
-      console.error('Error updating credits:', error);
+      console.error('Erro ao atualizar créditos:', error);
     }
   };
 
   const addInitialCreditsIfNeeded = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('last_login, credits')
-        .eq('id', userId)
-        .single();
-        
-      if (error) throw error;
+      // Verificar se o usuário já tem créditos
+      const userToCheck = users.find(u => u.id === userId);
       
-      if (profile && profile.credits === 0) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ credits: 3 })
-          .eq('id', userId);
-          
-        if (updateError) throw updateError;
+      if (userToCheck && userToCheck.credits === 0) {
+        // Adicionar 3 créditos iniciais
+        await addCredits(userId, 3);
         
         toast({
           title: "Boas-vindas!",
@@ -118,7 +80,7 @@ export const useUserManagement = (
         await refreshUserCredits();
       }
     } catch (error) {
-      console.error('Error adding initial credits:', error);
+      console.error('Erro ao adicionar créditos iniciais:', error);
     }
   };
 
@@ -128,77 +90,42 @@ export const useUserManagement = (
     }
     
     try {
-      supabase
-        .from('profiles')
-        .update({ is_banned: true })
-        .eq('id', id)
-        .then(() => syncUsers());
+      // No nosso sistema, "excluir" significa banir
+      apiBanUser(id).then(() => syncUsers());
         
-      const newUsers = users.filter(u => u.id !== id);
+      // Atualizar a UI imediatamente
+      const newUsers = users.map(u => 
+        u.id === id ? { ...u, isBanned: true } : u
+      );
       setUsers(newUsers);
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error('Erro ao excluir usuário:', error);
       throw new Error('Falha ao excluir usuário');
     }
   };
 
   const updateUser = (id: string, data: Partial<User>) => {
     try {
-      const profileData: { 
-        name?: string; 
-        is_banned?: boolean;
-        role?: string;
-        credits?: number;
-      } = {};
+      // Enviar atualização para o servidor
+      apiUpdateUser(id, data).then(() => syncUsers());
       
-      if (data.name !== undefined) profileData.name = data.name;
-      if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
-      
-      if (data.role !== undefined) {
-        if (data.role === 'admin' || data.role === 'user') {
-          profileData.role = data.role;
-        } else {
-          profileData.role = 'user';
-          console.warn('Invalid role provided, defaulting to "user"');
-        }
-      }
-      
-      if (data.credits !== undefined) profileData.credits = data.credits;
-      
-      if (Object.keys(profileData).length > 0) {
-        supabase
-          .from('profiles')
-          .update(profileData)
-          .eq('id', id)
-          .then(() => syncUsers());
-      }
-        
-      if (data.role) {
-        try {
-          console.log(`Trying to update role to: ${data.role}`);
-          supabase.auth.updateUser({
-            data: { role: data.role }
-          }).then(response => {
-            console.log("Role update response:", response);
-          });
-        } catch (e) {
-          console.error('Error updating role:', e);
-        }
-      }
-      
+      // Atualizar a UI imediatamente
       const newUsers = users.map(u => 
         u.id === id ? { ...u, ...data } : u
       );
       setUsers(newUsers);
 
-      if (user?.id === id && data.isBanned) {
-        logout();
-      } else if (user?.id === id) {
+      // Se for o usuário atual, atualizar também o estado do usuário
+      if (user?.id === id) {
         const updatedUser = { ...user, ...data };
         setUser(updatedUser);
+        
+        if (updatedUser.isBanned) {
+          logout();
+        }
       }
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Erro ao atualizar usuário:', error);
       throw new Error('Falha ao atualizar usuário');
     }
   };

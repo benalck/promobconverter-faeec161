@@ -1,0 +1,178 @@
+
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
+const { pool } = require('../config/database');
+require('dotenv').config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'sua_chave_secreta_aqui';
+
+// Registrar um novo usuário
+const register = async (req, res) => {
+  const { name, email, password } = req.body;
+
+  // Validar entrada
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Nome, email e senha são obrigatórios' });
+  }
+
+  try {
+    // Verificar se o email já está em uso
+    const [existingUsers] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (existingUsers.length > 0) {
+      return res.status(400).json({ message: 'Este email já está em uso' });
+    }
+
+    // Criar hash da senha
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const userId = uuidv4();
+
+    // Inserir novo usuário
+    await pool.query(
+      'INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)',
+      [userId, name, email, hashedPassword]
+    );
+
+    res.status(201).json({ message: 'Usuário registrado com sucesso', email, name });
+  } catch (error) {
+    console.error('Erro no registro:', error);
+    res.status(500).json({ message: 'Erro no servidor ao registrar usuário' });
+  }
+};
+
+// Login de usuário
+const login = async (req, res) => {
+  const { email, password } = req.body;
+
+  // Validar entrada
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email e senha são obrigatórios' });
+  }
+
+  try {
+    // Buscar usuário pelo email
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (users.length === 0) {
+      return res.status(401).json({ message: 'Email ou senha inválidos' });
+    }
+
+    const user = users[0];
+
+    // Verificar se o usuário está banido
+    if (user.is_banned) {
+      return res.status(403).json({ message: 'Sua conta foi banida. Entre em contato com o administrador.' });
+    }
+
+    // Comparar senha
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Email ou senha inválidos' });
+    }
+
+    // Atualizar último login
+    await pool.query(
+      'UPDATE users SET last_login = NOW() WHERE id = ?',
+      [user.id]
+    );
+
+    // Criar token JWT
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Criar sessão
+    const sessionId = uuidv4();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 dias
+
+    await pool.query(
+      'INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)',
+      [sessionId, user.id, expiresAt]
+    );
+
+    // Preparar resposta do usuário (sem senha)
+    const userResponse = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.created_at,
+      lastLogin: user.last_login,
+      isBanned: user.is_banned === 1,
+      credits: user.credits
+    };
+
+    res.status(200).json({ 
+      message: 'Login realizado com sucesso',
+      user: userResponse,
+      token 
+    });
+  } catch (error) {
+    console.error('Erro no login:', error);
+    res.status(500).json({ message: 'Erro no servidor ao fazer login' });
+  }
+};
+
+// Logout de usuário
+const logout = async (req, res) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return res.status(200).json({ message: 'Logout realizado' });
+  }
+
+  try {
+    await pool.query(
+      'DELETE FROM sessions WHERE id = ?',
+      [sessionId]
+    );
+
+    res.status(200).json({ message: 'Logout realizado com sucesso' });
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    res.status(500).json({ message: 'Erro no servidor ao fazer logout' });
+  }
+};
+
+// Verificar sessão atual
+const getCurrentUser = async (req, res) => {
+  try {
+    // O usuário já foi carregado pelo middleware de autenticação
+    const user = req.user;
+    
+    // Preparar resposta do usuário (sem senha)
+    const userResponse = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.created_at,
+      lastLogin: user.last_login,
+      isBanned: user.is_banned === 1,
+      credits: user.credits
+    };
+
+    res.status(200).json({ user: userResponse });
+  } catch (error) {
+    console.error('Erro ao obter usuário atual:', error);
+    res.status(500).json({ message: 'Erro no servidor ao obter usuário atual' });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  logout,
+  getCurrentUser
+};
