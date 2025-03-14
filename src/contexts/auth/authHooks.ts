@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -117,7 +118,7 @@ export const useAuthentication = (
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       try {
-        const { error: codeError } = await supabase.rpc('insert_verification_code', {
+        const { error: codeError } = await supabase.rpc<void>('insert_verification_code', {
           p_user_id: data.user.id,
           p_email: email,
           p_code: verificationCode

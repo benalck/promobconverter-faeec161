@@ -59,7 +59,7 @@ export default function VerifyEmail() {
     try {
       setIsLoading(true);
       
-      // Use RPC to verify code
+      // Use RPC to verify code with proper type
       const { data, error } = await supabase.rpc<VerificationCode>('verify_code', {
         p_email: email,
         p_code: code
@@ -90,12 +90,12 @@ export default function VerifyEmail() {
       }
       
       // Update user's email_verified status
-      await supabase.rpc('update_email_verified_status', {
+      await supabase.rpc<void>('update_email_verified_status', {
         p_user_id: data.user_id
       });
       
       // Remove the verification code
-      await supabase.rpc('delete_verification_code', {
+      await supabase.rpc<void>('delete_verification_code', {
         p_id: data.id
       });
       
@@ -144,12 +144,12 @@ export default function VerifyEmail() {
       }
       
       // Delete any existing codes
-      await supabase.rpc('delete_verification_codes_by_email', {
+      await supabase.rpc<void>('delete_verification_codes_by_email', {
         p_email: email
       });
       
       // Store new code
-      await supabase.rpc('insert_verification_code', {
+      await supabase.rpc<void>('insert_verification_code', {
         p_user_id: userData.id,
         p_email: email,
         p_code: newCode
