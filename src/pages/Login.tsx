@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { BanCheck } from '@/components/BanCheck';
+import BanCheck from '@/components/BanCheck';
 
 export default function Login() {
   const [email, setEmail] = useState('');

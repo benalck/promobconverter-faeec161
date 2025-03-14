@@ -49,6 +49,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <AppLayout>
       {/* This is the outlet for nested routes */}
+      {/* This ensures the children prop is passed explicitly */}
     </AppLayout>,
     errorElement: <NotFound />,
     children: [
