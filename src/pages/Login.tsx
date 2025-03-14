@@ -132,9 +132,7 @@ export default function Login() {
               <div>
                 <h4 className="text-sm font-medium text-blue-800">Credenciais de Acesso</h4>
                 <p className="text-xs text-blue-700 mt-1">
-                  Administrador padrão: <br />
-                  Email: admin@sistema.com <br />
-                  Senha: admin123
+                  Para acessar, registre-se primeiro ou faça login com suas credenciais.
                 </p>
               </div>
             </div>

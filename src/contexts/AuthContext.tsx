@@ -1,8 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthContextType } from './auth/types';
-import { getAllUsers, getCurrentUser, loginUser, logoutUser, registerUser, updateUser, addCredits, banUser, unbanUser } from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Session } from '@supabase/supabase-js';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -11,164 +12,321 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
+  const [session, setSession] = useState<Session | null>(null);
 
-  // Sincronizar usuários
+  // Convert Supabase user to our User type
+  const mapSupabaseUser = (session: Session | null): User | null => {
+    if (!session?.user) return null;
+
+    return {
+      id: session.user.id,
+      name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || null,
+      email: session.user.email,
+      role: 'user', // Default role, will be updated from profile
+      createdAt: session.user.created_at,
+      lastLogin: new Date().toISOString(),
+      isBanned: false, // Default value, will be updated from profile
+      credits: 3 // Default credits, will be updated from profile
+    };
+  };
+
+  // Fetch user profile data
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      return null;
+    }
+  };
+
+  // Update user with profile data
+  const updateUserWithProfile = async (baseUser: User): Promise<User> => {
+    try {
+      const profile = await fetchUserProfile(baseUser.id);
+      
+      if (profile) {
+        return {
+          ...baseUser,
+          role: profile.role || 'user',
+          isBanned: profile.is_banned || false,
+          credits: profile.credits || 3,
+          name: profile.name || baseUser.name,
+        };
+      }
+      
+      return baseUser;
+    } catch (error) {
+      console.error('Error updating user with profile:', error);
+      return baseUser;
+    }
+  };
+
+  // Sync users (for admin purposes)
   const syncUsers = async () => {
     try {
-      const allUsers = await getAllUsers();
-      setUsers(allUsers);
-      return Promise.resolve();
+      if (!user || user.role !== 'admin') return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching users:', error);
+        return;
+      }
+
+      const mappedUsers = data.map(profile => ({
+        id: profile.id,
+        name: profile.name,
+        email: null, // Email is not stored in profiles
+        role: profile.role || 'user',
+        createdAt: profile.created_at,
+        lastLogin: profile.last_login,
+        isBanned: profile.is_banned || false,
+        credits: profile.credits || 0
+      }));
+
+      setUsers(mappedUsers);
     } catch (error) {
-      console.error('Erro ao sincronizar usuários:', error);
-      return Promise.reject(error);
+      console.error('Error syncing users:', error);
     }
   };
 
-  // Atualizar créditos do usuário atual
+  // Refresh user credits
   const refreshUserCredits = async () => {
-    if (!user) return Promise.resolve();
+    if (!user) return;
     
     try {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching credits:', error);
+        return;
       }
-      return Promise.resolve();
+
+      if (data) {
+        setUser(prev => prev ? { ...prev, credits: data.credits } : null);
+      }
     } catch (error) {
-      console.error('Erro ao atualizar créditos:', error);
-      return Promise.reject(error);
+      console.error('Error refreshing credits:', error);
     }
   };
 
-  // Adicionar créditos iniciais se necessário
-  const addInitialCreditsIfNeeded = async (userId: string) => {
-    try {
-      // No nosso sistema local, os créditos iniciais já são adicionados ao criar o usuário
-      return Promise.resolve();
-    } catch (error) {
-      console.error('Erro ao adicionar créditos iniciais:', error);
-      return Promise.reject(error);
-    }
-  };
-
-  // Login
+  // Login with email and password
   const login = async (email: string, password: string) => {
     try {
-      const loggedUser = await loginUser(email, password);
-      setUser(loggedUser);
-      await syncUsers();
-    } catch (error) {
-      console.error('Erro ao fazer login:', error);
-      if (error instanceof Error) {
-        throw error;
-      } else {
-        throw new Error('Falha ao fazer login');
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+      
+      // User will be set in the session change listener
+      return data;
+    } catch (error: any) {
+      console.error('Error signing in:', error);
+      throw new Error(error.message || 'Failed to login');
     }
   };
 
-  // Registro
+  // Register a new user
   const register = async (name: string, email: string, password: string) => {
     try {
-      await registerUser({ name, email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
+
+      if (error) throw error;
+      
       return { email, name };
-    } catch (error) {
-      console.error('Erro ao registrar:', error);
-      if (error instanceof Error) {
-        throw error;
-      } else {
-        throw new Error('Falha ao registrar usuário');
-      }
+    } catch (error: any) {
+      console.error('Error registering:', error);
+      throw new Error(error.message || 'Failed to register');
     }
   };
 
   // Logout
   const logout = async () => {
-    logoutUser();
-    setUser(null);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Error logging out:', error);
+      throw error;
+    }
   };
 
-  // Excluir usuário (banir)
-  const deleteUser = async (id: string) => {
-    if (user?.id === id) {
-      throw new Error('Não é possível excluir o usuário atual');
-    }
-    
+  // Ban/unban a user
+  const banUser = async (userId: string, isBanned: boolean) => {
     try {
-      const bannedUser = await banUser(id);
-      if (bannedUser) {
-        setUsers(prevUsers => prevUsers.map(u => 
-          u.id === id ? { ...u, isBanned: true } : u
-        ));
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_banned: isBanned })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      // Update users list
+      setUsers(prevUsers => 
+        prevUsers.map(u => u.id === userId ? { ...u, isBanned } : u)
+      );
+
+      // If the banned user is the current user, log them out
+      if (isBanned && user?.id === userId) {
+        logout();
       }
     } catch (error) {
-      console.error('Erro ao excluir usuário:', error);
-      throw new Error('Falha ao excluir usuário');
+      console.error('Error updating ban status:', error);
+      throw error;
     }
   };
 
-  // Atualizar usuário
+  // Delete a user (by banning them)
+  const deleteUser = async (id: string) => {
+    return banUser(id, true);
+  };
+
+  // Update a user
   const userManagementUpdate = async (id: string, data: Partial<User>) => {
     try {
-      const updatedUser = await updateUser(id, data);
+      const updateData: any = {};
       
-      if (updatedUser) {
-        // Atualizar lista de usuários
-        setUsers(prevUsers => prevUsers.map(u => 
-          u.id === id ? updatedUser : u
-        ));
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.role !== undefined) updateData.role = data.role;
+      if (data.isBanned !== undefined) updateData.is_banned = data.isBanned;
+      if (data.credits !== undefined) updateData.credits = data.credits;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update users list
+      setUsers(prevUsers => 
+        prevUsers.map(u => u.id === id ? { ...u, ...data } : u)
+      );
+
+      // If the updated user is the current user, update the user state
+      if (user?.id === id) {
+        setUser(prev => prev ? { ...prev, ...data } : null);
         
-        // Se for o usuário atual, atualizar também o estado do usuário
-        if (user?.id === id) {
-          setUser(updatedUser);
-          
-          if (updatedUser.isBanned) {
-            logout();
-          }
+        // If the user is being banned, log them out
+        if (data.isBanned) {
+          logout();
         }
       }
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
-      throw new Error('Falha ao atualizar usuário');
+      console.error('Error updating user:', error);
+      throw error;
     }
   };
 
-  // Inicialização
+  // Initialize auth state and listen for auth changes
   useEffect(() => {
-    const initialize = async () => {
+    const initAuth = async () => {
       try {
-        console.log("AuthContext initializing...");
-        const currentUser = await getCurrentUser();
+        console.log("Initializing auth...");
         
-        if (currentUser) {
-          console.log("User session found:", currentUser.id);
-          setUser(currentUser);
+        // Get initial session
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        
+        if (session?.user) {
+          console.log("Found session for user:", session.user.id);
+          let mappedUser = mapSupabaseUser(session);
           
-          if (currentUser.isBanned) {
-            toast({
-              title: "Conta suspensa",
-              description: "Sua conta foi suspensa. Entre em contato com o administrador.",
-              variant: "destructive",
-            });
-            await logout();
-            return;
+          if (mappedUser) {
+            // Fetch additional profile data
+            mappedUser = await updateUserWithProfile(mappedUser);
+            setUser(mappedUser);
+            
+            // If user is banned, sign them out
+            if (mappedUser.isBanned) {
+              toast({
+                title: "Conta suspensa",
+                description: "Sua conta foi suspensa. Entre em contato com o administrador.",
+                variant: "destructive",
+              });
+              await logout();
+            } else {
+              // Sync users list if admin
+              if (mappedUser.role === 'admin') {
+                await syncUsers();
+              }
+            }
           }
         } else {
-          console.log("No user session found");
+          console.log("No active session found");
         }
-
-        console.log("Syncing users...");
-        await syncUsers();
-        console.log("Users synced");
       } catch (error) {
-        console.error('Error initializing AuthContext:', error);
+        console.error("Error initializing auth:", error);
       } finally {
         setIsInitialized(true);
-        console.log("AuthContext initialized");
+        console.log("Auth initialization complete");
       }
     };
 
-    initialize();
+    // Setup auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event);
+        setSession(session);
+        
+        // Handle specific auth events
+        if (event === 'SIGNED_IN' && session) {
+          let mappedUser = mapSupabaseUser(session);
+          if (mappedUser) {
+            mappedUser = await updateUserWithProfile(mappedUser);
+            setUser(mappedUser);
+            
+            if (mappedUser.role === 'admin') {
+              await syncUsers();
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        } else if (event === 'USER_UPDATED' && session) {
+          let mappedUser = mapSupabaseUser(session);
+          if (mappedUser) {
+            mappedUser = await updateUserWithProfile(mappedUser);
+            setUser(mappedUser);
+          }
+        }
+      }
+    );
+
+    // Initialize
+    initAuth();
+
+    // Cleanup
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   return (
