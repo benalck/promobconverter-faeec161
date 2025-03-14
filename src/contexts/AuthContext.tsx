@@ -32,12 +32,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const {
     login,
-    register,
+    register: authRegister,
     logout: authLogout
   } = useAuthentication(setUser, syncUsers, addInitialCreditsIfNeeded);
 
   // Override the partial logout with the complete one
   const completeLogout = authLogout;
+
+  // Wrap register to match the expected return type
+  const register = async (name: string, email: string, password: string): Promise<{email: string, name: string} | undefined> => {
+    return authRegister(name, email, password);
+  };
 
   useEffect(() => {
     const initialize = async () => {

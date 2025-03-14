@@ -19,7 +19,7 @@ export interface AuthContextType {
   users: User[];
   isInitialized: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<{email: string, name: string} | undefined>;
   logout: () => Promise<void>;
   deleteUser: (id: string) => void;
   updateUser: (id: string, data: Partial<User>) => void;

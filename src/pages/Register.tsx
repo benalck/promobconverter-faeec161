@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,7 +27,6 @@ export default function Register() {
     e.preventDefault();
     
     if (isLoginMode) {
-      // Login mode
       if (!email || !password) {
         toast({
           title: "Campos obrigatórios",
@@ -48,7 +46,6 @@ export default function Register() {
         navigate("/");
       } catch (error) {
         if (error instanceof Error && error.message.includes('banida')) {
-          // Isso será tratado pelo AuthContext
           throw error;
         } else {
           toast({
@@ -61,7 +58,6 @@ export default function Register() {
         setIsLoading(false);
       }
     } else {
-      // Register mode
       if (!name || !email || !password || !confirmPassword) {
         toast({
           title: "Campos obrigatórios",
@@ -84,7 +80,6 @@ export default function Register() {
         setIsLoading(true);
         const result = await register(name, email, password);
         
-        // Show success message after registration
         setRegistrationSuccess(true);
         
         toast({
@@ -92,14 +87,12 @@ export default function Register() {
           description: "Por favor, verifique seu email para o código de confirmação.",
         });
         
-        // Clear form fields after successful registration
         setName("");
         setEmail("");
         setPassword("");
         setConfirmPassword("");
         
-        // Redirect to verification page
-        if (result && result.email && result.name) {
+        if (result) {
           navigate(`/verify-email?email=${encodeURIComponent(result.email)}&name=${encodeURIComponent(result.name)}`);
         }
         
@@ -123,7 +116,6 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="w-full max-w-5xl flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden">
-        {/* Banner lateral */}
         <div className="hidden md:block md:w-1/2 bg-primary/90 p-12 text-white relative">
           <div className="h-full flex flex-col justify-between">
             <div>
@@ -160,7 +152,6 @@ export default function Register() {
           </div>
         </div>
         
-        {/* Formulário de cadastro/login */}
         <Card className="md:w-1/2 border-0 rounded-none shadow-none">
           <CardHeader className="pt-12 pb-6 text-center">
             <CardTitle className="text-2xl font-bold">

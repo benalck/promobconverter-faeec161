@@ -45,15 +45,14 @@ export default function VerifyEmail() {
     try {
       setIsLoading(true);
       
-      // Verify against code stored in Supabase
-      const { data, error } = await supabase
-        .from("verification_codes")
-        .select("*")
-        .eq("email", email)
-        .eq("code", code)
-        .single();
+      // Use RPC to verify code
+      const { data, error } = await supabase.rpc('verify_code', {
+        p_email: email,
+        p_code: code
+      });
       
       if (error || !data) {
+        console.error("Erro ao verificar código:", error);
         toast({
           title: "Código inválido",
           description: "O código informado é inválido ou expirou. Por favor, tente novamente.",
@@ -76,17 +75,15 @@ export default function VerifyEmail() {
         return;
       }
       
-      // Update user status in Supabase
-      await supabase
-        .from("profiles")
-        .update({ email_verified: true })
-        .eq("id", data.user_id);
+      // Update user's email_verified status
+      await supabase.rpc('update_email_verified_status', {
+        p_user_id: data.user_id
+      });
       
       // Remove the verification code
-      await supabase
-        .from("verification_codes")
-        .delete()
-        .eq("id", data.id);
+      await supabase.rpc('delete_verification_code', {
+        p_id: data.id
+      });
       
       setVerificationSuccess(true);
       
@@ -123,33 +120,26 @@ export default function VerifyEmail() {
       // Generate a new 6-digit code
       const newCode = Math.floor(100000 + Math.random() * 900000).toString();
       
-      // Get user_id
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", email)
-        .single();
+      // Get user_id from email
+      const { data: userData } = await supabase.rpc('get_user_id_by_email', {
+        p_email: email
+      });
       
-      if (!profileData) {
+      if (!userData) {
         throw new Error("Usuário não encontrado");
       }
       
       // Delete any existing codes
-      await supabase
-        .from("verification_codes")
-        .delete()
-        .eq("email", email);
+      await supabase.rpc('delete_verification_codes_by_email', {
+        p_email: email
+      });
       
       // Store new code
-      await supabase
-        .from("verification_codes")
-        .insert([
-          {
-            user_id: profileData.id,
-            email,
-            code: newCode,
-          }
-        ]);
+      await supabase.rpc('insert_verification_code', {
+        p_user_id: userData.id,
+        p_email: email,
+        p_code: newCode
+      });
       
       // Send email with code
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`, {
@@ -231,8 +221,8 @@ export default function VerifyEmail() {
                       disabled={isLoading}
                       render={({ slots }) => (
                         <InputOTPGroup>
-                          {slots.map((slot, index) => (
-                            <InputOTPSlot key={index} {...slot} />
+                          {slots.map((slot, i) => (
+                            <InputOTPSlot key={i} {...slot} />
                           ))}
                         </InputOTPGroup>
                       )}

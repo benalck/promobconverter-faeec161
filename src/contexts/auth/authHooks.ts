@@ -33,7 +33,7 @@ export const useAuthentication = (
 
         if (profileError) {
           console.error('Erro ao verificar status do email:', profileError);
-        } else if (profileData && !profileData.email_verified) {
+        } else if (profileData && profileData.email_verified === false) {
           throw new Error('Por favor, verifique seu email antes de fazer login.');
         }
 
@@ -63,7 +63,7 @@ export const useAuthentication = (
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string): Promise<{email: string, name: string} | undefined> => {
     try {
       // Step 1: Create the user in Auth
       const { data, error } = await supabase.auth.signUp({
@@ -116,20 +116,22 @@ export const useAuthentication = (
       // Wait for the profile to be created by the trigger
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Step 5: Store the verification code in Supabase
-      const { error: codeError } = await supabase
-        .from('verification_codes')
-        .insert([
-          {
-            user_id: data.user.id,
-            email,
-            code: verificationCode,
-          }
-        ]);
+      // Step 5: Insert verification code
+      try {
+        // We need to use rpc for accessing tables not in the type definition
+        const { error: codeError } = await supabase.rpc('insert_verification_code', {
+          p_user_id: data.user.id,
+          p_email: email,
+          p_code: verificationCode
+        });
 
-      if (codeError) {
-        console.error('Erro ao salvar código de verificação:', codeError);
-        throw new Error('Erro ao gerar código de verificação');
+        if (codeError) {
+          console.error('Erro ao salvar código de verificação:', codeError);
+          throw new Error('Erro ao gerar código de verificação');
+        }
+      } catch (insertError) {
+        console.error('Erro ao inserir código:', insertError);
+        throw new Error('Erro ao salvar código de verificação');
       }
 
       // Step 6: Send email with verification code
