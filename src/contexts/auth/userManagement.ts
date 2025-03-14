@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -33,40 +32,39 @@ export const useUserManagement = (
         return;
       }
 
-      const formattedUsers: User[] = [];
-      
-      for (const profile of supabaseUsers) {
-        try {
-          // Get the user email from auth.users
-          const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(profile.id);
-          
-          if (authError) {
-            console.log('Error fetching auth user:', authError);
-            // Continue with available data
-          }
-          
-          const userEmail = authUser?.user?.email || null;
-          console.log(`User ${profile.id} email:`, userEmail);
-          
-          let userRole: 'admin' | 'user' = 'user';
-          if (profile.role === 'admin') {
-            userRole = 'admin';
-          }
-          
-          formattedUsers.push({
-            id: profile.id,
-            name: profile.name || 'Usuário',
-            email: userEmail,
-            role: userRole,
-            createdAt: profile.created_at,
-            lastLogin: profile.last_login || undefined,
-            isBanned: profile.is_banned,
-            credits: profile.credits || 0
-          });
-        } catch (error) {
-          console.error('Error processing user:', error);
-        }
+      // Fetch auth users to get emails - this approach avoids using admin API
+      const { data: authUsers, error: authError } = await supabase
+        .from('auth.users')
+        .select('id, email')
+        .throwOnError();
+        
+      // Create a map of user IDs to emails for faster lookup
+      const emailMap = new Map();
+      if (authUsers) {
+        authUsers.forEach(authUser => {
+          emailMap.set(authUser.id, authUser.email);
+        });
+      } else {
+        console.log('No auth users found or error fetching them:', authError);
       }
+
+      const formattedUsers: User[] = supabaseUsers.map(profile => {
+        let userRole: 'admin' | 'user' = 'user';
+        if (profile.role === 'admin') {
+          userRole = 'admin';
+        }
+        
+        return {
+          id: profile.id,
+          name: profile.name || 'Usuário',
+          email: emailMap.get(profile.id) || null,
+          role: userRole,
+          createdAt: profile.created_at,
+          lastLogin: profile.last_login || undefined,
+          isBanned: profile.is_banned,
+          credits: profile.credits || 0
+        };
+      });
 
       console.log('Formatted users:', formattedUsers);
       setUsers(formattedUsers);
@@ -132,7 +130,7 @@ export const useUserManagement = (
 
   const deleteUser = (id: string) => {
     if (user?.id === id) {
-      throw new Error('Não é possível excluir o usuário atual');
+      throw new Error('Não é possível excluir o usu��rio atual');
     }
     
     try {

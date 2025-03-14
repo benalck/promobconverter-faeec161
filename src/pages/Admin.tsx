@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@/contexts/auth/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Admin() {
   const { users, updateUser, syncUsers } = useAuth();
@@ -16,15 +17,19 @@ export default function Admin() {
   const [creditAmount, setCreditAmount] = useState<number>(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUsers = async () => {
       setLoading(true);
+      setError(null);
       try {
+        console.log("Starting to load users...");
         await syncUsers();
-        console.log("Users loaded:", users);
-      } catch (error) {
-        console.error("Error loading users:", error);
+        console.log("Users loaded successfully:", users);
+      } catch (err) {
+        console.error("Error loading users:", err);
+        setError("Não foi possível carregar os usuários. Tente novamente.");
         toast({
           title: "Erro",
           description: "Não foi possível carregar os usuários. Tente novamente.",
@@ -65,6 +70,18 @@ export default function Admin() {
         description: "Ocorreu um erro ao adicionar créditos. Tente novamente.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleRetry = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await syncUsers();
+    } catch (err) {
+      setError("Não foi possível carregar os usuários. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,9 +126,26 @@ export default function Admin() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
+                    <>
+                      {[1, 2, 3].map((i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-[100px]" /></TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  ) : error ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-4">
-                        Carregando usuários...
+                        <div className="flex flex-col items-center gap-2">
+                          <p className="text-destructive">{error}</p>
+                          <Button onClick={handleRetry} variant="outline" size="sm">
+                            Tentar novamente
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredUsers.length > 0 ? (
