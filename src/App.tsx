@@ -1,3 +1,4 @@
+
 import { ReactNode, Suspense } from "react";
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import "./App.css";
@@ -46,9 +47,7 @@ function App() {
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <AppLayout>
-      <Outlet />
-    </AppLayout>,
+    element: <AppLayout><Outlet /></AppLayout>,
     errorElement: <NotFound />,
     children: [
       { index: true, element: <Index /> },
