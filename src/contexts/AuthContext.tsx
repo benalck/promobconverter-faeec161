@@ -15,7 +15,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sincronizar usuários
   const syncUsers = async () => {
     try {
-      const allUsers = getAllUsers();
+      const allUsers = await getAllUsers();
       setUsers(allUsers);
       return Promise.resolve();
     } catch (error) {
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return Promise.resolve();
     
     try {
-      const currentUser = getCurrentUser();
+      const currentUser = await getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
       }
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Login
   const login = async (email: string, password: string) => {
     try {
-      const loggedUser = loginUser(email, password);
+      const loggedUser = await loginUser(email, password);
       setUser(loggedUser);
       await syncUsers();
     } catch (error) {
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Registro
   const register = async (name: string, email: string, password: string) => {
     try {
-      registerUser({ name, email, password });
+      await registerUser({ name, email, password });
       return { email, name };
     } catch (error) {
       console.error('Erro ao registrar:', error);
@@ -89,13 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Excluir usuário (banir)
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
     if (user?.id === id) {
       throw new Error('Não é possível excluir o usuário atual');
     }
     
     try {
-      const bannedUser = banUser(id);
+      const bannedUser = await banUser(id);
       if (bannedUser) {
         setUsers(prevUsers => prevUsers.map(u => 
           u.id === id ? { ...u, isBanned: true } : u
@@ -108,9 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Atualizar usuário
-  const userManagementUpdate = (id: string, data: Partial<User>) => {
+  const userManagementUpdate = async (id: string, data: Partial<User>) => {
     try {
-      const updatedUser = updateUser(id, data);
+      const updatedUser = await updateUser(id, data);
       
       if (updatedUser) {
         // Atualizar lista de usuários
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initialize = async () => {
       try {
         console.log("AuthContext initializing...");
-        const currentUser = getCurrentUser();
+        const currentUser = await getCurrentUser();
         
         if (currentUser) {
           console.log("User session found:", currentUser.id);
