@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profile) {
         return {
           ...baseUser,
-          role: profile.role || 'user',
+          role: profile.role === 'admin' ? 'admin' : 'user', // Ensure role is 'admin' or 'user'
           isBanned: profile.is_banned || false,
           credits: profile.credits || 3,
           name: profile.name || baseUser.name,
@@ -87,11 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const mappedUsers = data.map(profile => ({
+      const mappedUsers: User[] = data.map(profile => ({
         id: profile.id,
         name: profile.name,
         email: null, // Email is not stored in profiles
-        role: profile.role || 'user',
+        role: profile.role === 'admin' ? 'admin' : 'user', // Ensure role is 'admin' or 'user'
         createdAt: profile.created_at,
         lastLogin: profile.last_login,
         isBanned: profile.is_banned || false,
@@ -138,8 +138,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       
-      // User will be set in the session change listener
-      return data;
+      // Process login response
+      if (data.user) {
+        const mappedUser = mapSupabaseUser(data.session);
+        if (mappedUser) {
+          const updatedUser = await updateUserWithProfile(mappedUser);
+          setUser(updatedUser);
+          
+          // Check if user is banned
+          if (updatedUser.isBanned) {
+            toast({
+              title: "Conta suspensa",
+              description: "Sua conta foi suspensa. Entre em contato com o administrador.",
+              variant: "destructive",
+            });
+            await logout();
+            throw new Error("Conta suspensa");
+          }
+          
+          // Sync users if admin
+          if (updatedUser.role === 'admin') {
+            await syncUsers();
+          }
+        }
+      }
     } catch (error: any) {
       console.error('Error signing in:', error);
       throw new Error(error.message || 'Failed to login');
