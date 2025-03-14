@@ -1,82 +1,62 @@
-
-import React, { ReactNode, Suspense, useEffect } from "react";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import Register from "@/pages/Register";
-import Admin from "@/pages/Admin";
-import NotFound from "@/pages/NotFound";
-import Index from "@/pages/Index";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ReactNode, Suspense } from "react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./App.css";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Admin from "./pages/Admin";
+import AppLayout from "./components/AppLayout";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { Toaster } from "@/components/ui/toaster";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import CreditPurchase from "./pages/CreditPurchase";
 
-// Simple loading component
-const LoadingScreen = () => (
-  <div className="h-screen w-full flex items-center justify-center">
-    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-  </div>
-);
+const queryClient = new QueryClient();
 
-interface ProtectedRouteProps {
-  children: ReactNode;
+function AdminRoute({ children }: { children: ReactNode }) {
+  const { isAdmin, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    window.location.href = "/login";
+    return null;
+  }
+
+  if (!isAdmin) {
+    window.location.href = "/";
+    return null;
+  }
+
+  return children;
 }
-
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isInitialized } = useAuth();
-  
-  if (!isInitialized) {
-    console.log("ProtectedRoute - Not initialized, showing loading");
-    return <LoadingScreen />;
-  }
-
-  if (!user) {
-    console.log("ProtectedRoute - Not authenticated, redirecting to /register");
-    return <Navigate to="/register" replace />;
-  }
-
-  console.log("ProtectedRoute - Rendering protected content");
-  return <>{children}</>;
-};
-
-interface AdminRouteProps {
-  children: ReactNode;
-}
-
-const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { user, isInitialized } = useAuth();
-  
-  if (!isInitialized) {
-    return <LoadingScreen />;
-  }
-
-  if (!user || !user.role || user.role !== 'admin') {
-    return <Navigate to="/register" replace />;
-  }
-
-  return <>{children}</>;
-};
 
 function App() {
-  useEffect(() => {
-    console.log("App mounted");
-  }, []);
-
   return (
-    <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Suspense fallback={<LoadingScreen />}>
-          <Routes>
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-            {/* Redirect /plans to home page since plans functionality was removed */}
-            <Route path="/plans" element={<Navigate to="/" replace />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+        <Suspense fallback={<p>Carregando...</p>}>
+          <RouterProvider router={router} />
           <Toaster />
         </Suspense>
       </AuthProvider>
-    </BrowserRouter>
+    </QueryClientProvider>
   );
 }
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <AppLayout />,
+    errorElement: <NotFound />,
+    children: [
+      { index: true, element: <Index /> },
+      { path: "login", element: <Login /> },
+      { path: "register", element: <Register /> },
+      { path: "admin", element: <AdminRoute><Admin /></AdminRoute> },
+      { path: "creditos", element: <CreditPurchase /> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
+]);
 
 export default App;

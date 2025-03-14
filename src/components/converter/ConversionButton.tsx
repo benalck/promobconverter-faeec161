@@ -61,6 +61,18 @@ const ConversionButton: React.FC<ConversionButtonProps> = ({
           </Button>
         </div>
       )}
+      
+      {(user && user.credits <= 0) && (
+        <div className="text-center mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate("/creditos")}
+            className="animate-pulse text-red-600 border-red-200 hover:bg-red-50"
+          >
+            Comprar créditos para continuar
+          </Button>
+        </div>
+      )}
     </>
   );
 };

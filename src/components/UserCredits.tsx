@@ -4,12 +4,14 @@ import { Coins } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function UserCredits() {
   const { user } = useAuth();
   const [showNewCreditsMessage, setShowNewCreditsMessage] = useState(false);
   const [showLowCreditsWarning, setShowLowCreditsWarning] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Se usuário tem exatamente 3 créditos (quantidade inicial), mostrar mensagem de boas-vindas
@@ -38,10 +40,7 @@ export default function UserCredits() {
   }, [user?.credits]);
 
   const handleBuyCredits = () => {
-    toast({
-      title: "Informação",
-      description: "A compra de créditos não está disponível nesta versão do aplicativo.",
-    });
+    navigate("/creditos");
   };
 
   if (!user) return null;
