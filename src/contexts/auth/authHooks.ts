@@ -1,11 +1,7 @@
 
+import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
-import axios from 'axios';
-
-// Definir a URL base da API
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://sua-api-de-producao.com/api' 
-  : 'http://localhost:5000/api';
+import { convertSupabaseUser } from './userUtils';
 
 export const useAuthentication = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -14,29 +10,37 @@ export const useAuthentication = (
 ) => {
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
-      
-      if (response.data.user) {
-        // Salvar token no localStorage
-        localStorage.setItem('authToken', response.data.token);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const currentUser = await convertSupabaseUser(data.user);
         
-        // Atualizar o usuário no contexto
-        setUser(response.data.user);
-        
-        // Sincronizar usuários (para admins)
+        if (currentUser.isBanned) {
+          throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
+        }
+
+        await supabase
+          .from('profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', currentUser.id);
+          
+        setUser(currentUser);
         await syncUsers();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao fazer login:', error);
-      
-      if (error.response) {
-        // Erros específicos retornados pelo backend
-        if (error.response.data.message.includes('banida')) {
-          throw new Error(error.response.data.message);
-        } else if (error.response.data.message.includes('inválidos')) {
+      if (error instanceof Error) {
+        if (error.message.includes('banida')) {
+          throw error;
+        } else if (error.message.includes('Invalid login credentials')) {
           throw new Error('Email ou senha inválidos');
         } else {
-          throw new Error(error.response.data.message || 'Falha ao fazer login');
+          throw new Error('Falha ao fazer login');
         }
       } else {
         throw new Error('Falha ao fazer login');
@@ -44,21 +48,68 @@ export const useAuthentication = (
     }
   };
 
-  const register = async (name: string, email: string, password: string): Promise<{email: string, name: string} | undefined> => {
+  const register = async (name: string, email: string, password: string) => {
     try {
-      const response = await axios.post(`${API_URL}/auth/register`, { name, email, password });
-      
-      if (response.data) {
-        return { email, name };
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const { count, error: countError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+          
+        const isFirstUser = count === 0 || countError;
+        const userRole = isFirstUser ? 'admin' : 'user';
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user.id,
+              name,
+              created_at: new Date().toISOString(),
+              last_login: new Date().toISOString(),
+              is_banned: false,
+              role: userRole,
+              credits: 0
+            }
+          ]);
+
+        if (profileError) throw profileError;
+
+        try {
+          await supabase.auth.updateUser({
+            data: { 
+              role: userRole 
+            }
+          });
+          
+          console.log(`Usuário registrado com role: ${userRole}`);
+        } catch (roleError) {
+          console.error('Erro ao definir role nos metadados:', roleError);
+        }
+
+        const newUser = await convertSupabaseUser(data.user);
+        newUser.role = userRole;
+        setUser(newUser);
+        await syncUsers();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao registrar:', error);
-      
-      if (error.response) {
-        if (error.response.data.message.includes('já está em uso')) {
+      if (error instanceof Error) {
+        if (error.message.includes('duplicate key')) {
           throw new Error('Este email já está em uso');
         } else {
-          throw new Error(error.response.data.message || 'Falha ao registrar usuário');
+          throw new Error('Falha ao registrar usuário');
         }
       } else {
         throw new Error('Falha ao registrar usuário');
@@ -67,26 +118,8 @@ export const useAuthentication = (
   };
 
   const logout = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      const sessionId = localStorage.getItem('sessionId');
-      
-      if (token) {
-        // Chamar o endpoint de logout no backend (opcional)
-        await axios.post(`${API_URL}/auth/logout`, { sessionId }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-    } finally {
-      // Remover token e outros dados de autenticação
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('sessionId');
-      
-      // Limpar o usuário no contexto
-      setUser(null);
-    }
+    await supabase.auth.signOut();
+    setUser(null);
   };
 
   return {

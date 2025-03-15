@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Lock, Mail, User, EyeOff, Eye, CheckCircle } from "lucide-react";
+import { ShoppingBag, Lock, Mail, User, EyeOff, Eye } from "lucide-react";
 import HowItWorksButton from "@/components/HowItWorksButton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Register() {
   const [isLoginMode, setIsLoginMode] = useState(false);
@@ -19,7 +18,6 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const { register, login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,6 +26,7 @@ export default function Register() {
     e.preventDefault();
     
     if (isLoginMode) {
+      // Login mode
       if (!email || !password) {
         toast({
           title: "Campos obrigatórios",
@@ -39,7 +38,6 @@ export default function Register() {
 
       try {
         setIsLoading(true);
-        console.log("Attempting login from Register page:", { email, password });
         await login(email, password);
         toast({
           title: "Login realizado com sucesso!",
@@ -47,16 +45,21 @@ export default function Register() {
         });
         navigate("/");
       } catch (error) {
-        console.error("Erro de login:", error);
-        toast({
-          title: "Erro ao fazer login",
-          description: error instanceof Error ? error.message : "Verifique suas credenciais e tente novamente.",
-          variant: "destructive",
-        });
+        if (error instanceof Error && error.message.includes('banida')) {
+          // Isso será tratado pelo AuthContext
+          throw error;
+        } else {
+          toast({
+            title: "Erro ao fazer login",
+            description: error instanceof Error ? error.message : "Verifique suas credenciais e tente novamente.",
+            variant: "destructive",
+          });
+        }
       } finally {
         setIsLoading(false);
       }
     } else {
+      // Register mode
       if (!name || !email || !password || !confirmPassword) {
         toast({
           title: "Campos obrigatórios",
@@ -77,22 +80,13 @@ export default function Register() {
 
       try {
         setIsLoading(true);
-        console.log("Attempting registration:", { name, email });
         await register(name, email, password);
-        
-        setRegistrationSuccess(true);
-        
         toast({
           title: "Conta criada com sucesso!",
-          description: "Você já pode fazer login com suas credenciais.",
+          description: "Seu cadastro foi realizado. Bem-vindo à nossa aplicação.",
         });
-        
-        setName("");
-        setEmail("");
-        setPassword("");
-        setConfirmPassword("");
+        navigate("/");
       } catch (error) {
-        console.error("Erro de registro:", error);
         toast({
           title: "Erro ao registrar",
           description: error instanceof Error ? error.message : "Ocorreu um erro ao criar sua conta. Tente novamente.",
@@ -111,6 +105,7 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="w-full max-w-5xl flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden">
+        {/* Banner lateral */}
         <div className="hidden md:block md:w-1/2 bg-primary/90 p-12 text-white relative">
           <div className="h-full flex flex-col justify-between">
             <div>
@@ -147,6 +142,7 @@ export default function Register() {
           </div>
         </div>
         
+        {/* Formulário de cadastro/login */}
         <Card className="md:w-1/2 border-0 rounded-none shadow-none">
           <CardHeader className="pt-12 pb-6 text-center">
             <CardTitle className="text-2xl font-bold">
@@ -159,159 +155,122 @@ export default function Register() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {registrationSuccess && !isLoginMode ? (
-              <div className="space-y-4">
-                <Alert className="bg-green-50 border-green-200">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <div>
-                      <h4 className="font-medium text-green-800">Cadastro realizado com sucesso!</h4>
-                      <AlertDescription className="text-green-700 mt-1">
-                        Enviamos um email de confirmação para o endereço fornecido.
-                        Por favor, verifique sua caixa de entrada e siga as instruções para ativar sua conta.
-                      </AlertDescription>
-                    </div>
-                  </div>
-                </Alert>
-                <div className="flex flex-col space-y-2">
-                  <Button 
-                    onClick={() => setIsLoginMode(true)}
-                    className="w-full py-6 font-medium transition-all duration-300 bg-primary hover:bg-primary/90"
-                  >
-                    Ir para o login
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => {
-                      setRegistrationSuccess(false);
-                      setIsLoginMode(false);
-                    }}
-                    className="w-full py-6 font-medium"
-                  >
-                    Registrar outra conta
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {!isLoginMode && (
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome completo</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="name"
-                        placeholder="Seu nome completo"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        disabled={isLoading}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                )}
-                
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLoginMode && (
                 <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
+                  <Label htmlFor="name">Nome completo</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="name"
+                      placeholder="Seu nome completo"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       disabled={isLoading}
                       className="pl-10"
                     />
                   </div>
                 </div>
-                
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                    className="pl-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={togglePasswordVisibility}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {!isLoginMode && (
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
+                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      id="password"
+                      id="confirmPassword"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                       disabled={isLoading}
                       className="pl-10"
                     />
-                    <button
-                      type="button"
-                      onClick={togglePasswordVisibility}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
                   </div>
                 </div>
-                
-                {!isLoginMode && (
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                      <Input
-                        id="confirmPassword"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        disabled={isLoading}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                )}
-                
-                <Button
-                  type="submit"
-                  className="w-full py-6 font-medium transition-all duration-300 bg-primary hover:bg-primary/90 mt-4"
-                  disabled={isLoading}
-                >
-                  {isLoading 
-                    ? (isLoginMode ? "Entrando..." : "Registrando...") 
-                    : (isLoginMode ? "Entrar" : "Criar conta")}
-                </Button>
-              </form>
-            )}
+              )}
+              
+              <Button
+                type="submit"
+                className="w-full py-6 font-medium transition-all duration-300 bg-primary hover:bg-primary/90 mt-4"
+                disabled={isLoading}
+              >
+                {isLoading 
+                  ? (isLoginMode ? "Entrando..." : "Registrando...") 
+                  : (isLoginMode ? "Entrar" : "Criar conta")}
+              </Button>
+            </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4 pb-12">
-            {!registrationSuccess && (
-              <p className="text-center text-sm text-gray-600">
-                {isLoginMode ? (
-                  <>
-                    Novo cliente?{" "}
-                    <button 
-                      type="button" 
-                      onClick={() => setIsLoginMode(false)}
-                      className="text-primary font-medium hover:underline"
-                    >
-                      Crie sua conta
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Já tem uma conta?{" "}
-                    <button 
-                      type="button" 
-                      onClick={() => setIsLoginMode(true)}
-                      className="text-primary font-medium hover:underline"
-                    >
-                      Faça login
-                    </button>
-                  </>
-                )}
-              </p>
-            )}
+            <p className="text-center text-sm text-gray-600">
+              {isLoginMode ? (
+                <>
+                  Novo cliente?{" "}
+                  <button 
+                    type="button" 
+                    onClick={() => setIsLoginMode(false)}
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Crie sua conta
+                  </button>
+                </>
+              ) : (
+                <>
+                  Já tem uma conta?{" "}
+                  <button 
+                    type="button" 
+                    onClick={() => setIsLoginMode(true)}
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Faça login
+                  </button>
+                </>
+              )}
+            </p>
             <HowItWorksButton />
           </CardFooter>
         </Card>

@@ -118,7 +118,6 @@ export type Database = {
           active_plan: string | null
           created_at: string
           credits: number | null
-          email_verified: boolean | null
           id: string
           is_banned: boolean | null
           last_login: string | null
@@ -130,7 +129,6 @@ export type Database = {
           active_plan?: string | null
           created_at?: string
           credits?: number | null
-          email_verified?: boolean | null
           id: string
           is_banned?: boolean | null
           last_login?: string | null
@@ -142,7 +140,6 @@ export type Database = {
           active_plan?: string | null
           created_at?: string
           credits?: number | null
-          email_verified?: boolean | null
           id?: string
           is_banned?: boolean | null
           last_login?: string | null
@@ -192,30 +189,6 @@ export type Database = {
           status?: string | null
           title?: string
           updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      verification_codes: {
-        Row: {
-          code: string
-          created_at: string
-          email: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          email: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          email?: string
-          id?: string
           user_id?: string
         }
         Relationships: []

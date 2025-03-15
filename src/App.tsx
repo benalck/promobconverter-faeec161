@@ -1,26 +1,65 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Index from './pages/Index';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import { AuthProvider } from './contexts/AuthContext';
-import Profile from './pages/Profile';
-import Admin from './pages/Admin';
+import React, { ReactNode } from "react";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
+import Register from "@/pages/Register";
+import Admin from "@/pages/Admin";
+import NotFound from "@/pages/NotFound";
+import Index from "@/pages/Index";
+import Plans from "@/pages/Plans";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import "./App.css";
+
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { user, isInitialized } = useAuth();
+
+  if (!isInitialized) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/register" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+interface AdminRouteProps {
+    children: ReactNode;
+}
+
+const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+    const { user, isInitialized } = useAuth();
+
+    if (!isInitialized) {
+        return <div>Loading...</div>;
+    }
+
+    if (!user || !user.role || user.role !== 'admin') {
+        return <Navigate to="/register" replace />;
+    }
+
+    return <>{children}</>;
+};
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+          <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
+        <Toaster />
       </AuthProvider>
-    </Router>
+    </BrowserRouter>
   );
 }
 

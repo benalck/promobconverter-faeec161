@@ -1,232 +1,165 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@/contexts/auth/types";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import AppLayout from "@/components/AppLayout";
 
 export default function Admin() {
-  const { users, updateUser, syncUsers } = useAuth();
+  const { users, deleteUser, isAdmin, user: currentUser } = useAuth();
   const { toast } = useToast();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [creditAmount, setCreditAmount] = useState<number>(5);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    const loadUsers = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        console.log("Starting to load users...");
-        await syncUsers();
-        console.log("Users loaded successfully:", users);
-      } catch (err) {
-        console.error("Error loading users:", err);
-        setError("Não foi possível carregar os usuários. Tente novamente.");
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar os usuários. Tente novamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadUsers();
-  }, [syncUsers, toast]);
+  if (!isAdmin) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Acesso Restrito
+            </h1>
+            <p className="text-gray-600">
+              Você não tem permissão para acessar esta página.
+            </p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
-  const handleAddCredits = () => {
-    if (!selectedUser) {
-      toast({
-        title: "Erro",
-        description: "Selecione um usuário para adicionar créditos",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleDeleteUser = async (id: string) => {
     try {
-      const newCredits = (selectedUser.credits || 0) + creditAmount;
-      updateUser(selectedUser.id, { credits: newCredits });
-
+      deleteUser(id);
       toast({
-        title: "Créditos adicionados",
-        description: `${creditAmount} créditos foram adicionados para ${selectedUser.name}`,
-        variant: "default",
+        title: "Usuário excluído",
+        description: "O usuário foi excluído com sucesso.",
       });
-      setSelectedUser(null);
-      setCreditAmount(5);
+      setShowDeleteDialog(false);
     } catch (error) {
       toast({
-        title: "Erro ao adicionar créditos",
-        description: "Ocorreu um erro ao adicionar créditos. Tente novamente.",
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o usuário.",
         variant: "destructive",
       });
     }
   };
 
-  const handleRetry = async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      await syncUsers();
-    } catch (err) {
-      setError("Não foi possível carregar os usuários. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", {
+      locale: ptBR,
+    });
   };
 
-  const filteredUsers = users.filter(user => 
-    (user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    user.id !== "00000000-0000-0000-0000-000000000000" // Filter out system users if any
-  );
-
   return (
-    <div className="container py-10">
-      <h1 className="text-3xl font-bold mb-6">Painel Administrativo (Local)</h1>
-      
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Users Table Card */}
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle>Usuários</CardTitle>
-            <CardDescription>
-              Visualize e gerencie os usuários da plataforma
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              <Input
-                placeholder="Buscar usuários por nome ou email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-4"
-              />
-            </div>
-            <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Função</TableHead>
-                    <TableHead>Créditos</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <>
-                      {[1, 2, 3].map((i) => (
-                        <TableRow key={i}>
-                          <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[150px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
-                          <TableCell><Skeleton className="h-8 w-[100px]" /></TableCell>
-                        </TableRow>
-                      ))}
-                    </>
-                  ) : error ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4">
-                        <div className="flex flex-col items-center gap-2">
-                          <p className="text-destructive">{error}</p>
-                          <Button onClick={handleRetry} variant="outline" size="sm">
-                            Tentar novamente
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredUsers.length > 0 ? (
-                    filteredUsers.map((user) => (
-                      <TableRow 
-                        key={user.id}
-                        className={selectedUser?.id === user.id ? "bg-muted" : ""}
+    <AppLayout>
+      <div className="container mx-auto py-8">
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6 border-b">
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Gerenciamento de Usuários
+            </h1>
+            <p className="mt-1 text-gray-600">
+              Gerencie os usuários do sistema
+            </p>
+          </div>
+
+          <div className="p-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Criado em</TableHead>
+                  <TableHead>Último acesso</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.role === "admin"
+                            ? "bg-purple-100 text-purple-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
                       >
-                        <TableCell>{user.name || "Sem nome"}</TableCell>
-                        <TableCell>{user.email || "Sem email"}</TableCell>
-                        <TableCell>{user.role === "admin" ? "Administrador" : "Usuário"}</TableCell>
-                        <TableCell>{user.credits || 0}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedUser(user)}
-                          >
-                            Selecionar
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4">
-                        {searchTerm ? "Nenhum usuário encontrado com este termo de busca." : "Nenhum usuário disponível."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Credit Management Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Gerenciar Créditos</CardTitle>
-            <CardDescription>
-              Adicione créditos para usuários testarem a aplicação
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {selectedUser ? (
-                <div className="bg-muted p-3 rounded mt-2 text-sm">
-                  <p><strong>Usuário selecionado:</strong> {selectedUser.name}</p>
-                  <p><strong>Email:</strong> {selectedUser.email}</p>
-                  <p><strong>Créditos atuais:</strong> {selectedUser.credits || 0}</p>
-                  <p><strong>Após adição:</strong> {(selectedUser.credits || 0) + creditAmount} créditos</p>
-                </div>
-              ) : (
-                <div className="p-3 border rounded border-dashed text-center text-sm text-muted-foreground">
-                  Selecione um usuário da tabela acima para adicionar créditos
-                </div>
-              )}
-              
-              <div>
-                <Label htmlFor="credit-amount">Quantidade de créditos</Label>
-                <Input 
-                  id="credit-amount"
-                  type="number" 
-                  min={1}
-                  value={creditAmount}
-                  onChange={(e) => setCreditAmount(parseInt(e.target.value) || 0)}
-                  className="mt-1"
-                />
-              </div>
-              
-              <Button 
-                onClick={handleAddCredits}
-                disabled={!selectedUser}
-                className="w-full"
+                        {user.role === "admin" ? "Administrador" : "Usuário"}
+                      </span>
+                    </TableCell>
+                    <TableCell>{formatDate(user.createdAt)}</TableCell>
+                    <TableCell>
+                      {user.lastLogin ? formatDate(user.lastLogin) : "Nunca"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {user.id !== currentUser?.id && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user.id);
+                            setShowDeleteDialog(true);
+                          }}
+                        >
+                          Excluir
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar exclusão</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir este usuário? Esta ação não pode ser
+                desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-4 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
               >
-                Adicionar Créditos
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => selectedUser && handleDeleteUser(selectedUser)}
+              >
+                Excluir
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </DialogContent>
+        </Dialog>
       </div>
-    </div>
+    </AppLayout>
   );
 }
