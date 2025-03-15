@@ -34,10 +34,11 @@ export const xanoAuth = {
       });
       return response.data;
     } catch (error: any) {
+      console.error('Registration error:', error.response?.data || error);
       if (error.response && error.response.data) {
         throw new Error(error.response.data.message || 'Failed to register');
       }
-      throw error;
+      throw new Error('Failed to register: Network or server error');
     }
   },
 
@@ -56,10 +57,11 @@ export const xanoAuth = {
       
       return response.data;
     } catch (error: any) {
+      console.error('Login error:', error.response?.data || error);
       if (error.response && error.response.data) {
         throw new Error(error.response.data.message || 'Failed to login');
       }
-      throw error;
+      throw new Error('Failed to login: Network or server error');
     }
   },
 
@@ -70,6 +72,7 @@ export const xanoAuth = {
       localStorage.removeItem('authToken');
       return true;
     } catch (error) {
+      console.error('Logout error:', error);
       throw error;
     }
   },
@@ -83,6 +86,7 @@ export const xanoAuth = {
       const response = await xanoApi.get('/auth/me');
       return { data: { session: { user: response.data } } };
     } catch (error) {
+      console.error('Get session error:', error);
       localStorage.removeItem('authToken');
       return { data: { session: null } };
     }
@@ -94,10 +98,11 @@ export const xanoAuth = {
       const response = await xanoApi.put(`/users/${userId}`, updates);
       return response.data;
     } catch (error: any) {
+      console.error('Update profile error:', error.response?.data || error);
       if (error.response && error.response.data) {
         throw new Error(error.response.data.message || 'Failed to update profile');
       }
-      throw error;
+      throw new Error('Failed to update profile: Network or server error');
     }
   }
 };

@@ -32,6 +32,7 @@ export default function Login() {
 
     try {
       setIsLoading(true);
+      console.log("Attempting login with:", { email, password });
       await login(email, password);
       toast({
         title: "Login realizado com sucesso!",

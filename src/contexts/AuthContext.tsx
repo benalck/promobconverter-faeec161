@@ -16,10 +16,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        console.log("Initializing auth state from Xano");
         // Get current session from Xano
         const { data: { session } } = await xanoAuth.getSession();
         
         if (session) {
+          console.log("Found existing session:", session);
           // Convert Xano user to our User format
           const userObj: User = {
             id: session.user.id,
@@ -38,6 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (userObj.role === 'admin') {
             await syncUsers();
           }
+        } else {
+          console.log("No active session found");
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -94,7 +98,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Login with email and password
   const login = async (email: string, password: string): Promise<void> => {
     try {
+      console.log("Starting login process for email:", email);
       const data = await xanoAuth.signIn(email, password);
+      console.log("Login response:", data);
       
       if (data.user) {
         // Convert response to our User format
@@ -110,26 +116,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         
         setUser(userObj);
+        console.log("User set in state:", userObj);
         
         // Update last login
-        await xanoApi.put(`/users/${data.user.id}/lastlogin`, {
-          last_login: new Date().toISOString()
-        });
+        try {
+          await xanoApi.put(`/users/${data.user.id}/lastlogin`, {
+            last_login: new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn("Could not update last login time:", err);
+        }
         
         // If admin, sync users
         if (userObj.role === 'admin') {
           await syncUsers();
         }
+      } else {
+        throw new Error("User data not found in response");
       }
     } catch (error: any) {
       console.error('Error signing in:', error);
-      throw new Error(error.response?.data?.message || 'Failed to login');
+      throw error;
     }
   };
 
   // Register a new user
   const register = async (name: string, email: string, password: string) => {
     try {
+      console.log("Starting registration for:", { name, email });
       const data = await xanoAuth.signUp(email, password, {
         full_name: name,
         role: 'user',
@@ -137,18 +151,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         is_banned: false
       });
       
+      console.log("Registration response:", data);
       return { email, name };
     } catch (error: any) {
       console.error('Error registering:', error);
-      throw new Error(error.response?.data?.message || 'Failed to register');
+      throw error;
     }
   };
 
   // Logout
   const logout = async () => {
     try {
+      console.log("Starting logout process");
       await xanoAuth.signOut();
       setUser(null);
+      console.log("User logged out successfully");
     } catch (error) {
       console.error('Error logging out:', error);
       throw error;

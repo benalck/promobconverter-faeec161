@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -38,6 +39,7 @@ export default function Register() {
 
       try {
         setIsLoading(true);
+        console.log("Attempting login from Register page:", { email, password });
         await login(email, password);
         toast({
           title: "Login realizado com sucesso!",
@@ -75,6 +77,7 @@ export default function Register() {
 
       try {
         setIsLoading(true);
+        console.log("Attempting registration:", { name, email });
         await register(name, email, password);
         
         setRegistrationSuccess(true);
