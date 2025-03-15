@@ -33,6 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           
           setUser(userObj);
+          
+          // If admin, sync users
+          if (userObj.role === 'admin') {
+            await syncUsers();
+          }
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -110,6 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await xanoApi.put(`/users/${data.user.id}/lastlogin`, {
           last_login: new Date().toISOString()
         });
+        
+        // If admin, sync users
+        if (userObj.role === 'admin') {
+          await syncUsers();
+        }
       }
     } catch (error: any) {
       console.error('Error signing in:', error);
@@ -120,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Register a new user
   const register = async (name: string, email: string, password: string) => {
     try {
-      await xanoAuth.signUp(email, password, {
+      const data = await xanoAuth.signUp(email, password, {
         full_name: name,
         role: 'user',
         credits: 3,

@@ -45,15 +45,12 @@ export default function Register() {
         });
         navigate("/");
       } catch (error) {
-        if (error instanceof Error && error.message.includes('banida')) {
-          throw error;
-        } else {
-          toast({
-            title: "Erro ao fazer login",
-            description: error instanceof Error ? error.message : "Verifique suas credenciais e tente novamente.",
-            variant: "destructive",
-          });
-        }
+        console.error("Erro de login:", error);
+        toast({
+          title: "Erro ao fazer login",
+          description: error instanceof Error ? error.message : "Verifique suas credenciais e tente novamente.",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -78,7 +75,7 @@ export default function Register() {
 
       try {
         setIsLoading(true);
-        const result = await register(name, email, password);
+        await register(name, email, password);
         
         setRegistrationSuccess(true);
         
@@ -91,12 +88,6 @@ export default function Register() {
         setEmail("");
         setPassword("");
         setConfirmPassword("");
-        
-        if (result) {
-          // We're not using the verify-email page with Xano, so we'll just show success
-          // navigate(`/verify-email?email=${encodeURIComponent(result.email)}&name=${encodeURIComponent(result.name)}`);
-        }
-        
       } catch (error) {
         console.error("Erro de registro:", error);
         toast({

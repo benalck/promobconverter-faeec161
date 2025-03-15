@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,19 +38,12 @@ export default function Login() {
       });
       navigate("/");
     } catch (error) {
-      if (error instanceof Error) {
-        toast({
-          title: "Erro ao fazer login",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Erro ao fazer login",
-          description: "Verifique suas credenciais e tente novamente.",
-          variant: "destructive",
-        });
-      }
+      console.error("Erro ao fazer login:", error);
+      toast({
+        title: "Erro ao fazer login",
+        description: error instanceof Error ? error.message : "Verifique suas credenciais e tente novamente.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
