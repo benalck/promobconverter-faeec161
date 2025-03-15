@@ -33,7 +33,10 @@ export const xanoAuth = {
         ...userData
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response && error.response.data) {
+        throw new Error(error.response.data.message || 'Failed to register');
+      }
       throw error;
     }
   },
@@ -52,7 +55,10 @@ export const xanoAuth = {
       }
       
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response && error.response.data) {
+        throw new Error(error.response.data.message || 'Failed to login');
+      }
       throw error;
     }
   },
@@ -87,7 +93,10 @@ export const xanoAuth = {
     try {
       const response = await xanoApi.put(`/users/${userId}`, updates);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response && error.response.data) {
+        throw new Error(error.response.data.message || 'Failed to update profile');
+      }
       throw error;
     }
   }

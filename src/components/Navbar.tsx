@@ -7,7 +7,7 @@ import UserCredits from "./UserCredits";
 import { LogOut } from "lucide-react";
 
 export default function Navbar() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -15,7 +15,7 @@ export default function Navbar() {
       console.log("Starting logout");
       await logout();
       console.log("Logout complete, redirecting");
-      navigate("/register");
+      navigate("/login");
     } catch (error) {
       console.error("Error logging out:", error);
     }
@@ -30,7 +30,7 @@ export default function Navbar() {
           </Link>
           
           <div className="flex items-center space-x-4">
-            {user && (
+            {isAuthenticated && user && (
               <>
                 <UserCredits />
                 <span className="text-sm text-gray-600">
@@ -57,14 +57,23 @@ export default function Navbar() {
               </>
             )}
             
-            {!user && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => navigate("/register")}
-              >
-                Entrar
-              </Button>
+            {!isAuthenticated && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/login")}
+                >
+                  Entrar
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => navigate("/register")}
+                >
+                  Registrar
+                </Button>
+              </>
             )}
           </div>
         </div>
