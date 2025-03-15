@@ -2,8 +2,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
-import UserCredits from "./UserCredits";
-import { LogOut } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -26,7 +24,6 @@ export default function Navbar() {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
-            <UserCredits />
             <span className="text-sm text-gray-600">
               Olá, {user?.name}
             </span>
@@ -34,9 +31,7 @@ export default function Navbar() {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="flex items-center gap-1"
             >
-              <LogOut className="h-4 w-4" />
               Sair
             </Button>
           </div>

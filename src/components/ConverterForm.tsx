@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -69,6 +68,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         description: "Você não possui créditos suficientes para realizar esta conversão.",
         variant: "destructive",
       });
+      navigate("/plans");
       return;
     }
 
@@ -220,14 +220,14 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             </span>
           </Button>
           
-          {(!user) && (
+          {(!user || user.credits <= 0) && (
             <div className="text-center mt-4">
               <Button 
                 variant="outline" 
-                onClick={() => navigate("/register")}
+                onClick={() => navigate("/plans")}
                 className="animate-pulse"
               >
-                Criar conta para obter créditos
+                {user ? "Adquirir mais créditos" : "Criar conta para obter créditos"}
               </Button>
             </div>
           )}
@@ -235,6 +235,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       </CardContent>
     </Card>
   );
-}
+};
 
 export default ConverterForm;
