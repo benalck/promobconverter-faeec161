@@ -11,7 +11,7 @@ export const useFileConversion = () => {
   const [outputFileName, setOutputFileName] = useState("modelos_converted");
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
-  const { user, refreshUserCredits } = useAuth();
+  const { user, refreshUserCredits, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const handleFileSelect = (file: File) => {
@@ -73,9 +73,8 @@ export const useFileConversion = () => {
 
           // Update user credits locally
           if (user) {
-            // In a real implementation, this would be an API call
-            const { updateUser } = await import('@/contexts/AuthContext');
-            await updateUser(user.id, { credits: user.credits - 1 });
+            // Update user credits through the AuthContext
+            updateUser(user.id, { credits: user.credits - 1 });
             await refreshUserCredits();
             
             toast({
