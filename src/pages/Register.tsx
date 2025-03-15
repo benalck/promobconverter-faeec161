@@ -84,7 +84,7 @@ export default function Register() {
         
         toast({
           title: "Conta criada com sucesso!",
-          description: "Por favor, verifique seu email para o código de confirmação.",
+          description: "Você já pode fazer login com suas credenciais.",
         });
         
         setName("");
@@ -93,7 +93,8 @@ export default function Register() {
         setConfirmPassword("");
         
         if (result) {
-          navigate(`/verify-email?email=${encodeURIComponent(result.email)}&name=${encodeURIComponent(result.name)}`);
+          // We're not using the verify-email page with Xano, so we'll just show success
+          // navigate(`/verify-email?email=${encodeURIComponent(result.email)}&name=${encodeURIComponent(result.name)}`);
         }
         
       } catch (error) {
