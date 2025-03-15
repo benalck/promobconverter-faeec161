@@ -2,47 +2,43 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthContextType } from './auth/types';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demonstration purposes
-const MOCK_USERS: User[] = [
-  {
-    id: '1',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    role: 'admin',
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    isBanned: false,
-    credits: 100
-  },
-  {
-    id: '2',
-    name: 'Test User',
-    email: 'user@example.com',
-    role: 'user',
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
-    isBanned: false,
-    credits: 10
-  }
-];
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
   const { toast } = useToast();
 
-  // Load user from localStorage on mount
+  // Initialize auth state from Supabase
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const storedUser = localStorage.getItem('user');
+        // Set up Supabase auth listener
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        if (session) {
+          const { data: userData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          // Convert Supabase user to our User format
+          const userObj: User = {
+            id: session.user.id,
+            name: userData?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || null,
+            email: session.user.email,
+            role: userData?.role || 'user',
+            createdAt: session.user.created_at,
+            isBanned: userData?.is_banned || false,
+            credits: userData?.credits || 3,
+            lastLogin: userData?.last_login || null
+          };
+          
+          setUser(userObj);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -52,48 +48,121 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initAuth();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        // Get or create profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!profile) {
+          // Create profile if it doesn't exist
+          await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: session.user.id, 
+                full_name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || null,
+                email: session.user.email,
+                role: 'user',
+                credits: 3,
+                is_banned: false
+              }
+            ]);
+        }
+
+        // Get user data with profile
+        const { data: userData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        // Convert Supabase user to our User format
+        const userObj: User = {
+          id: session.user.id,
+          name: userData?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || null,
+          email: session.user.email,
+          role: userData?.role || 'user',
+          createdAt: session.user.created_at,
+          isBanned: userData?.is_banned || false,
+          credits: userData?.credits || 3,
+          lastLogin: userData?.last_login || null
+        };
+        
+        setUser(userObj);
+
+        // Update last login
+        await supabase
+          .from('profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', session.user.id);
+
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Sync users (for admin purposes)
   const syncUsers = async () => {
-    // In a real implementation, this would fetch users from an API
-    console.log('Syncing users (mock)');
+    if (user?.role === 'admin') {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*');
+        
+      if (data) {
+        const mappedUsers: User[] = data.map(profile => ({
+          id: profile.id,
+          name: profile.full_name,
+          email: profile.email,
+          role: profile.role,
+          createdAt: profile.created_at,
+          lastLogin: profile.last_login,
+          isBanned: profile.is_banned,
+          credits: profile.credits
+        }));
+        setUsers(mappedUsers);
+      }
+    }
     return Promise.resolve();
   };
 
   // Refresh user credits
   const refreshUserCredits = async () => {
-    if (!user) return;
-    
-    // In a real implementation, this would fetch the latest credits from an API
-    console.log('Refreshing user credits (mock)');
+    if (user) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+        
+      if (data && user) {
+        setUser({ ...user, credits: data.credits });
+      }
+    }
     return Promise.resolve();
   };
 
   // Login with email and password
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      // Find user in mock data - in real implementation this would call an API
-      const mockUser = MOCK_USERS.find(u => u.email === email);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (!mockUser || password !== 'password') { // mock password check
-        throw new Error('Invalid email or password');
-      }
+      if (error) throw error;
       
-      if (mockUser.isBanned) {
-        toast({
-          title: "Conta suspensa",
-          description: "Sua conta foi suspensa. Entre em contato com o administrador.",
-          variant: "destructive",
-        });
-        throw new Error("Conta suspensa");
-      }
-      
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      
-      // Update last login
-      mockUser.lastLogin = new Date().toISOString();
+      // Auth state will be updated by the listener
     } catch (error: any) {
       console.error('Error signing in:', error);
       throw new Error(error.message || 'Failed to login');
@@ -103,13 +172,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Register a new user
   const register = async (name: string, email: string, password: string) => {
     try {
-      // Check if user already exists
-      if (MOCK_USERS.some(u => u.email === email)) {
-        throw new Error('Email already in use');
-      }
+      const { error, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          }
+        }
+      });
       
-      // In a real implementation, this would create a user in the database
-      console.log('Registering user:', name, email);
+      if (error) throw error;
       
       return { email, name };
     } catch (error: any) {
@@ -121,41 +194,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout
   const logout = async () => {
     try {
-      localStorage.removeItem('user');
-      setUser(null);
+      await supabase.auth.signOut();
+      // Auth state will be updated by the listener
     } catch (error) {
       console.error('Error logging out:', error);
       throw error;
     }
   };
 
-  // Delete a user
-  const deleteUser = (id: string) => {
-    setUsers(prevUsers => prevUsers.filter(u => u.id !== id));
+  // Delete a user (admin only)
+  const deleteUser = async (id: string) => {
+    if (user?.role !== 'admin') return;
     
-    // If the deleted user is the current user, log them out
-    if (user?.id === id) {
-      logout();
+    try {
+      await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', id);
+        
+      await syncUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
     }
   };
 
   // Update a user
-  const updateUser = (id: string, data: Partial<User>) => {
-    setUsers(prevUsers => 
-      prevUsers.map(u => u.id === id ? { ...u, ...data } : u)
-    );
-
-    // If the updated user is the current user, update the user state
-    if (user?.id === id) {
-      const updatedUser = { ...user, ...data };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+  const updateUser = async (id: string, data: Partial<User>) => {
+    try {
+      // Convert User object to profiles table structure
+      const profileData: any = {};
       
-      // If the user is being banned, log them out
-      if (data.isBanned) {
-        logout();
+      if (data.name !== undefined) profileData.full_name = data.name;
+      if (data.role !== undefined) profileData.role = data.role;
+      if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
+      if (data.credits !== undefined) profileData.credits = data.credits;
+      
+      await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', id);
+
+      // If it's the current user, update the local state
+      if (user && user.id === id) {
+        setUser({ ...user, ...data });
       }
+
+      // Resync users list if admin
+      if (user?.role === 'admin') {
+        await syncUsers();
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
     }
+  };
+
+  // Get all users (admin only)
+  const getAllUsers = () => {
+    return users;
   };
 
   return (
@@ -171,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         deleteUser,
         updateUser,
-        getAllUsers: () => users,
+        getAllUsers,
         refreshUserCredits,
         syncUsers
       }}
