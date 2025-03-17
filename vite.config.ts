@@ -5,8 +5,9 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Forçar modo de desenvolvimento para evitar erro com NODE_ENV=production
-  process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+  // Garantir que o NODE_ENV não cause problemas
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  console.log('Building with NODE_ENV:', nodeEnv);
   
   return {
     server: {
@@ -28,6 +29,7 @@ export default defineConfig(({ mode }) => {
       assetsDir: 'assets',
       emptyOutDir: true,
       minify: 'terser',
+      // Ignorar advertências sobre NODE_ENV
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html'),
@@ -44,6 +46,13 @@ export default defineConfig(({ mode }) => {
               return 'vendor-other';
             }
           }
+        },
+        onwarn(warning, warn) {
+          // Ignorar avisos de NODE_ENV
+          if (warning.message && warning.message.includes('NODE_ENV')) {
+            return;
+          }
+          warn(warning);
         }
       }
     }
