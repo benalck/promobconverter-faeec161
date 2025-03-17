@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Coins } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -56,36 +55,74 @@ export default function UserCredits() {
         <span className="font-medium">{user.credits}</span>
         <span className="text-xs text-primary/80">créditos</span>
       </div>
-      {showNewCreditsMessage && (
-        <div className="absolute -bottom-12 right-0 bg-primary/10 text-primary text-xs rounded-md px-3 py-2 whitespace-nowrap">
-          Você recebeu 3 créditos gratuitos para começar!
-        </div>
-      )}
-      {showLowCreditsWarning && (
-        <div className="absolute -bottom-20 right-0 flex flex-col gap-2 bg-amber-50 text-amber-700 border border-amber-200 text-xs rounded-md px-3 py-2 whitespace-nowrap">
-          <p>Seus créditos estão acabando!</p>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-800"
-            onClick={handleBuyCredits}
-          >
-            Comprar mais créditos
-          </Button>
-        </div>
-      )}
-      {user.credits === 0 && (
-        <div className="absolute -bottom-20 right-0 flex flex-col gap-2 bg-red-50 text-red-700 border border-red-200 text-xs rounded-md px-3 py-2 whitespace-nowrap">
-          <p>Você não tem mais créditos!</p>
-          <Button 
-            size="sm" 
-            className="bg-red-600 hover:bg-red-700"
-            onClick={handleBuyCredits}
-          >
-            Comprar créditos agora
-          </Button>
-        </div>
-      )}
+      
+      {/* Notificações em desktop */}
+      <div className="hidden sm:block">
+        {showNewCreditsMessage && (
+          <div className="absolute -bottom-12 right-0 bg-primary/10 text-primary text-xs rounded-md px-3 py-2 whitespace-nowrap z-30">
+            Você recebeu 3 créditos gratuitos para começar!
+          </div>
+        )}
+        {showLowCreditsWarning && (
+          <div className="absolute -bottom-20 right-0 flex flex-col gap-2 bg-amber-50 text-amber-700 border border-amber-200 text-xs rounded-md px-3 py-2 whitespace-nowrap z-30">
+            <p>Seus créditos estão acabando!</p>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-800"
+              onClick={handleBuyCredits}
+            >
+              Comprar mais créditos
+            </Button>
+          </div>
+        )}
+        {user.credits === 0 && (
+          <div className="absolute -bottom-20 right-0 flex flex-col gap-2 bg-red-50 text-red-700 border border-red-200 text-xs rounded-md px-3 py-2 whitespace-nowrap z-30">
+            <p>Você não tem mais créditos!</p>
+            <Button 
+              size="sm" 
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleBuyCredits}
+            >
+              Comprar créditos agora
+            </Button>
+          </div>
+        )}
+      </div>
+      
+      {/* Notificações em mobile - aparecem abaixo em vez de popup */}
+      <div className="sm:hidden">
+        {showNewCreditsMessage && (
+          <div className="fixed top-16 left-0 right-0 mx-auto max-w-[90%] bg-primary/10 text-primary text-xs rounded-md px-3 py-2 text-center z-50">
+            Você recebeu 3 créditos gratuitos para começar!
+          </div>
+        )}
+        {showLowCreditsWarning && (
+          <div className="fixed top-16 left-0 right-0 mx-auto max-w-[90%] flex flex-col gap-2 bg-amber-50 text-amber-700 border border-amber-200 text-xs rounded-md px-3 py-2 text-center z-50">
+            <p>Seus créditos estão acabando!</p>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-800"
+              onClick={handleBuyCredits}
+            >
+              Comprar mais créditos
+            </Button>
+          </div>
+        )}
+        {user.credits === 0 && (
+          <div className="fixed top-16 left-0 right-0 mx-auto max-w-[90%] flex flex-col gap-2 bg-red-50 text-red-700 border border-red-200 text-xs rounded-md px-3 py-2 text-center z-50">
+            <p>Você não tem mais créditos!</p>
+            <Button 
+              size="sm" 
+              className="bg-red-600 hover:bg-red-700"
+              onClick={handleBuyCredits}
+            >
+              Comprar créditos agora
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

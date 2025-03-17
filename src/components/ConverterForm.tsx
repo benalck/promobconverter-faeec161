@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -8,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowRight } from "lucide-react";
+import { FileDown, ArrowRight, Coins, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "./FileUpload";
 import { Input } from "@/components/ui/input";
@@ -17,9 +16,10 @@ import { cn } from "@/lib/utils";
 import { convertXMLToCSV } from "@/utils/xmlParser";
 import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { supabase } from "@/integrations/supabase/client";
+import StripeCheckoutButton from "./StripeCheckoutButton";
 
 interface ConverterFormProps {
   className?: string;
@@ -148,92 +148,105 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
   };
 
+  const needsCredits = !isConverting && !!xmlFile && (user?.credits || 0) <= 0;
+
   return (
-    <Card
-      className={cn(
-        "w-full max-w-3xl mx-auto transition-all duration-500 hover:shadow-glass relative overflow-hidden",
-        "backdrop-blur-sm bg-white/90 border border-white/40",
-        className
-      )}
-    >
-      <CardHeader className="text-center pb-4">
-        <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30"></div>
-        <CardTitle className="text-2xl sm:text-3xl tracking-tight mt-2 animate-slide-down">
-          XML para Excel
-        </CardTitle>
-        <CardDescription className="text-lg animate-slide-up">
-          Converta seus arquivos XML para planilhas Excel formatadas
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-8 pb-8">
-        <div className="space-y-6">
-          <FileUpload
-            onFileSelect={handleFileSelect}
-            acceptedFileTypes=".xml"
-            fileType="XML"
-            className="animate-scale-in"
-          />
-
-          <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
-            <Label htmlFor="outputFileName">Nome do Arquivo de Saída</Label>
-            <Input
-              id="outputFileName"
-              value={outputFileName}
-              onChange={(e) => setOutputFileName(e.target.value)}
-              className="transition-all duration-300 focus-visible:ring-offset-2 bg-white/50 backdrop-blur-sm focus:bg-white"
-              placeholder="Digite o nome do arquivo sem extensão"
+    <>
+      <Card
+        className={cn(
+          "w-full mx-auto transition-all duration-500 hover:shadow-glass relative overflow-hidden",
+          "backdrop-blur-sm bg-white/90 border border-white/40",
+          className
+        )}
+      >
+        <CardHeader className="text-center pb-4">
+          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30"></div>
+          <CardTitle className="text-2xl sm:text-3xl tracking-tight mt-2 animate-slide-down">
+            XML para Excel
+          </CardTitle>
+          <CardDescription className="text-lg animate-slide-up">
+            Converta seus arquivos XML para planilhas Excel formatadas
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8 pb-8">
+          <div className="space-y-6">
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              acceptedFileTypes=".xml"
+              fileType="XML"
+              className="animate-scale-in"
             />
-          </div>
 
-          {user && (
-            <div className="text-center text-sm bg-primary/10 py-2 px-4 rounded-md animate-fade-in">
-              <p>Você possui <span className="font-bold">{user.credits}</span> créditos disponíveis</p>
-              <p>Cada conversão utiliza 1 crédito</p>
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
+              <Label htmlFor="outputFileName">Nome do Arquivo de Saída</Label>
+              <Input
+                id="outputFileName"
+                value={outputFileName}
+                onChange={(e) => setOutputFileName(e.target.value)}
+                className="transition-all duration-300 focus-visible:ring-offset-2 bg-white/50 backdrop-blur-sm focus:bg-white"
+                placeholder="Digite o nome do arquivo sem extensão"
+              />
             </div>
-          )}
 
-          <Button
-            onClick={handleConvert}
-            disabled={!xmlFile || isConverting || !user || user.credits <= 0}
-            className={cn(
-              "w-full py-6 text-base font-medium transition-all duration-500 animate-fade-in",
-              "bg-primary hover:bg-primary/90 text-white relative overflow-hidden group",
-              "border border-primary/20"
+            {needsCredits && (
+              <div className="p-4 border border-amber-200 bg-amber-50 rounded-md mb-4">
+                <div className="flex items-start space-x-3">
+                  <Coins className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-amber-800">Créditos insuficientes</h4>
+                    <p className="text-sm text-amber-700 mt-0.5">
+                      Você não tem créditos suficientes para realizar esta conversão.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                      <StripeCheckoutButton
+                        mode="credits"
+                        amount={10}
+                        size="sm"
+                        className="flex items-center gap-1"
+                      >
+                        <ShoppingCart className="h-4 w-4" />
+                        <span>Comprar créditos agora</span>
+                      </StripeCheckoutButton>
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to="/plans">Ver planos disponíveis</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
-            style={{ animationDelay: "200ms" }}
-            size="lg"
-          >
-            <span className="absolute inset-0 w-0 bg-white/20 transition-all duration-500 ease-out group-hover:w-full"></span>
-            <span className="relative flex items-center justify-center gap-2">
-              {isConverting ? (
-                <>
-                  <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
-                  <span>Convertendo...</span>
-                </>
-              ) : (
-                <>
-                  <FileDown className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                  <span>Converter e Baixar</span>
-                  <ArrowRight className="h-5 w-5 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
-                </>
+
+            <Button
+              onClick={handleConvert}
+              disabled={!xmlFile || isConverting || !user}
+              className={cn(
+                "w-full py-6 text-base font-medium transition-all duration-500 animate-fade-in",
+                "bg-primary hover:bg-primary/90 text-white relative overflow-hidden group",
+                "border border-primary/20"
               )}
-            </span>
-          </Button>
-          
-          {(!user) && (
-            <div className="text-center mt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => navigate("/register")}
-                className="animate-pulse"
-              >
-                Criar conta para obter créditos
-              </Button>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              style={{ animationDelay: "200ms" }}
+              size="lg"
+            >
+              <span className="absolute inset-0 w-0 bg-white/20 transition-all duration-500 ease-out group-hover:w-full"></span>
+              <span className="relative flex items-center justify-center gap-2">
+                {isConverting ? (
+                  <>
+                    <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
+                    <span>Convertendo...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+                    <span>Converter e Baixar</span>
+                    <ArrowRight className="h-5 w-5 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
+                  </>
+                )}
+              </span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 

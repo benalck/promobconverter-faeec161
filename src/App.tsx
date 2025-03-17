@@ -1,4 +1,3 @@
-
 import React, { ReactNode } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,8 +6,11 @@ import Admin from "@/pages/Admin";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 import Plans from "@/pages/Plans";
+import PaymentSuccess from "@/pages/PaymentSuccess";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import "./App.css";
+import StripeCheckoutButton from '@/components/StripeCheckoutButton';
+import { Button } from "@/components/ui/button";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -55,6 +57,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
           <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
+          <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
