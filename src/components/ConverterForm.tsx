@@ -248,6 +248,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       </Card>
     </>
   );
-}
+};
 
 export default ConverterForm;

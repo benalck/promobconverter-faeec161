@@ -5,22 +5,34 @@ import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
  */
 export const convertXMLToCSV = (xmlContent: string): string => {
   try {
+    // Validar se o conteúdo é um XML válido
+    if (!xmlContent.trim().startsWith('<?xml') && !xmlContent.trim().startsWith('<')) {
+      throw new Error("O arquivo não parece ser um XML válido");
+    }
+
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+
+    // Verificar se há erros de parsing
+    const parserError = xmlDoc.querySelector('parsererror');
+    if (parserError) {
+      throw new Error("Erro ao processar o XML: " + parserError.textContent);
+    }
 
     let csvContent = generateTableHeader();
 
     const itemElements = xmlDoc.querySelectorAll("ITEM");
 
-    if (itemElements.length > 0) {
-      csvContent = processItemElements(itemElements, csvContent);
-      return csvContent;
+    if (itemElements.length === 0) {
+      throw new Error("Nenhum item encontrado no XML");
     }
 
-    return csvContent + "</table>";
+    csvContent = processItemElements(itemElements, csvContent);
+    return csvContent;
+
   } catch (error) {
     console.error("Error converting XML to CSV:", error);
-    return getDefaultTableHeader();
+    return getDefaultTableHeader() + getDefaultExampleRow();
   }
 };
 
@@ -49,12 +61,22 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
   let rowCount = 1;
   const moduleMap = new Map();
   
+  // Validar se há elementos
+  if (!itemElements || itemElements.length === 0) {
+    throw new Error("Nenhum elemento ITEM encontrado no XML");
+  }
+
   // Primeiro, organizar os módulos e seus componentes
   const mainModules = Array.from(itemElements).filter(item => {
     const component = item.getAttribute("COMPONENT") || "N";
     const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
     const group = item.getAttribute("GROUP") || "";
-    // Include "Tampos" group in the filter
+    
+    // Validar atributos obrigatórios
+    if (!item.getAttribute("UNIQUEID")) {
+      console.warn("Item encontrado sem UNIQUEID");
+    }
+    
     return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || 
            group === "Tamponamentos" || group === "Tampos";
   });
@@ -116,6 +138,10 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         moduleCell = processedDescription;
       }
       
+      // Formatar a coluna CHAPA para incluir material e cor (sem a espessura)
+      const espessuraSemMm = componentProps.thickness.replace(/mm/i, "");
+      const chapaFormatada = `${componentProps.material} ${espessuraSemMm}mm ${componentProps.color}`;
+      
       csvContent += `<tr>
         <td>${rowCount}</td>
         <td class="module-cell">${moduleCell}</td>
@@ -131,7 +157,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         <td class="borda-dir">${componentProps.edgeRight}</td>
         <td class="borda-esq">${componentProps.edgeLeft}</td>
         <td class="edge-color">${componentProps.edgeColor}</td>
-        <td class="material">${componentProps.material} ${componentProps.color}</td>
+        <td class="material">${chapaFormatada}</td>
         <td class="material">${componentProps.thickness}</td>
       </tr>`;
       
@@ -174,6 +200,10 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
       // Formatar a descrição da peça no formato [uniqueId] - [description] [thickness]
       const pieceDescription = formatPieceDescription(uniqueId, processedComponentDesc, componentProps.thickness);
       
+      // Formatar a coluna CHAPA para incluir material e cor (sem a espessura)
+      const espessuraSemMm = componentProps.thickness.replace(/mm/i, "");
+      const chapaFormatada = `${componentProps.material} ${espessuraSemMm}mm ${componentProps.color}`;
+      
       csvContent += `<tr>
         <td>${rowCount}</td>
         ${isFirstRow ? `<td class="module-cell" ${totalRows > 1 ? `rowspan="${totalRows}"` : ""}>${moduleDescription}</td>` : ""}
@@ -189,7 +219,7 @@ const processItemElements = (itemElements: NodeListOf<Element>, csvContent: stri
         <td class="borda-dir">${componentProps.edgeRight}</td>
         <td class="borda-esq">${componentProps.edgeLeft}</td>
         <td class="edge-color">${componentProps.edgeColor}</td>
-        <td class="material">${componentProps.material} ${componentProps.color}</td>
+        <td class="material">${chapaFormatada}</td>
         <td class="material">${componentProps.thickness}</td>
       </tr>`;
       
@@ -212,7 +242,7 @@ const formatPieceDescription = (uniqueId: string, description: string, thickness
 const extractItemPropertiesFromXML = (item: Element) => {
   let material = "MDF";
   let color = "Branco";
-  let thickness = "15";
+  let thickness = "15mm";  // Valor padrão já com "mm"
   let edgeColor = "";
   let edgeBottom = "0";
   let edgeTop = "0";
@@ -249,14 +279,48 @@ const extractItemPropertiesFromXML = (item: Element) => {
     // Espessura - Extrair corretamente o valor de THICKNESS REFERENCE
     if (thicknessElement) {
       const thicknessRef = thicknessElement.getAttribute("REFERENCE");
+      
       if (thicknessRef && thicknessRef !== "0") {
-        // Extract numeric part of thickness if it contains additional text
-        const thicknessMatch = thicknessRef.match(/(\d+)/);
-        if (thicknessMatch && thicknessMatch[1]) {
-          thickness = thicknessMatch[1];
-        } else {
+        // Verificar primeiro se o valor já tem "mm" ou não
+        if (thicknessRef.includes("mm")) {
           thickness = thicknessRef;
+        } else {
+          // Extract numeric part of thickness if it contains additional text
+          const thicknessMatch = thicknessRef.match(/(\d+)/);
+          if (thicknessMatch && thicknessMatch[1]) {
+            // Se o valor extraído for 1 e isso parece estranho, usar 15mm como padrão
+            if (thicknessMatch[1] === "1" && !thicknessRef.startsWith("1")) {
+              thickness = "15mm";
+            } else {
+              thickness = `${thicknessMatch[1]}mm`;
+            }
+          } else {
+            thickness = `${thicknessRef}mm`;
+          }
         }
+      }
+    }
+
+    // Verificação adicional para peças de 1mm (casos especiais)
+    if (thickness === "1mm") {
+      const description = item.getAttribute("DESCRIPTION") || "";
+      if (description.includes("15") || description.includes("padrão")) {
+        thickness = "15mm";
+      }
+    }
+
+    // Verificar a referência (formato XML específico)
+    const reference = item.getAttribute("REFERENCE") || "";
+    if (reference.includes(".")) {
+      const parts = reference.split(".");
+      // Procurar uma parte que seja um número entre 3 e 30 (espessuras comuns em mm)
+      const espessuraPart = parts.find(part => {
+        const num = parseInt(part);
+        return !isNaN(num) && num >= 3 && num <= 30;
+      });
+      
+      if (espessuraPart) {
+        thickness = `${espessuraPart}mm`;
       }
     }
 
@@ -292,33 +356,14 @@ const extractItemPropertiesFromXML = (item: Element) => {
     }
   }
   
-  // Verificar também a referência direta para formatos específicos
+  // Verificar se existem informações adicionais no REFERENCE que possam incluir Guararapes
   const reference = item.getAttribute("REFERENCE") || "";
-  if (reference && reference.includes(".")) {
-    const refParts = reference.split(".");
-    if (refParts.length >= 5) {
-      // Formato como "1.0155.15.Guararapes.Areia.MDF"
-      const thicknessFromRef = refParts.find(part => part.match(/^\d+$/));
-      if (thicknessFromRef) {
-        thickness = thicknessFromRef;
-      }
-      
-      // Buscar material e cor
-      const materialIndex = refParts.indexOf("MDF");
-      if (materialIndex > 0 && materialIndex < refParts.length) {
-        material = "MDF";
-        
-        // Geralmente a cor está um índice antes do material
-        if (materialIndex > 0) {
-          color = refParts[materialIndex - 1];
-        }
-      }
+  if (reference && reference.toLowerCase().includes("guararapes")) {
+    // Se Guararapes estiver no reference, adicionar ao nome do material
+    const fabricante = "Guararapes";
+    if (!material.includes(fabricante)) {
+      material = `${material} ${fabricante}`;
     }
-  }
-  
-  // Verificação adicional para garantir que espessura seja um valor completo
-  if (thickness && !isNaN(Number(thickness)) && !thickness.includes("mm")) {
-    thickness = `${thickness}mm`;
   }
   
   return {
@@ -415,7 +460,7 @@ const getDefaultExampleRow = (): string => {
       <td class="borda-dir">X</td>
       <td class="borda-esq"></td>
       <td class="edge-color">Branco</td>
-      <td class="material">Branco (MDF)</td>
-      <td class="material">15</td>
+      <td class="material">MDF 15mm Branco</td>
+      <td class="material">15mm</td>
     </tr>`;
 };
