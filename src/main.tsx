@@ -1,8 +1,22 @@
-import React from "react";
+
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App.tsx";
-import "./index.css";
 import ErrorBoundary from "./ErrorBoundary";
+import "./index.css";
+
+// Componente de carregamento para Suspense
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+  </div>
+);
+
+// Carregamento lazy do App
+const App = lazy(() => import('./App'));
+
+// Configuração de logs e detecção de erros
+console.log('Inicializando aplicação...');
+console.log('Ambiente:', import.meta.env.MODE);
 
 // Adicionar elemento para debug visível
 const debugElement = document.createElement('div');
@@ -33,43 +47,49 @@ document.addEventListener('click', (e) => {
 // Adicionar ao DOM
 document.body.appendChild(debugElement);
 
-// Adicionar log para debug
+// Capturar informações do ambiente
 const envInfo = {
   MODE: import.meta.env.MODE,
-  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-  VITE_API_URL: import.meta.env.VITE_API_URL,
+  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL || 'não definido',
+  VITE_API_URL: import.meta.env.VITE_API_URL || 'não definido',
   HAS_SUPABASE_KEY: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
   HAS_STRIPE_KEY: !!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
+  BROWSER: navigator.userAgent,
+  TIMESTAMP: new Date().toISOString()
 };
 
-console.log('Ambiente:', envInfo.MODE);
-console.log('Variáveis de ambiente:', envInfo);
-
-// Atualizar elemento de debug
+// Guardar variáveis de ambiente e informações de depuração
+console.log('Informações do ambiente:', envInfo);
 debugElement.innerHTML = `
   <h3>Debug Info (triplo clique para mostrar/ocultar)</h3>
   <p>Ambiente: ${envInfo.MODE}</p>
-  <p>VITE_SUPABASE_URL: ${envInfo.VITE_SUPABASE_URL || 'não definido'}</p>
-  <p>VITE_API_URL: ${envInfo.VITE_API_URL || 'não definido'}</p>
+  <p>VITE_SUPABASE_URL: ${envInfo.VITE_SUPABASE_URL}</p>
+  <p>VITE_API_URL: ${envInfo.VITE_API_URL}</p>
   <p>HAS_SUPABASE_KEY: ${envInfo.HAS_SUPABASE_KEY}</p>
   <p>HAS_STRIPE_KEY: ${envInfo.HAS_STRIPE_KEY}</p>
-  <p>User Agent: ${navigator.userAgent}</p>
-  <p>Timestamp: ${new Date().toISOString()}</p>
+  <p>User Agent: ${envInfo.BROWSER}</p>
+  <p>Timestamp: ${envInfo.TIMESTAMP}</p>
 `;
 
-// Adicionar handler global de erros
+// Handler para erros globais
 window.addEventListener('error', (event) => {
-  console.error('Erro global capturado:', event.error);
+  console.error('Erro global capturado:', event.error || event.message);
   
   // Atualizar elemento de debug
   const debugEl = document.getElementById('debug-info');
   if (debugEl) {
-    debugEl.innerHTML += `<p style="color: red">ERRO: ${event.error?.message || 'Erro desconhecido'}</p>`;
+    debugEl.innerHTML += `<p style="color: red">ERRO: ${event.error?.message || event.message || 'Erro desconhecido'}</p>`;
     debugEl.style.display = 'block'; // Mostrar automaticamente em caso de erro
+  }
+  
+  // Remover loader
+  const loader = document.getElementById('loading-fallback');
+  if (loader) {
+    loader.style.display = 'none';
   }
 });
 
-// Adicionar handler para rejeições de promessas não tratadas
+// Handler para rejeições de promessas não tratadas
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Promessa rejeitada não tratada:', event.reason);
   
@@ -81,7 +101,7 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Tentar renderizar com fallback simples em caso de erro
+// Renderizar aplicação com fallbacks
 try {
   const rootElement = document.getElementById("root");
   
@@ -92,12 +112,22 @@ try {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <ErrorBoundary>
-        <App />
+        <Suspense fallback={<LoadingFallback />}>
+          <App />
+        </Suspense>
       </ErrorBoundary>
     </React.StrictMode>
   );
+  
+  // Remover loader quando o app renderizar
+  const loader = document.getElementById('loading-fallback');
+  if (loader) {
+    loader.style.display = 'none';
+  }
+  
+  console.log('Aplicação renderizada com sucesso!');
 } catch (error) {
-  console.error('Erro ao renderizar aplicação:', error);
+  console.error('Erro crítico ao renderizar aplicação:', error);
   
   // Fallback simples em caso de erro crítico
   const rootElement = document.getElementById("root");

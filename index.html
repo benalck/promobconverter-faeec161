@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -9,11 +10,27 @@
     <meta property="og:title" content="Conversor XML para Excel" />
     <meta property="og:description" content="Converta seus arquivos XML para planilhas Excel formatadas" />
     <meta property="og:image" content="/og-image.png" />
+    
     <!-- Preload de recursos críticos -->
-    <link rel="preconnect" href="https://npnkmbflfflqpjwhxbfu.supabase.co" />
-    <link rel="preconnect" href="https://promobconverter.lovable.ai" />
-    <!-- Fallback para caso de erro -->
+    <link rel="preconnect" href="https://npnkmbflfflqpjwhxbfu.supabase.co" crossorigin />
+    <link rel="preconnect" href="https://promobconverter.lovable.ai" crossorigin />
+    <link rel="dns-prefetch" href="https://npnkmbflfflqpjwhxbfu.supabase.co" />
+    
+    <!-- Detecção de Internet Explorer -->
+    <script>
+      if(/MSIE \d|Trident.*rv:/.test(navigator.userAgent)) {
+        window.location = 'browser-not-supported.html';
+      }
+    </script>
+    
+    <!-- Estilo inicial -->
     <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #f9fafb;
+      }
       #root:empty {
         display: none;
       }
@@ -26,7 +43,6 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         text-align: center;
         padding: 2rem;
       }
@@ -48,34 +64,55 @@
   
   <body>
     <div id="root"></div>
+    
     <!-- Fallback para caso de erro -->
     <div id="loading-fallback">
       <div class="spinner"></div>
       <h2>Carregando aplicação...</h2>
       <p>Se a página não carregar em alguns segundos, <a href="javascript:window.location.reload()">clique aqui para recarregar</a>.</p>
     </div>
+    
+    <!-- Scripts -->
     <script type="module" src="/src/main.tsx"></script>
+    
     <!-- Script para detectar erros de carregamento -->
     <script>
-      // Se a aplicação não carregar em 10 segundos, mostrar mensagem de erro
-      setTimeout(() => {
+      // Adiciona evento para capturar erros
+      window.addEventListener('error', function(e) {
+        console.error('Erro global capturado:', e.error || e.message);
+        showErrorMessage(e.error ? e.error.message : e.message);
+      });
+      
+      // Se a aplicação não carregar em 8 segundos, mostrar mensagem de erro
+      const loadTimeout = setTimeout(() => {
         const root = document.getElementById('root');
         if (!root || !root.hasChildNodes()) {
-          const fallback = document.getElementById('loading-fallback');
-          if (fallback) {
-            fallback.innerHTML = `
-              <h2 style="color: #dc2626;">Erro ao carregar a aplicação</h2>
-              <p>Não foi possível carregar a aplicação corretamente.</p>
-              <button onclick="window.location.reload()" style="background-color: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                Tentar novamente
-              </button>
-              <p style="margin-top: 20px;">
-                <a href="/debug" style="color: #2563eb;">Ir para página de diagnóstico</a>
-              </p>
-            `;
-          }
+          showErrorMessage('Tempo limite excedido ao carregar a aplicação.');
         }
-      }, 10000);
+      }, 8000);
+      
+      // Função para mostrar mensagem de erro amigável
+      function showErrorMessage(errorMsg) {
+        const fallback = document.getElementById('loading-fallback');
+        if (fallback) {
+          fallback.innerHTML = `
+            <h2 style="color: #dc2626;">Erro ao carregar a aplicação</h2>
+            <p>Não foi possível carregar a aplicação corretamente.</p>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">Erro: ${errorMsg || 'Erro desconhecido'}</p>
+            <button onclick="window.location.reload()" style="background-color: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 15px;">
+              Tentar novamente
+            </button>
+            <p style="margin-top: 20px;">
+              <a href="/debug" style="color: #2563eb;">Ir para página de diagnóstico</a>
+            </p>
+          `;
+        }
+      }
+      
+      // Quando a aplicação carregar, limpar o timeout
+      window.addEventListener('load', function() {
+        clearTimeout(loadTimeout);
+      });
     </script>
   </body>
 </html>
