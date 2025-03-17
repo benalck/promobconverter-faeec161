@@ -1,64 +1,36 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  // Garantir que o NODE_ENV não cause problemas
-  const nodeEnv = process.env.NODE_ENV || 'development';
-  console.log('Building with NODE_ENV:', nodeEnv);
-  
-  return {
-    server: {
-      host: "::",
-      port: 8080,
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
     },
-    plugins: [
-      react(),
-      mode === 'development' && componentTagger(),
-    ].filter(Boolean),
-    resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
+  },
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+    minify: 'terser',
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
       },
-    },
-    build: {
-      sourcemap: true,
-      outDir: 'dist',
-      assetsDir: 'assets',
-      emptyOutDir: true,
-      minify: 'terser',
-      // Ignorar advertências sobre NODE_ENV
-      rollupOptions: {
-        input: {
-          main: path.resolve(__dirname, 'index.html'),
-        },
-        output: {
-          manualChunks: (id) => {
-            if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-                return 'react';
-              }
-              if (id.includes('@supabase') || id.includes('date-fns') || id.includes('lucide-react')) {
-                return 'vendor';
-              }
-              return 'vendor-other';
-            }
-          }
-        },
-        onwarn(warning, warn) {
-          // Ignorar avisos de NODE_ENV
-          if (warning.message && warning.message.includes('NODE_ENV')) {
-            return;
-          }
-          // Ignorar avisos sobre diretórios importados como módulos
-          if (warning.message && warning.message.includes('is a directory')) {
-            return;
-          }
-          warn(warning);
+      onwarn(warning, warn) {
+        // Ignorar completamente os avisos sobre diretórios
+        if (warning.code === 'INVALID_IMPORT_SYNTAX' || 
+            warning.code === 'INVALID_EXPORT_OPTION' || 
+            (warning.message && (
+              warning.message.includes('is a directory') || 
+              warning.message.includes('NODE_ENV') ||
+              warning.message.includes('resolved with an external identifier')
+            ))) {
+          return;
         }
+        warn(warning);
       }
     }
-  };
+  }
 });
