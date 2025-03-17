@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "npm run build",
+  "buildCommand": "NODE_ENV=development npm run build",
   "outputDirectory": "dist",
   "routes": [
     { "handle": "filesystem" },
@@ -8,6 +8,6 @@
     { "src": "/(.*)", "dest": "/index.html" }
   ],
   "env": {
-    "NODE_ENV": null
+    "NODE_ENV": "development"
   }
 } 
