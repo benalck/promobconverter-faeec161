@@ -52,6 +52,10 @@ export default defineConfig(({ mode }) => {
           if (warning.message && warning.message.includes('NODE_ENV')) {
             return;
           }
+          // Ignorar avisos sobre diretórios importados como módulos
+          if (warning.message && warning.message.includes('is a directory')) {
+            return;
+          }
           warn(warning);
         }
       }
