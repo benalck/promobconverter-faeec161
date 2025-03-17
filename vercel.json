@@ -6,5 +6,8 @@
     { "handle": "filesystem" },
     { "src": "/debug", "dest": "/debug.html" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": null
+  }
 } 
