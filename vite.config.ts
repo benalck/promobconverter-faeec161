@@ -14,12 +14,12 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     minify: 'terser',
+    sourcemap: true,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
       },
       onwarn(warning, warn) {
-        // Ignorar completamente os avisos sobre diretórios
         if (warning.code === 'INVALID_IMPORT_SYNTAX' || 
             warning.code === 'INVALID_EXPORT_OPTION' || 
             (warning.message && (
@@ -34,3 +34,4 @@ export default defineConfig({
     }
   }
 });
+
