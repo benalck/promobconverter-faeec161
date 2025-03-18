@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface Plan {
@@ -38,4 +38,6 @@ export interface AuthContextType {
   updateUser: (id: string, data: Partial<User>) => void;
   getAllUsers: () => User[];
   refreshUserCredits: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  addExtraCredits: (userId: string, extraCredits: number) => Promise<number | undefined>;
 }

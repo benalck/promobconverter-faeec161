@@ -110,8 +110,8 @@ export default function Register() {
           <div className="h-full flex flex-col justify-between">
             <div>
               <ShoppingBag className="h-12 w-12 mb-6" />
-              <h1 className="text-3xl font-bold mb-2">Conversor XML para Excel</h1>
-              <p className="text-white/80 mb-8">Transforme seus arquivos XML em planilhas Excel profissionais com apenas alguns cliques.</p>
+              <h1 className="text-3xl font-bold mb-2">Arquivo XML Promob para Plano de corte Excel</h1>
+              <p className="text-white/80 mb-8">Transforme seus arquivos XML Promob em planos de corte Excel profissionais com apenas alguns cliques.</p>
             </div>
             
             <div className="space-y-4">
@@ -137,7 +137,7 @@ export default function Register() {
             </div>
             
             <div className="mt-12 text-sm text-white/60">
-              © {new Date().getFullYear()} XML Excel Wizard. Todos os direitos reservados.
+              © {new Date().getFullYear()} XML Promob para Excel. Todos os direitos reservados.
             </div>
           </div>
         </div>

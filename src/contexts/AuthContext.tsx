@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { User, AuthContextType } from './auth/types';
 import { convertSupabaseUser } from './auth/userUtils';
 import { useUserManagement } from './auth/userManagement';
@@ -27,7 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     addInitialCreditsIfNeeded,
     deleteUser,
     updateUser,
-    getAllUsers
+    getAllUsers,
+    addExtraCredits
   } = useUserManagement(setUser, setUsers, user, users, logout);
 
   const {
@@ -92,20 +92,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isAdmin: !!user && user.role === 'admin',
         users,
-        isAuthenticated: !!user && isInitialized,
-        isAdmin: user?.role === 'admin',
         isInitialized,
-        login, 
-        register, 
+        login,
+        register,
         logout: completeLogout,
         deleteUser,
         updateUser,
         getAllUsers,
-        refreshUserCredits
+        refreshUserCredits,
+        setUser,
+        addExtraCredits
       }}
     >
       {isInitialized ? children : null}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowRight, Coins, ShoppingCart } from "lucide-react";
+import { FileDown, ArrowRight, Coins, ShoppingCart, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "./FileUpload";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,9 @@ import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import StripeCheckoutButton from "./StripeCheckoutButton";
-import { useTrackConversion } from "@/hooks/useTrackConversion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ConverterFormProps {
   className?: string;
@@ -28,12 +28,63 @@ interface ConverterFormProps {
 
 const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [xmlFile, setXmlFile] = useState<File | null>(null);
-  const [outputFileName, setOutputFileName] = useState("modelos_converted");
+  const [outputFileName, setOutputFileName] = useState("plano_de_corte_promob");
   const [isConverting, setIsConverting] = useState(false);
+  const [showCreditError, setShowCreditError] = useState(false);
   const { toast } = useToast();
-  const { user, refreshUserCredits } = useAuth();
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
-  const { trackConversion } = useTrackConversion();
+
+  // Atualizar créditos sempre que o componente montar
+  useEffect(() => {
+    if (user) {
+      atualizarCreditosDoUsuario();
+    }
+  }, [user]);
+
+  // Função para atualizar os créditos do usuário a partir do banco
+  const atualizarCreditosDoUsuario = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) {
+        console.error("Erro ao buscar créditos:", error);
+        return;
+      }
+      
+      if (data && user.credits !== data.credits) {
+        console.log(`Atualizando créditos do usuário: ${user.credits} -> ${data.credits}`);
+        setUser({
+          ...user,
+          credits: data.credits
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar créditos:", error);
+    }
+  };
+
+  // Função auxiliar para ler arquivo como texto
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (typeof e.target?.result === 'string') {
+          resolve(e.target.result);
+        } else {
+          reject(new Error("Falha ao ler o arquivo como texto"));
+        }
+      };
+      reader.onerror = () => reject(new Error("Erro ao ler o arquivo"));
+      reader.readAsText(file);
+    });
+  };
 
   if (user?.isBanned) {
     return <BannedMessage />;
@@ -46,6 +97,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   };
 
   const handleConvert = async () => {
+    // Limpar erros anteriores
+    setShowCreditError(false);
+
     if (!xmlFile) {
       toast({
         title: "Nenhum arquivo selecionado",
@@ -65,6 +119,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       return;
     }
 
+    // Obter créditos atualizados primeiro
+    await atualizarCreditosDoUsuario();
+
     if (user.credits <= 0) {
       toast({
         title: "Créditos insuficientes",
@@ -75,124 +132,108 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
 
     setIsConverting(true);
-    const startTime = performance.now();
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const xmlContent = e.target?.result as string;
-          const csvString = convertXMLToCSV(xmlContent);
-          const htmlPrefix = generateHtmlPrefix();
-          const htmlSuffix = generateHtmlSuffix();
+      // 1. Converter o arquivo
+      const xmlContent = await readFileAsText(xmlFile);
+      const csvString = convertXMLToCSV(xmlContent);
+      const htmlPrefix = generateHtmlPrefix();
+      const htmlSuffix = generateHtmlSuffix();
 
-          const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
-            type: "application/vnd.ms-excel;charset=utf-8;",
-          });
+      // 2. Criar e baixar o arquivo Excel
+      const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
+        type: "application/vnd.ms-excel;charset=utf-8;",
+      });
 
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = `${outputFileName}.xls`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${outputFileName}.xls`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-          const { data, error } = await supabase
-            .from('profiles')
-            .update({ credits: user.credits - 1 })
-            .eq('id', user.id);
-
-          if (error) {
-            console.error("Erro ao atualizar créditos:", error);
-            toast({
-              title: "Erro ao atualizar créditos",
-              description: "Ocorreu um erro ao atualizar seus créditos.",
-              variant: "destructive",
-            });
-          } else {
-            await refreshUserCredits();
-            
-            // Rastrear conversão bem-sucedida
-            const endTime = performance.now();
-            await trackConversion({
-              success: true,
-              fileSize: xmlFile.size,
-              conversionTime: Math.round(endTime - startTime),
-              inputFormat: 'XML',
-              outputFormat: 'XLS'
-            });
-            
-            toast({
-              title: "Conversão concluída",
-              description: `Seu arquivo foi convertido com sucesso. Você utilizou 1 crédito e agora possui ${user.credits - 1} créditos.`,
-              variant: "default",
-            });
-          }
-        } catch (error) {
-          console.error("Error converting file:", error);
-          
-          // Rastrear conversão com erro
-          const endTime = performance.now();
-          await trackConversion({
-            success: false,
-            fileSize: xmlFile.size,
-            conversionTime: Math.round(endTime - startTime),
-            errorMessage: error instanceof Error ? error.message : 'Erro desconhecido',
-            inputFormat: 'XML',
-            outputFormat: 'XLS'
-          });
-          
-          toast({
-            title: "Erro na conversão",
-            description: "Ocorreu um erro ao converter o arquivo XML.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsConverting(false);
-        }
-      };
-
-      reader.onerror = () => {
-        setIsConverting(false);
+      // 3. Atualizar créditos - ABORDAGEM DIRETA
+      try {
+        // Calcular novo saldo
+        const creditosAtuais = user.credits;
+        const novosSaldoCreditos = creditosAtuais - 1;
         
-        // Rastrear erro de leitura
-        const endTime = performance.now();
-        trackConversion({
-          success: false,
-          fileSize: xmlFile.size,
-          conversionTime: Math.round(endTime - startTime),
-          errorMessage: 'Erro na leitura do arquivo',
-          inputFormat: 'XML',
-          outputFormat: 'XLS'
+        // Atualizar no banco
+        const { error } = await supabase
+          .from('profiles')
+          .update({ credits: novosSaldoCreditos })
+          .eq('id', user.id);
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Atualizar localmente
+        setUser({
+          ...user,
+          credits: novosSaldoCreditos
         });
+        
+        // Mostrar sucesso
+        toast({
+          title: "Conversão concluída",
+          description: `Seu arquivo foi convertido com sucesso. Você utilizou 1 crédito e agora possui ${novosSaldoCreditos} créditos.`,
+          variant: "default",
+        });
+      } catch (error) {
+        console.error("ERRO CRÍTICO AO ATUALIZAR CRÉDITOS:", error);
+        // Mostrar erro específico de créditos
+        setShowCreditError(true);
         
         toast({
-          title: "Erro na leitura",
-          description: "Não foi possível ler o arquivo XML.",
+          title: "Erro ao atualizar créditos",
+          description: "A conversão foi concluída, mas houve um erro ao atualizar seus créditos. Use o botão Sincronizar abaixo.",
           variant: "destructive",
         });
-      };
-
-      reader.readAsText(xmlFile);
+      }
     } catch (error) {
-      console.error("Error in handleConvert:", error);
+      console.error("Erro durante a conversão:", error);
+      toast({
+        title: "Erro na conversão",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao processar o arquivo XML.",
+        variant: "destructive",
+      });
+    } finally {
       setIsConverting(false);
+    }
+  };
+
+  // Função para forçar sincronização manual de créditos
+  const sincronizarCreditos = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) throw error;
       
-      // Rastrear erro inesperado
-      const endTime = performance.now();
-      trackConversion({
-        success: false,
-        fileSize: xmlFile.size,
-        conversionTime: Math.round(endTime - startTime),
-        errorMessage: error instanceof Error ? error.message : 'Erro inesperado',
-        inputFormat: 'XML',
-        outputFormat: 'XLS'
+      setUser({
+        ...user,
+        credits: data.credits
       });
       
+      setShowCreditError(false);
+      
       toast({
-        title: "Erro inesperado",
-        description: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
-        variant: "destructive",
+        title: "Créditos sincronizados",
+        description: `Seus créditos foram atualizados para ${data.credits}.`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Erro ao sincronizar créditos:", error);
+      toast({
+        title: "Falha na sincronização",
+        description: "Não foi possível sincronizar seus créditos. Tente novamente mais tarde.",
+        variant: "destructive"
       });
     }
   };
@@ -201,97 +242,133 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
   return (
     <>
-      <Card
-        className={cn(
-          "w-full mx-auto transition-all duration-500 hover:shadow-glass relative overflow-hidden",
-          "backdrop-blur-sm bg-white/90 border border-white/40",
-          className
-        )}
-      >
-        <CardHeader className="text-center pb-4">
-          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30"></div>
-          <CardTitle className="text-2xl sm:text-3xl tracking-tight mt-2 animate-slide-down">
-            XML para Excel
-          </CardTitle>
-          <CardDescription className="text-lg animate-slide-up">
-            Converta seus arquivos XML para planilhas Excel formatadas
+      <Card className={cn("w-full", className)}>
+        <CardHeader>
+          <CardTitle>Conversor de XML Promob para Excel</CardTitle>
+          <CardDescription>
+            Transforme seus planos de corte do Promob em planilhas Excel formatadas
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8 pb-8">
-          <div className="space-y-6">
+        <CardContent>
+          {showCreditError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Erro ao atualizar créditos</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">A conversão foi concluída, mas houve um erro ao atualizar seus créditos.</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={sincronizarCreditos}
+                  className="mt-1"
+                >
+                  Sincronizar Créditos
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4">
             <FileUpload
               onFileSelect={handleFileSelect}
-              acceptedFileTypes=".xml"
-              fileType="XML"
-              className="animate-scale-in"
+              accept=".xml"
+              isDisabled={isConverting}
             />
 
-            <div className="space-y-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
-              <Label htmlFor="outputFileName">Nome do Arquivo de Saída</Label>
+            <div>
+              <Label htmlFor="output-name">Nome do arquivo de saída</Label>
               <Input
-                id="outputFileName"
+                id="output-name"
                 value={outputFileName}
                 onChange={(e) => setOutputFileName(e.target.value)}
-                className="transition-all duration-300 focus-visible:ring-offset-2 bg-white/50 backdrop-blur-sm focus:bg-white"
-                placeholder="Digite o nome do arquivo sem extensão"
+                className="mt-1"
+                disabled={isConverting}
               />
             </div>
 
-            {needsCredits && (
-              <div className="p-4 border border-amber-200 bg-amber-50 rounded-md mb-4">
-                <div className="flex items-start space-x-3">
-                  <Coins className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-medium text-amber-800">Créditos insuficientes</h4>
-                    <p className="text-sm text-amber-700 mt-0.5">
-                      Você não tem créditos suficientes para realizar esta conversão.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
-                      <StripeCheckoutButton
-                        mode="credits"
-                        amount={10}
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
+            {needsCredits ? (
+              <div className="bg-amber-50 p-4 rounded-md border border-amber-200 flex items-start space-x-3">
+                <Coins className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-amber-900">Créditos insuficientes</h4>
+                  <p className="text-sm text-amber-700 mb-3">
+                    Você precisa de créditos para converter arquivos. Adquira créditos para continuar.
+                  </p>
+                  <div className="flex space-x-2">
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/plans" className="flex items-center space-x-1">
                         <ShoppingCart className="h-4 w-4" />
-                        <span>Comprar créditos agora</span>
-                      </StripeCheckoutButton>
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to="/plans">Ver planos disponíveis</Link>
-                      </Button>
-                    </div>
+                        <span>Ver planos</span>
+                      </Link>
+                    </Button>
+                    
+                    <StripeCheckoutButton
+                      mode="credits"
+                      amount={10}
+                      variant="default"
+                      size="sm"
+                    >
+                      <Coins className="mr-1.5 h-4 w-4" />
+                      Comprar 10 créditos
+                    </StripeCheckoutButton>
                   </div>
                 </div>
               </div>
+            ) : (
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 group relative overflow-hidden"
+                onClick={handleConvert}
+                disabled={isConverting || !xmlFile}
+              >
+                <span className="flex items-center justify-center">
+                  {isConverting ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span>Processando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="mr-2 h-5 w-5" />
+                      <span>Converter e Baixar</span>
+                      <ArrowRight className="h-5 w-5 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
+                    </>
+                  )}
+                </span>
+              </Button>
             )}
-
-            <Button
-              onClick={handleConvert}
-              disabled={!xmlFile || isConverting || !user}
-              className={cn(
-                "w-full py-6 text-base font-medium transition-all duration-500 animate-fade-in",
-                "bg-primary hover:bg-primary/90 text-white relative overflow-hidden group",
-                "border border-primary/20"
-              )}
-              style={{ animationDelay: "200ms" }}
-              size="lg"
-            >
-              <span className="absolute inset-0 w-0 bg-white/20 transition-all duration-500 ease-out group-hover:w-full"></span>
-              <span className="relative flex items-center justify-center gap-2">
-                {isConverting ? (
-                  <>
-                    <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
-                    <span>Convertendo...</span>
-                  </>
-                ) : (
-                  <>
-                    <FileDown className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-                    <span>Converter e Baixar</span>
-                    <ArrowRight className="h-5 w-5 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
-                  </>
-                )}
-              </span>
-            </Button>
+          </div>
+          
+          <div className="mt-4 text-center text-sm text-muted-foreground">
+            <p>
+              Problemas com créditos? Consulte nossa <Link to="/faq" className="text-primary hover:underline">página de FAQ</Link> ou 
+              <Button 
+                variant="link" 
+                onClick={sincronizarCreditos} 
+                className="p-0 h-auto font-normal text-sm"
+              >
+                {" "}clique aqui para sincronizar
+              </Button>.
+            </p>
           </div>
         </CardContent>
       </Card>

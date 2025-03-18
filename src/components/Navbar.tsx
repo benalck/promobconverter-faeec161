@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -30,7 +31,7 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex items-center">
               <h1 className="text-xl font-bold text-primary hover:text-primary/80 transition-colors">
-                Conversor XML para Excel
+                Arquivo XML Promob para Plano de corte Excel
               </h1>
             </Link>
           </div>
