@@ -1,13 +1,13 @@
 
 import React from "react";
 import { 
-  FileText, 
-  Ruler, 
-  Hammer, 
-  PencilRuler, 
+  Upload, 
+  FileSpreadsheet, 
+  Settings, 
+  Download, 
   CheckCircle, 
-  Armchair,
-  Palette
+  RefreshCw,
+  FileCheck
 } from "lucide-react";
 
 export interface TutorialStepType {
@@ -20,40 +20,40 @@ export interface TutorialStepType {
 export const getTutorialSteps = (): TutorialStepType[] => {
   return [
     {
-      title: "Envie seu projeto",
-      description: "Faça upload do seu projeto ou planta baixa para começarmos a planejar seus móveis.",
-      icon: <FileText className="h-8 w-8" />,
-      color: "bg-amber-100 text-amber-600"
+      title: "Faça upload do arquivo XML",
+      description: "Arraste e solte ou selecione seu arquivo XML para iniciar o processo de conversão.",
+      icon: <Upload className="h-8 w-8" />,
+      color: "bg-blue-100 text-blue-600"
     },
     {
-      title: "Defina as medidas",
-      description: "Especifique as dimensões de cada ambiente onde serão instalados os móveis planejados.",
-      icon: <Ruler className="h-8 w-8" />,
+      title: "Visualize os dados",
+      description: "Confira os dados extraídos do seu arquivo XML antes da conversão.",
+      icon: <FileCheck className="h-8 w-8" />,
+      color: "bg-green-100 text-green-600"
+    },
+    {
+      title: "Configure as opções",
+      description: "Personalize o formato da planilha e escolha quais dados serão incluídos.",
+      icon: <Settings className="h-8 w-8" />,
+      color: "bg-purple-100 text-purple-600"
+    },
+    {
+      title: "Processar conversão",
+      description: "Nossa aplicação processa rapidamente seus dados e prepara o arquivo Excel.",
+      icon: <RefreshCw className="h-8 w-8" />,
       color: "bg-orange-100 text-orange-600"
     },
     {
-      title: "Escolha os materiais",
-      description: "Selecione entre diversos tipos de madeira, acabamentos e acessórios para seus móveis.",
-      icon: <Palette className="h-8 w-8" />,
-      color: "bg-brown-100 text-amber-800"
+      title: "Baixe o resultado",
+      description: "Faça download do arquivo Excel pronto para uso com todos os seus dados organizados.",
+      icon: <Download className="h-8 w-8" />,
+      color: "bg-indigo-100 text-indigo-600"
     },
     {
-      title: "Acompanhe a produção",
-      description: "Visualize cada etapa da produção dos seus móveis planejados em nossa marcenaria.",
-      icon: <Hammer className="h-8 w-8" />,
-      color: "bg-yellow-100 text-yellow-700"
-    },
-    {
-      title: "Visualize em 3D",
-      description: "Veja como ficarão seus móveis antes mesmo da fabricação através de renderizações 3D.",
-      icon: <PencilRuler className="h-8 w-8" />,
+      title: "Pronto!",
+      description: "Utilize sua planilha Excel com todos os dados convertidos de forma organizada.",
+      icon: <CheckCircle className="h-8 w-8" />,
       color: "bg-emerald-100 text-emerald-600"
-    },
-    {
-      title: "Instalação profissional",
-      description: "Nossos especialistas instalam seus móveis planejados com precisão e acabamento perfeito.",
-      icon: <Armchair className="h-8 w-8" />,
-      color: "bg-blue-100 text-blue-600"
     }
   ];
 };
