@@ -3,7 +3,7 @@ import React from "react";
 import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
 import FurniturePlanning from "@/components/FurniturePlanning";
-import { FileText, Download, Upload, List, Check, LayoutDashboard, MousePointerClick, Armchair, Ruler, TableLamp } from "lucide-react";
+import { FileText, Download, Upload, List, Check, LayoutDashboard, MousePointerClick, Armchair, Ruler, Lamp } from "lucide-react";
 
 const Index = () => {
   return (
@@ -40,7 +40,7 @@ const Index = () => {
                 
                 <div className="p-4 md:p-6 bg-white/60 backdrop-blur-sm rounded-lg border border-amber-100 shadow-glass-sm transition-all duration-300 hover:shadow-glass hover:translate-y-[-2px] sm:col-span-2 md:col-span-1">
                   <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-amber-100 text-amber-700 mx-auto mb-4">
-                    <TableLamp className="w-4 h-4 md:w-5 md:h-5" />
+                    <Lamp className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                   <h3 className="font-medium mb-2">Acabamento Premium</h3>
                   <p className="text-xs md:text-sm text-gray-600">Materiais de alta qualidade e acabamento impecável em cada detalhe.</p>
