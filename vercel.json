@@ -1,14 +1,9 @@
+
 {
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  }
-} 
+  ]
+}
