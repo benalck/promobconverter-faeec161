@@ -1,3 +1,4 @@
+
 import React from "react";
 import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
@@ -14,7 +15,7 @@ const Index = () => {
             <section className="text-center max-w-3xl mx-auto">
               <h2 className="text-xl md:text-2xl font-bold tracking-tight mb-3 md:mb-4">Conversão Simples, Resultados Perfeitos</h2>
               <p className="text-base md:text-lg text-muted-foreground mb-6 md:mb-8">
-                Nossa interface intuitiva torna a transformação de dados XML em planilhas Excel formatadas simples e eficiente.
+                Nossa interface intuitiva torna a transformação de dados XML Promob em planos de corte Excel formatados simples e eficiente.
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mt-8 md:mt-10">
@@ -23,7 +24,7 @@ const Index = () => {
                     <Upload className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                   <h3 className="font-medium mb-2">Arrastar e Soltar</h3>
-                  <p className="text-xs md:text-sm text-gray-600">Simplesmente arraste e solte seus arquivos XML para conversão instantânea.</p>
+                  <p className="text-xs md:text-sm text-gray-600">Simplesmente arraste e solte seus arquivos XML Promob para conversão instantânea.</p>
                 </div>
                 
                 <div className="p-4 md:p-6 bg-white/60 backdrop-blur-sm rounded-lg border border-gray-100 shadow-glass-sm transition-all duration-300 hover:shadow-glass hover:translate-y-[-2px]">
@@ -31,7 +32,7 @@ const Index = () => {
                     <FileText className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                   <h3 className="font-medium mb-2">Processamento XML</h3>
-                  <p className="text-xs md:text-sm text-gray-600">Analise estruturas XML complexas com extração precisa de elementos e atributos.</p>
+                  <p className="text-xs md:text-sm text-gray-600">Analise estruturas XML Promob complexas com extração precisa de elementos e atributos.</p>
                 </div>
                 
                 <div className="p-4 md:p-6 bg-white/60 backdrop-blur-sm rounded-lg border border-gray-100 shadow-glass-sm transition-all duration-300 hover:shadow-glass hover:translate-y-[-2px] sm:col-span-2 md:col-span-1">
@@ -39,7 +40,7 @@ const Index = () => {
                     <MousePointerClick className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                   <h3 className="font-medium mb-2">Download com Um Clique</h3>
-                  <p className="text-xs md:text-sm text-gray-600">Baixe seus arquivos XLSX convertidos instantaneamente com um único clique.</p>
+                  <p className="text-xs md:text-sm text-gray-600">Baixe seus planos de corte Excel convertidos instantaneamente com um único clique.</p>
                 </div>
               </div>
             </section>
@@ -53,7 +54,7 @@ const Index = () => {
                     <LayoutDashboard className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                   <h3 className="font-medium mb-1 md:mb-2 text-sm md:text-base">Formatação Excel</h3>
-                  <p className="text-xs text-gray-600">Gere planilhas Excel perfeitamente formatadas.</p>
+                  <p className="text-xs text-gray-600">Gere planos de corte Excel perfeitamente formatados.</p>
                 </div>
                 
                 <div className="p-3 md:p-5 bg-white/60 backdrop-blur-sm rounded-lg border border-gray-100 shadow-glass-sm transition-all duration-300 hover:shadow-glass hover:translate-y-[-2px]">

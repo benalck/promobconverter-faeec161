@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -27,7 +28,7 @@ interface ConverterFormProps {
 
 const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [xmlFile, setXmlFile] = useState<File | null>(null);
-  const [outputFileName, setOutputFileName] = useState("modelos_converted");
+  const [outputFileName, setOutputFileName] = useState("plano_de_corte_promob");
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
   const { user, refreshUserCredits } = useAuth();
@@ -162,10 +163,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <CardHeader className="text-center pb-4">
           <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30"></div>
           <CardTitle className="text-2xl sm:text-3xl tracking-tight mt-2 animate-slide-down">
-            XML para Excel
+            XML Promob para Excel
           </CardTitle>
           <CardDescription className="text-lg animate-slide-up">
-            Converta seus arquivos XML para planilhas Excel formatadas
+            Converta seus arquivos XML Promob para planos de corte Excel formatados
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8 pb-8">

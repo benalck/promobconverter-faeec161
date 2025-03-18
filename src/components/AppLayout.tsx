@@ -1,3 +1,4 @@
+
 import React from "react";
 import { cn } from "@/lib/utils";
 import Navbar from "./Navbar";
@@ -28,10 +29,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
         <div className="w-full max-w-4xl mx-auto relative z-10 animate-fade-in">
           <header className="text-center mb-8 md:mb-12">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight animate-slide-down">
-              XML para Excel
+              XML Promob para Excel
             </h1>
             <p className="mt-2 text-muted-foreground max-w-lg mx-auto animate-slide-up">
-              Transforme arquivos XML em planilhas Excel com formatação profissional em segundos
+              Transforme arquivos XML Promob em planos de corte Excel com formatação profissional em segundos
             </p>
             
             {/* Créditos do usuário */}
@@ -45,7 +46,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
           </main>
           
           <footer className="mt-auto pt-16 text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} XML para Excel Conversor. Todos os direitos reservados.</p>
+            <p>© {new Date().getFullYear()} Arquivo XML Promob para Plano de corte Excel. Todos os direitos reservados.</p>
           </footer>
         </div>
       </div>
