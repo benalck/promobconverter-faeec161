@@ -20,6 +20,7 @@ import { useNavigate, Link } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { supabase } from "@/integrations/supabase/client";
 import StripeCheckoutButton from "./StripeCheckoutButton";
+import { useTrackConversion } from "@/hooks/useTrackConversion";
 
 interface ConverterFormProps {
   className?: string;
@@ -32,6 +33,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const { toast } = useToast();
   const { user, refreshUserCredits } = useAuth();
   const navigate = useNavigate();
+  const { trackConversion } = useTrackConversion();
 
   if (user?.isBanned) {
     return <BannedMessage />;
@@ -73,6 +75,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
 
     setIsConverting(true);
+    const startTime = performance.now();
 
     try {
       const reader = new FileReader();
@@ -109,6 +112,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           } else {
             await refreshUserCredits();
             
+            // Rastrear conversão bem-sucedida
+            const endTime = performance.now();
+            await trackConversion({
+              success: true,
+              fileSize: xmlFile.size,
+              conversionTime: Math.round(endTime - startTime),
+              inputFormat: 'XML',
+              outputFormat: 'XLS'
+            });
+            
             toast({
               title: "Conversão concluída",
               description: `Seu arquivo foi convertido com sucesso. Você utilizou 1 crédito e agora possui ${user.credits - 1} créditos.`,
@@ -117,6 +130,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           }
         } catch (error) {
           console.error("Error converting file:", error);
+          
+          // Rastrear conversão com erro
+          const endTime = performance.now();
+          await trackConversion({
+            success: false,
+            fileSize: xmlFile.size,
+            conversionTime: Math.round(endTime - startTime),
+            errorMessage: error instanceof Error ? error.message : 'Erro desconhecido',
+            inputFormat: 'XML',
+            outputFormat: 'XLS'
+          });
+          
           toast({
             title: "Erro na conversão",
             description: "Ocorreu um erro ao converter o arquivo XML.",
@@ -129,6 +154,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
       reader.onerror = () => {
         setIsConverting(false);
+        
+        // Rastrear erro de leitura
+        const endTime = performance.now();
+        trackConversion({
+          success: false,
+          fileSize: xmlFile.size,
+          conversionTime: Math.round(endTime - startTime),
+          errorMessage: 'Erro na leitura do arquivo',
+          inputFormat: 'XML',
+          outputFormat: 'XLS'
+        });
+        
         toast({
           title: "Erro na leitura",
           description: "Não foi possível ler o arquivo XML.",
@@ -140,6 +177,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     } catch (error) {
       console.error("Error in handleConvert:", error);
       setIsConverting(false);
+      
+      // Rastrear erro inesperado
+      const endTime = performance.now();
+      trackConversion({
+        success: false,
+        fileSize: xmlFile.size,
+        conversionTime: Math.round(endTime - startTime),
+        errorMessage: error instanceof Error ? error.message : 'Erro inesperado',
+        inputFormat: 'XML',
+        outputFormat: 'XLS'
+      });
+      
       toast({
         title: "Erro inesperado",
         description: "Ocorreu um erro inesperado. Tente novamente mais tarde.",

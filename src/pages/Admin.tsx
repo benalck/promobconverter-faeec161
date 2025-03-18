@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSystemMetrics } from "@/hooks/useSystemMetrics";
+import { useUserMetrics } from "@/hooks/useUserMetrics";
 import {
   Table,
   TableBody,
@@ -33,7 +35,13 @@ import {
   Ban, 
   Check,
   Search,
-  Coins
+  Coins,
+  LineChart,
+  Users,
+  FileText,
+  AlertCircle,
+  Clock,
+  Activity
 } from "lucide-react";
 import {
   Card,
@@ -49,7 +57,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ConversionMetricsChart from "@/components/admin/ConversionMetricsChart";
 import { User } from "@/contexts/auth/types";
+import { supabase } from "@/lib/supabase";
 
 export default function Admin() {
   const { users, deleteUser, isAdmin: isCurrentUserAdmin, user: currentUser, updateUser, register } = useAuth();
@@ -61,6 +71,7 @@ export default function Admin() {
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [timeFilter, setTimeFilter] = useState("today");
   
   // Estados para cadastro de novo usuário
   const [newUserName, setNewUserName] = useState("");
@@ -71,6 +82,175 @@ export default function Admin() {
   
   // Estados para alterar créditos
   const [creditsToAdd, setCreditsToAdd] = useState("0");
+
+  // Buscar métricas do sistema
+  const {
+    metrics: systemMetrics,
+    dailyStats,
+    isLoading: isLoadingSystem,
+    error: systemError
+  } = useSystemMetrics(timeFilter);
+
+  // Buscar métricas dos usuários
+  const {
+    metrics: userMetrics,
+    isLoading: isLoadingUsers,
+    error: userError
+  } = useUserMetrics(users.map(u => u.id), timeFilter);
+
+  // Filtrar usuários
+  const filteredUsers = users.filter((user) =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatDate = (date: string) => {
+    return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: ptBR });
+  };
+
+  // Funções de gerenciamento de usuários
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      await deleteUser(selectedUser);
+      toast({
+        title: "Usuário excluído",
+        description: "O usuário foi excluído com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Erro ao excluir usuário",
+        description: "Ocorreu um erro ao excluir o usuário.",
+        variant: "destructive",
+      });
+    }
+
+    setShowDeleteDialog(false);
+  };
+
+  const handleBanUser = async () => {
+    if (!selectedUser) return;
+
+    const user = users.find((u) => u.id === selectedUser);
+    if (!user) return;
+
+    try {
+      await updateUser(selectedUser, { isBanned: !user.isBanned });
+      toast({
+        title: user.isBanned ? "Usuário desbanido" : "Usuário banido",
+        description: user.isBanned
+          ? "O usuário foi desbanido com sucesso."
+          : "O usuário foi banido com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error banning user:", error);
+      toast({
+        title: "Erro ao alterar status do usuário",
+        description: "Ocorreu um erro ao alterar o status do usuário.",
+        variant: "destructive",
+      });
+    }
+
+    setShowBanDialog(false);
+  };
+
+  const handleChangeRole = async () => {
+    if (!selectedUser) return;
+
+    const user = users.find((u) => u.id === selectedUser);
+    if (!user) return;
+
+    try {
+      await updateUser(selectedUser, {
+        role: user.role === "admin" ? "user" : "admin",
+      });
+      toast({
+        title: "Função alterada",
+        description: `O usuário agora é ${
+          user.role === "admin" ? "usuário comum" : "administrador"
+        }.`,
+      });
+    } catch (error) {
+      console.error("Error changing role:", error);
+      toast({
+        title: "Erro ao alterar função",
+        description: "Ocorreu um erro ao alterar a função do usuário.",
+        variant: "destructive",
+      });
+    }
+
+    setShowRoleDialog(false);
+  };
+
+  const handleUpdateCredits = async () => {
+    if (!selectedUser) return;
+
+    const user = users.find((u) => u.id === selectedUser);
+    if (!user) return;
+
+    const credits = parseInt(creditsToAdd);
+    if (isNaN(credits)) {
+      toast({
+        title: "Valor inválido",
+        description: "Por favor, insira um número válido de créditos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await updateUser(selectedUser, {
+        credits: user.credits + credits,
+      });
+      toast({
+        title: "Créditos atualizados",
+        description: `Os créditos do usuário foram atualizados com sucesso.`,
+      });
+    } catch (error) {
+      console.error("Error updating credits:", error);
+      toast({
+        title: "Erro ao atualizar créditos",
+        description: "Ocorreu um erro ao atualizar os créditos do usuário.",
+        variant: "destructive",
+      });
+    }
+
+    setShowCreditsDialog(false);
+  };
+
+  const handleAddUser = async () => {
+    try {
+      await register({
+        name: newUserName,
+        email: newUserEmail,
+        password: newUserPassword,
+        credits: parseInt(newUserCredits),
+        role: isNewUserAdmin ? "admin" : "user",
+      });
+
+      toast({
+        title: "Usuário adicionado",
+        description: "O novo usuário foi adicionado com sucesso.",
+      });
+
+      setNewUserName("");
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserCredits("5");
+      setIsNewUserAdmin(false);
+    } catch (error) {
+      console.error("Error adding user:", error);
+      toast({
+        title: "Erro ao adicionar usuário",
+        description: "Ocorreu um erro ao adicionar o novo usuário.",
+        variant: "destructive",
+      });
+    }
+
+    setShowAddUserDialog(false);
+  };
 
   if (!isCurrentUserAdmin) {
     return (
@@ -89,382 +269,294 @@ export default function Admin() {
     );
   }
 
-  const handleDeleteUser = async (id: string) => {
-    try {
-      deleteUser(id);
-      toast({
-        title: "Usuário excluído",
-        description: "O usuário foi excluído com sucesso.",
-      });
-      setShowDeleteDialog(false);
-    } catch (error) {
-      toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir o usuário.",
-        variant: "destructive",
-      });
-    }
-  };
+  if (isLoadingSystem || isLoadingUsers) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto py-8">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <span className="ml-3">Carregando métricas...</span>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
-  const handleBanUser = async (id: string, isBanned: boolean) => {
-    try {
-      updateUser(id, { isBanned });
-      toast({
-        title: isBanned ? "Usuário banido" : "Usuário desbanido",
-        description: isBanned 
-          ? "O usuário foi banido com sucesso." 
-          : "O usuário foi desbanido com sucesso.",
-      });
-      setShowBanDialog(false);
-    } catch (error) {
-      toast({
-        title: "Erro ao processar",
-        description: "Não foi possível processar a operação.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleChangeRole = async (id: string, role: 'admin' | 'user') => {
-    try {
-      updateUser(id, { role });
-      toast({
-        title: "Função atualizada",
-        description: `O usuário agora é um ${role === 'admin' ? 'Administrador' : 'Usuário comum'}.`,
-      });
-      setShowRoleDialog(false);
-    } catch (error) {
-      toast({
-        title: "Erro ao atualizar",
-        description: "Não foi possível atualizar a função do usuário.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateCredits = async (id: string) => {
-    try {
-      const user = users.find(u => u.id === id);
-      if (!user) return;
-      
-      const currentCredits = user.credits || 0;
-      const addedCredits = parseInt(creditsToAdd);
-      const newCredits = currentCredits + addedCredits;
-      
-      updateUser(id, { credits: newCredits });
-      toast({
-        title: "Créditos atualizados",
-        description: `Foram adicionados ${addedCredits} créditos para o usuário.`,
-      });
-      setShowCreditsDialog(false);
-    } catch (error) {
-      toast({
-        title: "Erro ao atualizar",
-        description: "Não foi possível atualizar os créditos.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAddUser = async () => {
-    if (!newUserName || !newUserEmail || !newUserPassword) {
-      toast({
-        title: "Dados incompletos",
-        description: "Preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      await register(newUserName, newUserEmail, newUserPassword);
-      
-      // Aguardar um momento para o usuário ser registrado
-      setTimeout(() => {
-        const newUser = users.find(u => u.email === newUserEmail);
-        if (newUser) {
-          // Atualizar créditos e função se necessário
-          const updates: Partial<User> = {};
-          
-          if (newUserCredits) {
-            updates.credits = parseInt(newUserCredits);
-          }
-          
-          if (isNewUserAdmin) {
-            updates.role = 'admin';
-          }
-          
-          if (Object.keys(updates).length > 0) {
-            updateUser(newUser.id, updates);
-          }
-        }
-      }, 1000);
-      
-      toast({
-        title: "Usuário criado",
-        description: "O novo usuário foi criado com sucesso.",
-      });
-      
-      // Limpar formulário
-      setNewUserName("");
-      setNewUserEmail("");
-      setNewUserPassword("");
-      setNewUserCredits("5");
-      setIsNewUserAdmin(false);
-      
-      setShowAddUserDialog(false);
-    } catch (error: any) {
-      toast({
-        title: "Erro ao criar usuário",
-        description: error.message || "Não foi possível criar o usuário.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", {
-      locale: ptBR,
-    });
-  };
-
-  const filteredUsers = users.filter(user => 
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  if (systemError || userError) {
+    return (
+      <AppLayout>
+        <div className="container mx-auto py-8">
+          <div className="flex items-center justify-center text-red-500">
+            <AlertCircle className="h-6 w-6 mr-2" />
+            <span>Erro ao carregar métricas. Por favor, tente novamente.</span>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
       <div className="container mx-auto py-8">
         <div className="grid grid-cols-1 gap-6">
-          {/* Cabeçalho e estatísticas */}
+          {/* Cabeçalho e Filtros */}
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">Painel do Administrador</CardTitle>
               <CardDescription>
-                Gerencie os usuários e recursos do sistema
+                Monitore e gerencie o sistema
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <h3 className="text-lg font-medium">Total de Usuários</h3>
-                  <p className="text-3xl font-bold">{users.length}</p>
-                </div>
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <h3 className="text-lg font-medium">Usuários Ativos</h3>
-                  <p className="text-3xl font-bold">{users.filter(u => !u.isBanned).length}</p>
-                </div>
-                <div className="bg-white rounded-lg p-4 border shadow-sm">
-                  <h3 className="text-lg font-medium">Administradores</h3>
-                  <p className="text-3xl font-bold">{users.filter(u => u.role === 'admin').length}</p>
-                </div>
+              <div className="flex justify-between items-center mb-4">
+                <Select value={timeFilter} onValueChange={setTimeFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="week">Última Semana</SelectItem>
+                    <SelectItem value="month">Último Mês</SelectItem>
+                    <SelectItem value="all">Todo Período</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
 
-          {/* Gerenciamento de usuários */}
+          {/* Métricas do Sistema */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Usuários Ativos
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{systemMetrics.activeUsers}</div>
+                <p className="text-xs text-muted-foreground">
+                  de {systemMetrics.totalUsers} usuários totais
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Taxa de Sucesso
+                </CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {systemMetrics.successRate.toFixed(1)}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  em {systemMetrics.totalConversions} conversões
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Tempo Médio
+                </CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {(systemMetrics.averageResponseTime / 1000).toFixed(2)}s
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  por conversão
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Gráficos de Métricas */}
+          <ConversionMetricsChart data={dailyStats} timeFilter={timeFilter} />
+
+          {/* Lista de Usuários */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gerenciamento de Usuários</CardTitle>
-                <CardDescription>
-                  Adicione, edite ou remova usuários do sistema
-                </CardDescription>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Usuários do Sistema</CardTitle>
+                <Button onClick={() => setShowAddUserDialog(true)}>
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Novo Usuário
+                </Button>
               </div>
-              <Button 
-                onClick={() => setShowAddUserDialog(true)}
-                className="flex items-center gap-2"
-              >
-                <PlusCircle className="h-4 w-4" />
-                Novo Usuário
-              </Button>
+              <div className="flex items-center space-x-2 mt-4">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar usuários..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="relative w-full">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Pesquisar por nome ou email..."
-                    className="pl-8"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Créditos</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Criado em</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user) => (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Função</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Conversões</TableHead>
+                    <TableHead>Taxa de Sucesso</TableHead>
+                    <TableHead>Última Conversão</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => {
+                    const metrics = userMetrics[user.id] || {
+                      totalConversions: 0,
+                      successfulConversions: 0,
+                      failedConversions: 0,
+                      averageConversionTime: 0,
+                      lastConversion: '-'
+                    };
+                    
+                    return (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell>{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              user.role === "admin"
-                                ? "bg-purple-100 text-purple-800"
-                                : "bg-blue-100 text-blue-800"
-                            }`}
-                          >
-                            {user.role === "admin" ? "Administrador" : "Usuário"}
-                          </span>
+                          {user.role === "admin" ? "Administrador" : "Usuário"}
                         </TableCell>
                         <TableCell>
-                          <span className="inline-flex items-center gap-1">
-                            <Coins className="h-3 w-3" />
-                            {user.credits || 0}
-                          </span>
+                          {user.isBanned ? (
+                            <span className="text-red-500">Banido</span>
+                          ) : (
+                            <span className="text-green-500">Ativo</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{metrics.totalConversions}</TableCell>
+                        <TableCell>
+                          {metrics.totalConversions > 0
+                            ? ((metrics.successfulConversions / metrics.totalConversions) * 100).toFixed(1)
+                            : 0}%
                         </TableCell>
                         <TableCell>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              user.isBanned
-                                ? "bg-red-100 text-red-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {user.isBanned ? "Banido" : "Ativo"}
-                          </span>
+                          {metrics.lastConversion !== '-'
+                            ? formatDate(metrics.lastConversion)
+                            : 'Nunca converteu'}
                         </TableCell>
-                        <TableCell>{formatDate(user.createdAt)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {/* Botão de Banir/Desbanir */}
+                        <TableCell>
+                          <div className="flex space-x-2">
                             <Button
                               variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedUser(user.id);
-                                setShowBanDialog(true);
-                              }}
-                              title={user.isBanned ? "Desbanir usuário" : "Banir usuário"}
-                              className={user.isBanned ? "text-green-600" : "text-red-600"}
-                            >
-                              {user.isBanned ? <Check className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                            </Button>
-                            
-                            {/* Botão de Alterar Função */}
-                            <Button
-                              variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => {
                                 setSelectedUser(user.id);
                                 setShowRoleDialog(true);
                               }}
-                              title={user.role === 'admin' ? "Remover privilégios admin" : "Tornar administrador"}
                             >
-                              {user.role === 'admin' ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                              {user.role === "admin" ? (
+                                <Shield className="h-4 w-4" />
+                              ) : (
+                                <ShieldOff className="h-4 w-4" />
+                              )}
                             </Button>
-                            
-                            {/* Botão de Adicionar Créditos */}
                             <Button
                               variant="outline"
-                              size="sm"
+                              size="icon"
                               onClick={() => {
                                 setSelectedUser(user.id);
-                                setCreditsToAdd("0");
+                                setShowBanDialog(true);
+                              }}
+                            >
+                              {user.isBanned ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <Ban className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedUser(user.id);
                                 setShowCreditsDialog(true);
                               }}
-                              title="Gerenciar créditos"
                             >
                               <Coins className="h-4 w-4" />
                             </Button>
-
-                            {/* Botão de Excluir */}
-                            {user.id !== currentUser?.id && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedUser(user.id);
-                                  setShowDeleteDialog(true);
-                                }}
-                                title="Excluir usuário"
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedUser(user.id);
+                                setShowDeleteDialog(true);
+                              }}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </div>
 
-        {/* Dialog de Exclusão */}
+        {/* Diálogo de Excluir Usuário */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirmar exclusão</DialogTitle>
+              <DialogTitle>Excluir Usuário</DialogTitle>
               <DialogDescription>
-                Tem certeza que deseja excluir este usuário? Esta ação não pode ser
-                desfeita.
+                Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteDialog(false)}
-              >
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
                 Cancelar
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => selectedUser && handleDeleteUser(selectedUser)}
-              >
+              <Button variant="destructive" onClick={handleDeleteUser}>
                 Excluir
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de Banir/Desbanir */}
+        {/* Diálogo de Banir Usuário */}
         <Dialog open={showBanDialog} onOpenChange={setShowBanDialog}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {selectedUser && users.find(u => u.id === selectedUser)?.isBanned
-                  ? "Desbanir usuário"
-                  : "Banir usuário"}
+                {users.find((u) => u.id === selectedUser)?.isBanned
+                  ? "Desbanir Usuário"
+                  : "Banir Usuário"}
               </DialogTitle>
               <DialogDescription>
-                {selectedUser && users.find(u => u.id === selectedUser)?.isBanned
-                  ? "Tem certeza que deseja desbanir este usuário? Ele poderá acessar o sistema normalmente."
-                  : "Tem certeza que deseja banir este usuário? Ele não poderá acessar o sistema até ser desbanido."}
+                {users.find((u) => u.id === selectedUser)?.isBanned
+                  ? "Tem certeza que deseja desbanir este usuário?"
+                  : "Tem certeza que deseja banir este usuário?"}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowBanDialog(false)}
-              >
+              <Button variant="outline" onClick={() => setShowBanDialog(false)}>
                 Cancelar
               </Button>
               <Button
-                variant={selectedUser && users.find(u => u.id === selectedUser)?.isBanned ? "default" : "destructive"}
-                onClick={() => selectedUser && handleBanUser(
-                  selectedUser, 
-                  !(users.find(u => u.id === selectedUser)?.isBanned)
-                )}
+                variant={
+                  users.find((u) => u.id === selectedUser)?.isBanned
+                    ? "default"
+                    : "destructive"
+                }
+                onClick={handleBanUser}
               >
-                {selectedUser && users.find(u => u.id === selectedUser)?.isBanned
+                {users.find((u) => u.id === selectedUser)?.isBanned
                   ? "Desbanir"
                   : "Banir"}
               </Button>
@@ -472,175 +564,137 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de Alterar Função */}
+        {/* Diálogo de Alterar Função */}
         <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Alterar função do usuário</DialogTitle>
+              <DialogTitle>Alterar Função</DialogTitle>
               <DialogDescription>
-                {selectedUser && users.find(u => u.id === selectedUser)?.role === 'admin'
+                {users.find((u) => u.id === selectedUser)?.role === "admin"
                   ? "Remover privilégios de administrador deste usuário?"
-                  : "Conceder privilégios de administrador para este usuário?"}
+                  : "Tornar este usuário um administrador?"}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowRoleDialog(false)}
-              >
+              <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
                 Cancelar
               </Button>
-              <Button
-                variant="default"
-                onClick={() => selectedUser && handleChangeRole(
-                  selectedUser, 
-                  users.find(u => u.id === selectedUser)?.role === 'admin' ? 'user' : 'admin'
-                )}
-              >
-                {selectedUser && users.find(u => u.id === selectedUser)?.role === 'admin'
-                  ? "Remover privilégios"
-                  : "Conceder privilégios"}
-              </Button>
+              <Button onClick={handleChangeRole}>Confirmar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de Gerenciar Créditos */}
+        {/* Diálogo de Alterar Créditos */}
         <Dialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Gerenciar créditos</DialogTitle>
+              <DialogTitle>Alterar Créditos</DialogTitle>
               <DialogDescription>
-                Adicione créditos para o usuário selecionado.
+                Adicione ou remova créditos do usuário.
+                Use números negativos para remover créditos.
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="currentCredits">Créditos atuais</Label>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="credits" className="text-right">
+                  Créditos
+                </Label>
                 <Input
-                  id="currentCredits"
-                  value={selectedUser ? users.find(u => u.id === selectedUser)?.credits || 0 : 0}
-                  disabled
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="creditsToAdd">Créditos a adicionar</Label>
-                <Input
-                  id="creditsToAdd"
+                  id="credits"
                   type="number"
                   value={creditsToAdd}
                   onChange={(e) => setCreditsToAdd(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="newTotalCredits">Novo total de créditos</Label>
-                <Input
-                  id="newTotalCredits"
-                  value={selectedUser 
-                    ? (users.find(u => u.id === selectedUser)?.credits || 0) + parseInt(creditsToAdd || "0")
-                    : 0
-                  }
-                  disabled
+                  className="col-span-3"
                 />
               </div>
             </div>
-            
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowCreditsDialog(false)}
-              >
+              <Button variant="outline" onClick={() => setShowCreditsDialog(false)}>
                 Cancelar
               </Button>
-              <Button
-                variant="default"
-                onClick={() => selectedUser && handleUpdateCredits(selectedUser)}
-              >
-                Atualizar créditos
-              </Button>
+              <Button onClick={handleUpdateCredits}>Confirmar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de Adicionar Usuário */}
+        {/* Diálogo de Adicionar Usuário */}
         <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Adicionar novo usuário</DialogTitle>
+              <DialogTitle>Adicionar Novo Usuário</DialogTitle>
               <DialogDescription>
-                Preencha os campos abaixo para criar um novo usuário.
+                Preencha os dados do novo usuário.
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome *</Label>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Nome
+                </Label>
                 <Input
                   id="name"
                   value={newUserName}
                   onChange={(e) => setNewUserName(e.target.value)}
-                  placeholder="Nome completo"
+                  className="col-span-3"
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail *</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
+                  className="col-span-3"
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha *</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="password" className="text-right">
+                  Senha
+                </Label>
                 <Input
                   id="password"
                   type="password"
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
-                  placeholder="Senha segura"
+                  className="col-span-3"
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="credits">Créditos iniciais</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="credits" className="text-right">
+                  Créditos
+                </Label>
                 <Input
                   id="credits"
                   type="number"
                   value={newUserCredits}
                   onChange={(e) => setNewUserCredits(e.target.value)}
+                  className="col-span-3"
                 />
               </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="admin"
-                  checked={isNewUserAdmin}
-                  onCheckedChange={setIsNewUserAdmin}
-                />
-                <Label htmlFor="admin">Usuário administrador</Label>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="isAdmin" className="text-right">
+                  Administrador
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isAdmin"
+                    checked={isNewUserAdmin}
+                    onCheckedChange={setIsNewUserAdmin}
+                  />
+                  <Label htmlFor="isAdmin">
+                    {isNewUserAdmin ? "Sim" : "Não"}
+                  </Label>
+                </div>
               </div>
             </div>
-            
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowAddUserDialog(false)}
-              >
+              <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>
                 Cancelar
               </Button>
-              <Button
-                variant="default"
-                onClick={handleAddUser}
-              >
-                Criar usuário
-              </Button>
+              <Button onClick={handleAddUser}>Adicionar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
