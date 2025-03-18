@@ -52,7 +52,7 @@ const LoadingAnimation = () => {
       </div>
       
       {/* Keyframes para efeito de queda da serragem */}
-      <style jsx>{`
+      <style>{`
         @keyframes fall {
           from {
             transform: translateY(-10px);
