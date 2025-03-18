@@ -1,3 +1,4 @@
+
 import React from "react";
 import { cn } from "@/lib/utils";
 import Navbar from "./Navbar";
@@ -10,7 +11,7 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-background/80 overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-amber-50 to-white overflow-hidden">
       {/* Navbar fixo no topo */}
       <div className="w-full sticky top-0 z-50">
         <Navbar />
@@ -18,8 +19,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
       
       {/* Elementos de fundo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-primary/5 rounded-full blur-[120px] -translate-y-1/2"></div>
-        <div className="absolute bottom-0 right-1/4 w-1/2 h-1/2 bg-primary/5 rounded-full blur-[120px] translate-y-1/2"></div>
+        <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-amber-200/20 rounded-full blur-[120px] -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-1/4 w-1/2 h-1/2 bg-amber-500/10 rounded-full blur-[120px] translate-y-1/2"></div>
       </div>
       
       {/* Container principal centralizado */}
@@ -27,11 +28,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
         {/* Conteúdo principal */}
         <div className="w-full max-w-4xl mx-auto relative z-10 animate-fade-in">
           <header className="text-center mb-8 md:mb-12">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight animate-slide-down">
-              XML para Excel
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight animate-slide-down text-amber-900">
+              Móveis Planejados
             </h1>
             <p className="mt-2 text-muted-foreground max-w-lg mx-auto animate-slide-up">
-              Transforme arquivos XML em planilhas Excel com formatação profissional em segundos
+              Transforme seus espaços com móveis sob medida criados por nossos mestres marceneiros
             </p>
             
             {/* Créditos do usuário */}
@@ -45,7 +46,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
           </main>
           
           <footer className="mt-auto pt-16 text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} XML para Excel Conversor. Todos os direitos reservados.</p>
+            <p>© {new Date().getFullYear()} Marcenaria Móveis Planejados. Todos os direitos reservados.</p>
           </footer>
         </div>
       </div>
