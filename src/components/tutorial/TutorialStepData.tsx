@@ -7,7 +7,7 @@ import {
   PencilRuler, 
   CheckCircle, 
   Armchair,
-  TableLamp
+  Palette
 } from "lucide-react";
 
 export interface TutorialStepType {
@@ -34,7 +34,7 @@ export const getTutorialSteps = (): TutorialStepType[] => {
     {
       title: "Escolha os materiais",
       description: "Selecione entre diversos tipos de madeira, acabamentos e acessórios para seus móveis.",
-      icon: <TableLamp className="h-8 w-8" />,
+      icon: <Palette className="h-8 w-8" />,
       color: "bg-brown-100 text-amber-800"
     },
     {
