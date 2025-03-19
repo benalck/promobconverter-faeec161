@@ -57,8 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User } from "@/contexts/auth/types";
-import { supabase } from "@/integrations/supabase/client";
+import ConversionMetricsChart from "@/components/admin/ConversionMetricsChart";
 
 export default function Admin() {
   const { users, deleteUser, isAdmin: isCurrentUserAdmin, user: currentUser, updateUser, register } = useAuth();
@@ -94,8 +93,8 @@ export default function Admin() {
   } = useUserMetrics(users.map(u => u.id), timeFilter);
 
   const filteredUsers = users.filter((user) =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatDate = (date: string) => {
@@ -686,4 +685,3 @@ export default function Admin() {
     </AppLayout>
   );
 }
-

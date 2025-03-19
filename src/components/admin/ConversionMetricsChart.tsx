@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface DailyStats {
@@ -45,7 +45,7 @@ const ConversionMetricsChart: React.FC<ConversionMetricsChartProps> = ({ data, t
   const processedData = data.map(item => ({
     ...item,
     date: formatDate(item.date),
-    averageTimeSeconds: item.averageTime / 1000 // Converter de ms para segundos
+    averageTimeSeconds: item.averageTime / 1000 // Convert from ms to seconds
   }));
 
   return (

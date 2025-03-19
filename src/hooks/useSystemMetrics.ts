@@ -65,7 +65,7 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
 
       const { startDate, endDate } = getDateRange();
 
-      // Buscar métricas do sistema
+      // Fetch system metrics
       const { data: metricsData, error: metricsError } = await supabase.rpc(
         'get_system_metrics',
         {
@@ -76,7 +76,7 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
 
       if (metricsError) throw metricsError;
 
-      // Buscar estatísticas diárias
+      // Fetch daily statistics
       const { data: statsData, error: statsError } = await supabase.rpc(
         'get_daily_conversion_stats',
         {

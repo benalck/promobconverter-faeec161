@@ -51,7 +51,7 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
       const { startDate, endDate } = getDateRange();
       const metricsData: Record<string, UserMetrics> = {};
 
-      // Buscar métricas para cada usuário
+      // Fetch metrics for each user
       await Promise.all(
         userIds.map(async (userId) => {
           const { data, error } = await supabase.rpc('get_user_metrics', {
