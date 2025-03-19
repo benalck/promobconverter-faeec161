@@ -58,17 +58,18 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
             p_user_id: userId,
             p_start_date: startDate?.toISOString() || null,
             p_end_date: endDate?.toISOString() || null
-          });
+          } as Record<string, any>);
 
           if (error) throw error;
 
-          if (data && data.length > 0) {
+          if (data && Array.isArray(data) && data.length > 0) {
+            const userData = data[0] as any;
             metricsData[userId] = {
-              totalConversions: data[0].total_conversions || 0,
-              successfulConversions: data[0].successful_conversions || 0,
-              failedConversions: data[0].failed_conversions || 0,
-              averageConversionTime: data[0].average_conversion_time || 0,
-              lastConversion: data[0].last_conversion || '-'
+              totalConversions: userData.total_conversions || 0,
+              successfulConversions: userData.successful_conversions || 0,
+              failedConversions: userData.failed_conversions || 0,
+              averageConversionTime: userData.average_conversion_time || 0,
+              lastConversion: userData.last_conversion || '-'
             };
           } else {
             // Default metrics if no data found
@@ -85,8 +86,8 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
 
       setMetrics(metricsData);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Erro ao buscar métricas dos usuários'));
-      console.error('Erro ao buscar métricas dos usuários:', err);
+      setError(err instanceof Error ? err : new Error('Error fetching user metrics'));
+      console.error('Error fetching user metrics:', err);
     } finally {
       setIsLoading(false);
     }

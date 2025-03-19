@@ -34,15 +34,15 @@ export function useTrackConversion() {
         p_error_message: errorMessage || null,
         p_input_format: inputFormat,
         p_output_format: outputFormat
-      });
+      } as Record<string, any>);
 
       if (error) {
-        console.error('Erro ao rastrear conversão:', error);
+        console.error('Error tracking conversion:', error);
       }
 
       return data;
     } catch (error) {
-      console.error('Erro ao rastrear conversão:', error);
+      console.error('Error tracking conversion:', error);
     }
   }, [user]);
 

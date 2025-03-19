@@ -71,7 +71,7 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
         {
           p_start_date: startDate?.toISOString() || null,
           p_end_date: endDate?.toISOString() || null
-        }
+        } as Record<string, any>
       );
 
       if (metricsError) throw metricsError;
@@ -82,18 +82,18 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
         {
           p_start_date: startDate?.toISOString() || null,
           p_end_date: endDate?.toISOString() || null
-        }
+        } as Record<string, any>
       );
 
       if (statsError) throw statsError;
 
-      if (metricsData && metricsData.length > 0) {
-        setMetrics(metricsData[0]);
+      if (metricsData && Array.isArray(metricsData) && metricsData.length > 0) {
+        setMetrics(metricsData[0] as unknown as SystemMetrics);
       }
-      setDailyStats(statsData || []);
+      setDailyStats((statsData || []) as DailyStats[]);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Erro ao buscar métricas'));
-      console.error('Erro ao buscar métricas:', err);
+      setError(err instanceof Error ? err : new Error('Error fetching metrics'));
+      console.error('Error fetching metrics:', err);
     } finally {
       setIsLoading(false);
     }
