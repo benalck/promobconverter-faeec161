@@ -26,7 +26,7 @@ export function useTrackConversion() {
     if (!user) return;
 
     try {
-      // Define parameters with proper type
+      // Define parameters with proper type for RPC
       const params: Record<string, any> = {
         p_user_id: user.id,
         p_success: success,

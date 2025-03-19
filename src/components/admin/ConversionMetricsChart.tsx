@@ -57,7 +57,11 @@ export default function ConversionMetricsChart({ data, timeFilter }: ConversionM
               <YAxis yAxisId="right" orientation="right" domain={[0, 100]} />
               <Tooltip formatter={(value, name) => {
                 if (name === 'Taxa de Sucesso') return [`${value}%`, name];
-                if (name === 'Tempo Médio (s)') return [`${value.toFixed(2)}s`, name];
+                if (name === 'Tempo Médio (s)') {
+                  // Safely convert the value to number before using toFixed
+                  const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+                  return [`${isNaN(numValue) ? '0.00' : numValue.toFixed(2)}s`, name];
+                }
                 return [value, name];
               }} />
               <Legend />

@@ -54,7 +54,7 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
       // Fetch metrics for each user
       await Promise.all(
         userIds.map(async (userId) => {
-          // Define parameters with proper type
+          // Define parameters with proper type for RPC
           const params: Record<string, any> = {
             p_user_id: userId,
             p_start_date: startDate?.toISOString() || null,
@@ -65,6 +65,7 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
 
           if (error) throw error;
 
+          // Safely handle the data
           if (data && Array.isArray(data) && data.length > 0) {
             const userData = data[0] as any;
             metricsData[userId] = {

@@ -80,7 +80,11 @@ export default function Register() {
 
       try {
         setIsLoading(true);
-        await register(name, email, password);
+        await register({
+          name,
+          email,
+          password
+        });
         toast({
           title: "Conta criada com sucesso!",
           description: "Seu cadastro foi realizado. Bem-vindo à nossa aplicação.",

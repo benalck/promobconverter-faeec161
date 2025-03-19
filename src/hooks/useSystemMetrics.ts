@@ -65,13 +65,13 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
 
       const { startDate, endDate } = getDateRange();
       
-      // Define parameters and their proper type
+      // Define parameters with proper typing for RPC
       const params: Record<string, any> = {
         p_start_date: startDate?.toISOString() || null,
         p_end_date: endDate?.toISOString() || null
       };
 
-      // Fetch system metrics
+      // Fetch system metrics with explicit type for data
       const { data: metricsData, error: metricsError } = await supabase.rpc(
         'get_system_metrics',
         params
@@ -79,7 +79,7 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
 
       if (metricsError) throw metricsError;
 
-      // Fetch daily statistics
+      // Fetch daily statistics with explicit type for data
       const { data: statsData, error: statsError } = await supabase.rpc(
         'get_daily_conversion_stats',
         params
@@ -87,11 +87,17 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
 
       if (statsError) throw statsError;
 
+      // Safely handle metricsData
       if (metricsData && Array.isArray(metricsData) && metricsData.length > 0) {
         setMetrics(metricsData[0] as SystemMetrics);
       }
       
-      setDailyStats(Array.isArray(statsData) ? (statsData as DailyStats[]) : []);
+      // Safely handle statsData
+      if (statsData && Array.isArray(statsData)) {
+        setDailyStats(statsData as DailyStats[]);
+      } else {
+        setDailyStats([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Error fetching metrics'));
       console.error('Error fetching metrics:', err);
