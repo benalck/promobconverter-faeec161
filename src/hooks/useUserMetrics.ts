@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserMetrics {
   totalConversions: number;
@@ -94,4 +95,4 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
     error,
     refetch: fetchMetrics
   };
-} 
+}

@@ -1,6 +1,7 @@
+
 import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TrackConversionParams {
   success: boolean;
@@ -46,4 +47,4 @@ export function useTrackConversion() {
   }, [user]);
 
   return { trackConversion };
-} 
+}

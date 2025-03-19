@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SystemMetrics {
   totalUsers: number;
@@ -107,4 +108,4 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
     error,
     refetch: fetchMetrics
   };
-} 
+}
