@@ -27,7 +27,7 @@ export function useTrackConversion() {
 
     try {
       // Define parameters with proper type for RPC
-      const params: Record<string, any> = {
+      const params = {
         p_user_id: user.id,
         p_success: success,
         p_file_size: fileSize,

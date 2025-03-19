@@ -66,7 +66,7 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
       const { startDate, endDate } = getDateRange();
       
       // Define parameters with proper typing for RPC
-      const params: Record<string, any> = {
+      const params = {
         p_start_date: startDate?.toISOString() || null,
         p_end_date: endDate?.toISOString() || null
       };
