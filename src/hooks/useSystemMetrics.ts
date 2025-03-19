@@ -75,7 +75,7 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
       const { data: metricsData, error: metricsError } = await supabase.rpc(
         'get_system_metrics',
         params
-      );
+      ) as { data: any, error: any };
 
       if (metricsError) throw metricsError;
 
@@ -83,7 +83,7 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
       const { data: statsData, error: statsError } = await supabase.rpc(
         'get_daily_conversion_stats',
         params
-      );
+      ) as { data: any, error: any };
 
       if (statsError) throw statsError;
 
