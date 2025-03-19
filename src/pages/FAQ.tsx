@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, RefreshCcw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const FAQ: React.FC = () => {
   const { user, setUser } = useAuth();
@@ -180,4 +180,4 @@ const FAQ: React.FC = () => {
   );
 };
 
-export default FAQ; 
+export default FAQ;

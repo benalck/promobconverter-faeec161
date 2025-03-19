@@ -31,7 +31,7 @@ export function useTrackConversion() {
         p_success: success,
         p_file_size: fileSize,
         p_conversion_time: conversionTime,
-        p_error_message: errorMessage,
+        p_error_message: errorMessage || null,
         p_input_format: inputFormat,
         p_output_format: outputFormat
       });

@@ -56,19 +56,28 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
         userIds.map(async (userId) => {
           const { data, error } = await supabase.rpc('get_user_metrics', {
             p_user_id: userId,
-            p_start_date: startDate?.toISOString(),
-            p_end_date: endDate?.toISOString()
+            p_start_date: startDate?.toISOString() || null,
+            p_end_date: endDate?.toISOString() || null
           });
 
           if (error) throw error;
 
-          if (data && data[0]) {
+          if (data && data.length > 0) {
             metricsData[userId] = {
-              totalConversions: data[0].total_conversions,
-              successfulConversions: data[0].successful_conversions,
-              failedConversions: data[0].failed_conversions,
-              averageConversionTime: data[0].average_conversion_time,
-              lastConversion: data[0].last_conversion
+              totalConversions: data[0].total_conversions || 0,
+              successfulConversions: data[0].successful_conversions || 0,
+              failedConversions: data[0].failed_conversions || 0,
+              averageConversionTime: data[0].average_conversion_time || 0,
+              lastConversion: data[0].last_conversion || '-'
+            };
+          } else {
+            // Default metrics if no data found
+            metricsData[userId] = {
+              totalConversions: 0,
+              successfulConversions: 0,
+              failedConversions: 0,
+              averageConversionTime: 0,
+              lastConversion: '-'
             };
           }
         })

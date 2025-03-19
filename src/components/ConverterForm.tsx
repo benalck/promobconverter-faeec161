@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -18,7 +19,7 @@ import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import StripeCheckoutButton from "./StripeCheckoutButton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 

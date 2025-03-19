@@ -69,8 +69,8 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
       const { data: metricsData, error: metricsError } = await supabase.rpc(
         'get_system_metrics',
         {
-          p_start_date: startDate?.toISOString(),
-          p_end_date: endDate?.toISOString()
+          p_start_date: startDate?.toISOString() || null,
+          p_end_date: endDate?.toISOString() || null
         }
       );
 
@@ -80,15 +80,17 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
       const { data: statsData, error: statsError } = await supabase.rpc(
         'get_daily_conversion_stats',
         {
-          p_start_date: startDate?.toISOString(),
-          p_end_date: endDate?.toISOString()
+          p_start_date: startDate?.toISOString() || null,
+          p_end_date: endDate?.toISOString() || null
         }
       );
 
       if (statsError) throw statsError;
 
-      setMetrics(metricsData[0]);
-      setDailyStats(statsData);
+      if (metricsData && metricsData.length > 0) {
+        setMetrics(metricsData[0]);
+      }
+      setDailyStats(statsData || []);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Erro ao buscar métricas'));
       console.error('Erro ao buscar métricas:', err);

@@ -6,16 +6,18 @@ import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
-  acceptedFileTypes: string;
-  fileType: string;
+  accept: string;
+  isDisabled?: boolean;
   className?: string;
+  fileType?: string;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
   onFileSelect,
-  acceptedFileTypes,
-  fileType,
+  accept,
+  isDisabled = false,
   className,
+  fileType = "XML",
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -70,20 +72,21 @@ const FileUpload: React.FC<FileUploadProps> = ({
           "border-2 border-dashed border-gray-300 hover:border-primary",
           dragActive ? "border-primary bg-primary/5" : "bg-gray-50/50",
           fileName ? "border-primary/50" : "",
-          className
+          isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         )}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        onClick={openFileSelector}
+        onDragEnter={!isDisabled ? handleDrag : undefined}
+        onDragLeave={!isDisabled ? handleDrag : undefined}
+        onDragOver={!isDisabled ? handleDrag : undefined}
+        onDrop={!isDisabled ? handleDrop : undefined}
+        onClick={!isDisabled ? openFileSelector : undefined}
       >
         <input
           ref={fileInputRef}
           type="file"
           className="hidden"
-          accept={acceptedFileTypes}
+          accept={accept}
           onChange={handleChange}
+          disabled={isDisabled}
         />
         
         <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center p-5 text-center">

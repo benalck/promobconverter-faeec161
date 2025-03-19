@@ -57,9 +57,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ConversionMetricsChart from "@/components/admin/ConversionMetricsChart";
 import { User } from "@/contexts/auth/types";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Admin() {
   const { users, deleteUser, isAdmin: isCurrentUserAdmin, user: currentUser, updateUser, register } = useAuth();
@@ -73,17 +72,14 @@ export default function Admin() {
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState("today");
   
-  // Estados para cadastro de novo usuário
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserCredits, setNewUserCredits] = useState("5");
   const [isNewUserAdmin, setIsNewUserAdmin] = useState(false);
   
-  // Estados para alterar créditos
   const [creditsToAdd, setCreditsToAdd] = useState("0");
 
-  // Buscar métricas do sistema
   const {
     metrics: systemMetrics,
     dailyStats,
@@ -91,14 +87,12 @@ export default function Admin() {
     error: systemError
   } = useSystemMetrics(timeFilter);
 
-  // Buscar métricas dos usuários
   const {
     metrics: userMetrics,
     isLoading: isLoadingUsers,
     error: userError
   } = useUserMetrics(users.map(u => u.id), timeFilter);
 
-  // Filtrar usuários
   const filteredUsers = users.filter((user) =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -108,7 +102,6 @@ export default function Admin() {
     return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: ptBR });
   };
 
-  // Funções de gerenciamento de usuários
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
 
@@ -299,7 +292,6 @@ export default function Admin() {
     <AppLayout>
       <div className="container mx-auto py-8">
         <div className="grid grid-cols-1 gap-6">
-          {/* Cabeçalho e Filtros */}
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">Painel do Administrador</CardTitle>
@@ -324,7 +316,6 @@ export default function Admin() {
             </CardContent>
           </Card>
 
-          {/* Métricas do Sistema */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -376,10 +367,8 @@ export default function Admin() {
             </Card>
           </div>
 
-          {/* Gráficos de Métricas */}
           <ConversionMetricsChart data={dailyStats} timeFilter={timeFilter} />
 
-          {/* Lista de Usuários */}
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -509,7 +498,6 @@ export default function Admin() {
           </Card>
         </div>
 
-        {/* Diálogo de Excluir Usuário */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
             <DialogHeader>
@@ -529,7 +517,6 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
-        {/* Diálogo de Banir Usuário */}
         <Dialog open={showBanDialog} onOpenChange={setShowBanDialog}>
           <DialogContent>
             <DialogHeader>
@@ -564,7 +551,6 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
-        {/* Diálogo de Alterar Função */}
         <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
           <DialogContent>
             <DialogHeader>
@@ -584,7 +570,6 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
-        {/* Diálogo de Alterar Créditos */}
         <Dialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog}>
           <DialogContent>
             <DialogHeader>
@@ -617,7 +602,6 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
-        {/* Diálogo de Adicionar Usuário */}
         <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
           <DialogContent>
             <DialogHeader>
@@ -702,3 +686,4 @@ export default function Admin() {
     </AppLayout>
   );
 }
+

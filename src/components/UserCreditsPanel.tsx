@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Coins, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserCreditsPanelProps {
   className?: string;
@@ -88,4 +88,4 @@ const UserCreditsPanel: React.FC<UserCreditsPanelProps> = ({ className }) => {
   );
 };
 
-export default UserCreditsPanel; 
+export default UserCreditsPanel;

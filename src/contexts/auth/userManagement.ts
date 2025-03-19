@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -124,6 +123,46 @@ export const useUserManagement = (
     }
   };
 
+  const addExtraCredits = async (userId: string, credits: number) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      
+      const currentCredits = profile?.credits || 0;
+      const newCredits = currentCredits + credits;
+      
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ credits: newCredits })
+        .eq('id', userId);
+        
+      if (updateError) throw updateError;
+      
+      // Update local state
+      if (user?.id === userId) {
+        setUser({
+          ...user,
+          credits: newCredits
+        });
+      }
+      
+      const newUsers = users.map(u => 
+        u.id === userId ? { ...u, credits: newCredits } : u
+      );
+      setUsers(newUsers);
+      
+      return newCredits;
+    } catch (error) {
+      console.error('Erro ao adicionar créditos extras:', error);
+      throw new Error('Falha ao adicionar créditos extras');
+    }
+  };
+
   const deleteUser = (id: string) => {
     if (user?.id === id) {
       throw new Error('Não é possível excluir o usuário atual');
@@ -217,6 +256,7 @@ export const useUserManagement = (
     addInitialCreditsIfNeeded,
     deleteUser,
     updateUser,
-    getAllUsers
+    getAllUsers,
+    addExtraCredits
   };
 };
