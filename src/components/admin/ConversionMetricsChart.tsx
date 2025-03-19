@@ -1,24 +1,6 @@
 
-import React from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart } from 'recharts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface DailyStats {
   date: string;
@@ -32,77 +14,60 @@ interface ConversionMetricsChartProps {
   timeFilter: string;
 }
 
-const ConversionMetricsChart: React.FC<ConversionMetricsChartProps> = ({ data, timeFilter }) => {
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return format(date, 'dd/MM', { locale: ptBR });
-    } catch {
-      return dateStr;
+export default function ConversionMetricsChart({ data, timeFilter }: ConversionMetricsChartProps) {
+  // Format the date based on the time filter
+  const formattedData = data.map(item => {
+    let formattedDate = item.date;
+    
+    // For 'month' or 'week' view, we want to show shorter date format
+    if (timeFilter === 'month' || timeFilter === 'week') {
+      const date = new Date(item.date);
+      formattedDate = `${date.getDate()}/${date.getMonth() + 1}`;
     }
-  };
-
-  const processedData = data.map(item => ({
-    ...item,
-    date: formatDate(item.date),
-    averageTimeSeconds: item.averageTime / 1000 // Convert from ms to seconds
-  }));
+    
+    // For 'today' we might want to show hours
+    if (timeFilter === 'today') {
+      const date = new Date(item.date);
+      formattedDate = `${date.getHours()}:00`;
+    }
+    
+    return {
+      ...item,
+      formattedDate,
+      // Convert milliseconds to seconds for the UI
+      averageTimeInSeconds: item.averageTime / 1000
+    };
+  });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Estatísticas de Conversão</CardTitle>
+        <CardTitle>Métricas de Conversão</CardTitle>
         <CardDescription>
-          {timeFilter === 'today' && 'Dados de hoje'}
-          {timeFilter === 'week' && 'Dados da última semana'}
-          {timeFilter === 'month' && 'Dados do último mês'}
-          {timeFilter === 'all' && 'Dados de todo o período'}
+          Estatísticas de conversão ao longo do tempo
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={350}>
-          <LineChart
-            data={processedData}
-            margin={{
-              top: 5,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis yAxisId="left" />
-            <YAxis yAxisId="right" orientation="right" />
-            <Tooltip />
-            <Legend />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="totalConversions"
-              name="Total de Conversões"
-              stroke="#8884d8"
-              activeDot={{ r: 8 }}
-            />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="successRate"
-              name="Taxa de Sucesso (%)"
-              stroke="#82ca9d"
-            />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="averageTimeSeconds"
-              name="Tempo Médio (s)"
-              stroke="#ffc658"
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <div className="h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={formattedData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="formattedDate" />
+              <YAxis yAxisId="left" />
+              <YAxis yAxisId="right" orientation="right" domain={[0, 100]} />
+              <Tooltip formatter={(value, name) => {
+                if (name === 'Taxa de Sucesso') return [`${value}%`, name];
+                if (name === 'Tempo Médio (s)') return [`${value.toFixed(2)}s`, name];
+                return [value, name];
+              }} />
+              <Legend />
+              <Bar yAxisId="left" dataKey="totalConversions" name="Total de Conversões" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Line yAxisId="right" type="monotone" dataKey="successRate" name="Taxa de Sucesso" stroke="#10b981" dot={{ r: 4 }} />
+              <Line yAxisId="left" type="monotone" dataKey="averageTimeInSeconds" name="Tempo Médio (s)" stroke="#f97316" dot={{ r: 4 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
-};
-
-export default ConversionMetricsChart;
+}

@@ -65,8 +65,8 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
 
       const { startDate, endDate } = getDateRange();
       
-      // Define proper type for parameters
-      const params: Record<string, string | null> = {
+      // Define parameters and their proper type
+      const params: Record<string, any> = {
         p_start_date: startDate?.toISOString() || null,
         p_end_date: endDate?.toISOString() || null
       };
@@ -88,9 +88,10 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
       if (statsError) throw statsError;
 
       if (metricsData && Array.isArray(metricsData) && metricsData.length > 0) {
-        setMetrics(metricsData[0] as unknown as SystemMetrics);
+        setMetrics(metricsData[0] as SystemMetrics);
       }
-      setDailyStats((statsData || []) as unknown as DailyStats[]);
+      
+      setDailyStats(Array.isArray(statsData) ? (statsData as DailyStats[]) : []);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Error fetching metrics'));
       console.error('Error fetching metrics:', err);

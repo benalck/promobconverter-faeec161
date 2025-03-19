@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -52,7 +53,7 @@ export const useAuthentication = (
     email: string,
     password: string,
     credits?: number,
-    role?: string
+    role?: 'admin' | 'user'
   }) => {
     try {
       const { name, email, password } = userData;

@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSystemMetrics } from "@/hooks/useSystemMetrics";
 import { useUserMetrics } from "@/hooks/useUserMetrics";
@@ -41,7 +42,11 @@ import {
   FileText,
   AlertCircle,
   Clock,
-  Activity
+  Activity,
+  RefreshCcw,
+  Download,
+  Eye,
+  Loader2
 } from "lucide-react";
 import {
   Card,
@@ -49,6 +54,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Select,
@@ -58,9 +64,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import ConversionMetricsChart from "@/components/admin/ConversionMetricsChart";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { User } from "@/contexts/auth/types";
 
 export default function Admin() {
-  const { users, deleteUser, isAdmin: isCurrentUserAdmin, user: currentUser, updateUser, register } = useAuth();
+  const { 
+    users, 
+    deleteUser, 
+    isAdmin: isCurrentUserAdmin, 
+    user: currentUser, 
+    updateUser, 
+    register, 
+    refreshUserCredits
+  } = useAuth();
   const { toast } = useToast();
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -68,28 +86,39 @@ export default function Admin() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showCreditsDialog, setShowCreditsDialog] = useState(false);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [showUserDetailsDialog, setShowUserDetailsDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState("today");
+  const [activeTab, setActiveTab] = useState("users");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
+  // Form states for the add user dialog
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserCredits, setNewUserCredits] = useState("5");
   const [isNewUserAdmin, setIsNewUserAdmin] = useState(false);
   
+  // Credits dialog state
   const [creditsToAdd, setCreditsToAdd] = useState("0");
+
+  // User export state
+  const [selectedUsers, setSelectedUsers] = useState<Record<string, boolean>>({});
+  const [selectAllUsers, setSelectAllUsers] = useState(false);
 
   const {
     metrics: systemMetrics,
     dailyStats,
     isLoading: isLoadingSystem,
-    error: systemError
+    error: systemError,
+    refetch: refetchSystemMetrics
   } = useSystemMetrics(timeFilter);
 
   const {
     metrics: userMetrics,
     isLoading: isLoadingUsers,
-    error: userError
+    error: userError,
+    refetch: refetchUserMetrics
   } = useUserMetrics(users.map(u => u.id), timeFilter);
 
   const filteredUsers = users.filter((user) =>
@@ -97,8 +126,46 @@ export default function Admin() {
     user.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Function to refresh data
+  const refreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchSystemMetrics(),
+        refetchUserMetrics(),
+        refreshUserCredits()
+      ]);
+      toast({
+        title: "Dados atualizados",
+        description: "Os dados da administração foram atualizados com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar dados",
+        description: "Ocorreu um erro ao atualizar os dados.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    // Reset selected users when filtered users change
+    const newSelectedUsers: Record<string, boolean> = {};
+    filteredUsers.forEach(user => {
+      newSelectedUsers[user.id] = !!selectedUsers[user.id];
+    });
+    setSelectedUsers(newSelectedUsers);
+    setSelectAllUsers(false);
+  }, [filteredUsers]);
+
   const formatDate = (date: string) => {
-    return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: ptBR });
+    try {
+      return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: ptBR });
+    } catch (e) {
+      return "Data inválida";
+    }
   };
 
   const handleDeleteUser = async () => {
@@ -244,6 +311,67 @@ export default function Admin() {
     setShowAddUserDialog(false);
   };
 
+  const handleToggleSelectAll = () => {
+    const newValue = !selectAllUsers;
+    setSelectAllUsers(newValue);
+    
+    const newSelectedUsers: Record<string, boolean> = {};
+    filteredUsers.forEach(user => {
+      newSelectedUsers[user.id] = newValue;
+    });
+    setSelectedUsers(newSelectedUsers);
+  };
+
+  const handleToggleSelectUser = (userId: string) => {
+    setSelectedUsers(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
+
+  const exportSelectedUsers = () => {
+    const selectedUserIds = Object.entries(selectedUsers)
+      .filter(([, isSelected]) => isSelected)
+      .map(([id]) => id);
+    
+    if (selectedUserIds.length === 0) {
+      toast({
+        title: "Nenhum usuário selecionado",
+        description: "Por favor, selecione pelo menos um usuário para exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const selectedUserData = users
+      .filter(user => selectedUserIds.includes(user.id))
+      .map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
+        isBanned: user.isBanned,
+        credits: user.credits
+      }));
+    
+    const dataStr = JSON.stringify(selectedUserData, null, 2);
+    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
+    
+    const exportFileDefaultName = `users-export-${new Date().toISOString().slice(0, 10)}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    toast({
+      title: "Usuários exportados",
+      description: `${selectedUserIds.length} usuários foram exportados com sucesso.`,
+    });
+  };
+
   if (!isCurrentUserAdmin) {
     return (
       <AppLayout>
@@ -293,210 +421,387 @@ export default function Admin() {
         <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Painel do Administrador</CardTitle>
-              <CardDescription>
-                Monitore e gerencie o sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center mb-4">
-                <Select value={timeFilter} onValueChange={setTimeFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="today">Hoje</SelectItem>
-                    <SelectItem value="week">Última Semana</SelectItem>
-                    <SelectItem value="month">Último Mês</SelectItem>
-                    <SelectItem value="all">Todo Período</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Usuários Ativos
-                </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{systemMetrics.activeUsers}</div>
-                <p className="text-xs text-muted-foreground">
-                  de {systemMetrics.totalUsers} usuários totais
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Taxa de Sucesso
-                </CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {systemMetrics.successRate.toFixed(1)}%
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  em {systemMetrics.totalConversions} conversões
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Tempo Médio
-                </CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {(systemMetrics.averageResponseTime / 1000).toFixed(2)}s
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  por conversão
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <ConversionMetricsChart data={dailyStats} timeFilter={timeFilter} />
-
-          <Card>
-            <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>Usuários do Sistema</CardTitle>
-                <Button onClick={() => setShowAddUserDialog(true)}>
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Novo Usuário
+                <div>
+                  <CardTitle className="text-2xl">Painel do Administrador</CardTitle>
+                  <CardDescription>
+                    Monitore e gerencie o sistema
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={refreshData} 
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                  )}
+                  Atualizar Dados
                 </Button>
               </div>
-              <div className="flex items-center space-x-2 mt-4">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar usuários..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-sm"
-                />
-              </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Função</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Conversões</TableHead>
-                    <TableHead>Taxa de Sucesso</TableHead>
-                    <TableHead>Última Conversão</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => {
-                    const metrics = userMetrics[user.id] || {
-                      totalConversions: 0,
-                      successfulConversions: 0,
-                      failedConversions: 0,
-                      averageConversionTime: 0,
-                      lastConversion: '-'
-                    };
-                    
-                    return (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          {user.role === "admin" ? "Administrador" : "Usuário"}
-                        </TableCell>
-                        <TableCell>
-                          {user.isBanned ? (
-                            <span className="text-red-500">Banido</span>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="mb-4">
+                  <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                  <TabsTrigger value="users">Usuários</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="dashboard">
+                  <div className="flex justify-between items-center mb-4">
+                    <Select value={timeFilter} onValueChange={setTimeFilter}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Período" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">Hoje</SelectItem>
+                        <SelectItem value="week">Última Semana</SelectItem>
+                        <SelectItem value="month">Último Mês</SelectItem>
+                        <SelectItem value="all">Todo Período</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Usuários Ativos
+                        </CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">{systemMetrics.activeUsers}</div>
+                        <p className="text-xs text-muted-foreground">
+                          de {systemMetrics.totalUsers} usuários totais
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Taxa de Sucesso
+                        </CardTitle>
+                        <Activity className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {systemMetrics.successRate.toFixed(1)}%
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          em {systemMetrics.totalConversions} conversões
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Tempo Médio
+                        </CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {(systemMetrics.averageResponseTime / 1000).toFixed(2)}s
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          por conversão
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <ConversionMetricsChart data={dailyStats} timeFilter={timeFilter} />
+                </TabsContent>
+                
+                <TabsContent value="users">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <CardTitle>Usuários do Sistema</CardTitle>
+                        <div className="flex space-x-2">
+                          <Button onClick={exportSelectedUsers} variant="outline">
+                            <Download className="h-4 w-4 mr-2" />
+                            Exportar Selecionados
+                          </Button>
+                          <Button onClick={() => setShowAddUserDialog(true)}>
+                            <PlusCircle className="h-4 w-4 mr-2" />
+                            Novo Usuário
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-4">
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar usuários..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="max-w-sm"
+                        />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">
+                              <Checkbox 
+                                checked={selectAllUsers} 
+                                onCheckedChange={handleToggleSelectAll}
+                                aria-label="Selecionar todos os usuários"
+                              />
+                            </TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Função</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Créditos</TableHead>
+                            <TableHead>Conversões</TableHead>
+                            <TableHead>Taxa de Sucesso</TableHead>
+                            <TableHead>Última Conversão</TableHead>
+                            <TableHead>Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredUsers.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={10} className="h-24 text-center">
+                                Nenhum usuário encontrado.
+                              </TableCell>
+                            </TableRow>
                           ) : (
-                            <span className="text-green-500">Ativo</span>
+                            filteredUsers.map((user) => {
+                              const metrics = userMetrics[user.id] || {
+                                totalConversions: 0,
+                                successfulConversions: 0,
+                                failedConversions: 0,
+                                averageConversionTime: 0,
+                                lastConversion: '-'
+                              };
+                              
+                              return (
+                                <TableRow key={user.id}>
+                                  <TableCell>
+                                    <Checkbox 
+                                      checked={!!selectedUsers[user.id]} 
+                                      onCheckedChange={() => handleToggleSelectUser(user.id)}
+                                      aria-label={`Selecionar usuário ${user.name}`}
+                                    />
+                                  </TableCell>
+                                  <TableCell>{user.name}</TableCell>
+                                  <TableCell>{user.email}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={user.role === "admin" ? "default" : "outline"}>
+                                      {user.role === "admin" ? "Administrador" : "Usuário"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={user.isBanned ? "destructive" : "success"}>
+                                      {user.isBanned ? "Banido" : "Ativo"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{user.credits}</TableCell>
+                                  <TableCell>{metrics.totalConversions}</TableCell>
+                                  <TableCell>
+                                    {metrics.totalConversions > 0
+                                      ? ((metrics.successfulConversions / metrics.totalConversions) * 100).toFixed(1)
+                                      : 0}%
+                                  </TableCell>
+                                  <TableCell>
+                                    {metrics.lastConversion !== '-'
+                                      ? formatDate(metrics.lastConversion)
+                                      : 'Nunca converteu'}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex space-x-1">
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSelectedUser(user.id);
+                                          setShowUserDetailsDialog(true);
+                                        }}
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSelectedUser(user.id);
+                                          setShowRoleDialog(true);
+                                        }}
+                                      >
+                                        {user.role === "admin" ? (
+                                          <Shield className="h-4 w-4" />
+                                        ) : (
+                                          <ShieldOff className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSelectedUser(user.id);
+                                          setShowBanDialog(true);
+                                        }}
+                                      >
+                                        {user.isBanned ? (
+                                          <Check className="h-4 w-4" />
+                                        ) : (
+                                          <Ban className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSelectedUser(user.id);
+                                          setShowCreditsDialog(true);
+                                        }}
+                                      >
+                                        <Coins className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSelectedUser(user.id);
+                                          setShowDeleteDialog(true);
+                                        }}
+                                      >
+                                        <Trash className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
                           )}
-                        </TableCell>
-                        <TableCell>{metrics.totalConversions}</TableCell>
-                        <TableCell>
-                          {metrics.totalConversions > 0
-                            ? ((metrics.successfulConversions / metrics.totalConversions) * 100).toFixed(1)
-                            : 0}%
-                        </TableCell>
-                        <TableCell>
-                          {metrics.lastConversion !== '-'
-                            ? formatDate(metrics.lastConversion)
-                            : 'Nunca converteu'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedUser(user.id);
-                                setShowRoleDialog(true);
-                              }}
-                            >
-                              {user.role === "admin" ? (
-                                <Shield className="h-4 w-4" />
-                              ) : (
-                                <ShieldOff className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedUser(user.id);
-                                setShowBanDialog(true);
-                              }}
-                            >
-                              {user.isBanned ? (
-                                <Check className="h-4 w-4" />
-                              ) : (
-                                <Ban className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedUser(user.id);
-                                setShowCreditsDialog(true);
-                              }}
-                            >
-                              <Coins className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedUser(user.id);
-                                setShowDeleteDialog(true);
-                              }}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>
 
+        {/* User Details Dialog */}
+        <Dialog open={showUserDetailsDialog} onOpenChange={setShowUserDetailsDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Detalhes do Usuário</DialogTitle>
+            </DialogHeader>
+            {selectedUser && (
+              <div className="space-y-4">
+                {(() => {
+                  const user = users.find(u => u.id === selectedUser);
+                  if (!user) return null;
+                  
+                  const metrics = userMetrics[user.id] || {
+                    totalConversions: 0,
+                    successfulConversions: 0,
+                    failedConversions: 0,
+                    averageConversionTime: 0,
+                    lastConversion: '-'
+                  };
+                  
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label>ID do Usuário</Label>
+                          <div className="text-sm truncate">{user.id}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Nome</Label>
+                          <div className="text-sm">{user.name}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Email</Label>
+                          <div className="text-sm">{user.email}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Função</Label>
+                          <div className="text-sm">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Status</Label>
+                          <div className="text-sm">{user.isBanned ? 'Banido' : 'Ativo'}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Créditos</Label>
+                          <div className="text-sm">{user.credits}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Criado em</Label>
+                          <div className="text-sm">{formatDate(user.createdAt)}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Último login</Label>
+                          <div className="text-sm">{user.lastLogin ? formatDate(user.lastLogin) : 'Nunca'}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4 border-t">
+                        <h3 className="font-medium mb-2">Estatísticas de Conversão</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label>Total de Conversões</Label>
+                            <div className="text-sm">{metrics.totalConversions}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Conversões com Sucesso</Label>
+                            <div className="text-sm">{metrics.successfulConversions}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Conversões Falhas</Label>
+                            <div className="text-sm">{metrics.failedConversions}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Taxa de Sucesso</Label>
+                            <div className="text-sm">
+                              {metrics.totalConversions > 0
+                                ? ((metrics.successfulConversions / metrics.totalConversions) * 100).toFixed(1)
+                                : 0}%
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Tempo Médio de Conversão</Label>
+                            <div className="text-sm">
+                              {(metrics.averageConversionTime / 1000).toFixed(2)}s
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Última Conversão</Label>
+                            <div className="text-sm">
+                              {metrics.lastConversion !== '-'
+                                ? formatDate(metrics.lastConversion)
+                                : 'Nunca converteu'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            <DialogFooter>
+              <Button onClick={() => setShowUserDetailsDialog(false)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete User Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
             <DialogHeader>
@@ -516,6 +821,7 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
+        {/* Ban/Unban User Dialog */}
         <Dialog open={showBanDialog} onOpenChange={setShowBanDialog}>
           <DialogContent>
             <DialogHeader>
@@ -550,6 +856,7 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
+        {/* Change Role Dialog */}
         <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
           <DialogContent>
             <DialogHeader>
@@ -569,6 +876,7 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
+        {/* Change Credits Dialog */}
         <Dialog open={showCreditsDialog} onOpenChange={setShowCreditsDialog}>
           <DialogContent>
             <DialogHeader>
@@ -601,6 +909,7 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
+        {/* Add User Dialog */}
         <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
           <DialogContent>
             <DialogHeader>

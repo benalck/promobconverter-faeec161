@@ -54,7 +54,7 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
       // Fetch metrics for each user
       await Promise.all(
         userIds.map(async (userId) => {
-          // Define proper parameter type
+          // Define parameters with proper type
           const params: Record<string, any> = {
             p_user_id: userId,
             p_start_date: startDate?.toISOString() || null,

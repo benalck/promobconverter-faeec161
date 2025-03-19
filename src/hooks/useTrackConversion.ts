@@ -26,7 +26,7 @@ export function useTrackConversion() {
     if (!user) return;
 
     try {
-      // Define proper parameter type
+      // Define parameters with proper type
       const params: Record<string, any> = {
         p_user_id: user.id,
         p_success: success,
