@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -48,8 +47,15 @@ export const useAuthentication = (
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (userData: {
+    name: string,
+    email: string,
+    password: string,
+    credits?: number,
+    role?: string
+  }) => {
     try {
+      const { name, email, password } = userData;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -68,7 +74,7 @@ export const useAuthentication = (
           .select('*', { count: 'exact', head: true });
           
         const isFirstUser = count === 0 || countError;
-        const userRole = isFirstUser ? 'admin' : 'user';
+        const userRole = userData.role || (isFirstUser ? 'admin' : 'user');
 
         const { error: profileError } = await supabase
           .from('profiles')
@@ -80,7 +86,7 @@ export const useAuthentication = (
               last_login: new Date().toISOString(),
               is_banned: false,
               role: userRole,
-              credits: 0
+              credits: userData.credits || 0
             }
           ]);
 

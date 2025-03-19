@@ -54,11 +54,14 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
       // Fetch metrics for each user
       await Promise.all(
         userIds.map(async (userId) => {
-          const { data, error } = await supabase.rpc('get_user_metrics', {
+          // Define proper parameter type
+          const params: Record<string, any> = {
             p_user_id: userId,
             p_start_date: startDate?.toISOString() || null,
             p_end_date: endDate?.toISOString() || null
-          } as Record<string, any>);
+          };
+
+          const { data, error } = await supabase.rpc('get_user_metrics', params);
 
           if (error) throw error;
 

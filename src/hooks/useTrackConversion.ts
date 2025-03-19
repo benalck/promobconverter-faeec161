@@ -26,7 +26,8 @@ export function useTrackConversion() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase.rpc('track_conversion', {
+      // Define proper parameter type
+      const params: Record<string, any> = {
         p_user_id: user.id,
         p_success: success,
         p_file_size: fileSize,
@@ -34,7 +35,9 @@ export function useTrackConversion() {
         p_error_message: errorMessage || null,
         p_input_format: inputFormat,
         p_output_format: outputFormat
-      } as Record<string, any>);
+      };
+
+      const { data, error } = await supabase.rpc('track_conversion', params);
 
       if (error) {
         console.error('Error tracking conversion:', error);
