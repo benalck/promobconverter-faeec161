@@ -5,12 +5,11 @@ import Register from "@/pages/Register";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
-import Plans from "@/pages/Plans";
 import FAQ from "@/pages/FAQ";
-import PaymentSuccess from "@/pages/PaymentSuccess";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LoadingAnimation from "@/components/LoadingAnimation";
 import "./App.css";
+import VerifyEmail from "@/pages/VerifyEmail";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -70,9 +69,8 @@ function App() {
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-            <Route path="/plans" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
-            <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
             <Route path="/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
+            <Route path="/verify" element={<VerifyEmail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />

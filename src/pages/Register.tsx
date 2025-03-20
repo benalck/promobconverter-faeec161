@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,13 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Lock, Mail, User, EyeOff, Eye } from "lucide-react";
+import { ShoppingBag, Lock, Mail, User, EyeOff, Eye, Phone } from "lucide-react";
 import HowItWorksButton from "@/components/HowItWorksButton";
+import { sendConfirmationEmail } from "@/lib/email";
 
 export default function Register() {
   const [isLoginMode, setIsLoginMode] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -21,6 +22,58 @@ export default function Register() {
   const { register, login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Funções de validação
+  const validateName = (name: string) => {
+    if (name.length < 3) return "Nome deve ter pelo menos 3 caracteres";
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(name)) return "Nome deve conter apenas letras";
+    if (name.split(' ').length < 2) return "Por favor, insira nome e sobrenome";
+    return null;
+  };
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) return "E-mail inválido";
+    return null;
+  };
+
+  const validatePhone = (phone: string) => {
+    // Remove todos os caracteres não numéricos para validação
+    const numbers = phone.replace(/\D/g, '');
+    if (numbers.length !== 11) return "Telefone deve ter 11 números (DDD + 9 dígitos)";
+    if (!/^[1-9]{2}9[0-9]{8}$/.test(numbers)) return "Formato de telefone inválido";
+    return null;
+  };
+
+  const validatePassword = (password: string) => {
+    if (password.length < 8) return "Senha deve ter pelo menos 8 caracteres";
+    if (!/[A-Z]/.test(password)) return "Senha deve conter pelo menos uma letra maiúscula";
+    if (!/[a-z]/.test(password)) return "Senha deve conter pelo menos uma letra minúscula";
+    if (!/[0-9]/.test(password)) return "Senha deve conter pelo menos um número";
+    if (!/[!@#$%^&*]/.test(password)) return "Senha deve conter pelo menos um caractere especial (!@#$%^&*)";
+    return null;
+  };
+
+  // Formatar telefone automaticamente
+  const formatPhone = (value: string) => {
+    let numbers = value.replace(/\D/g, '');
+    
+    // Limita a 11 dígitos
+    numbers = numbers.slice(0, 11);
+    
+    // Aplica a máscara conforme o usuário digita
+    let formatted = numbers;
+    if (numbers.length > 0) formatted = '(' + formatted;
+    if (numbers.length > 2) formatted = formatted.slice(0, 3) + ') ' + formatted.slice(3);
+    if (numbers.length > 7) formatted = formatted.slice(0, 10) + '-' + formatted.slice(10);
+    
+    return formatted;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setPhone(formatted);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,10 +113,51 @@ export default function Register() {
       }
     } else {
       // Register mode
-      if (!name || !email || !password || !confirmPassword) {
+      if (!name || !email || !phone || !password || !confirmPassword) {
         toast({
           title: "Campos obrigatórios",
           description: "Por favor, preencha todos os campos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validações
+      const nameError = validateName(name);
+      if (nameError) {
+        toast({
+          title: "Nome inválido",
+          description: nameError,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const emailError = validateEmail(email);
+      if (emailError) {
+        toast({
+          title: "E-mail inválido",
+          description: emailError,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const phoneError = validatePhone(phone);
+      if (phoneError) {
+        toast({
+          title: "Telefone inválido",
+          description: phoneError,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        toast({
+          title: "Senha inválida",
+          description: passwordError,
           variant: "destructive",
         });
         return;
@@ -80,16 +174,35 @@ export default function Register() {
 
       try {
         setIsLoading(true);
-        await register({
+        
+        // Registrar usuário
+        const result = await register({
           name,
           email,
+          phone,
           password
         });
-        toast({
-          title: "Conta criada com sucesso!",
-          description: "Seu cadastro foi realizado. Bem-vindo à nossa aplicação.",
-        });
-        navigate("/");
+
+        if (result.success) {
+          // Enviar email de confirmação
+          const { success: emailSuccess, error: emailError } = await sendConfirmationEmail(email);
+
+          toast({
+            title: result.message,
+            description: emailSuccess 
+              ? "Por favor, verifique sua caixa de entrada."
+              : "Não foi possível enviar o email de confirmação. Tente novamente mais tarde.",
+            variant: emailSuccess ? "default" : "destructive",
+          });
+
+          navigate("/");
+        } else {
+          toast({
+            title: "Erro ao registrar",
+            description: result.message,
+            variant: "destructive",
+          });
+        }
       } catch (error) {
         toast({
           title: "Erro ao registrar",
@@ -161,20 +274,42 @@ export default function Register() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLoginMode && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome completo</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      id="name"
-                      placeholder="Seu nome completo"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={isLoading}
-                      className="pl-10"
-                    />
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome completo</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        id="name"
+                        placeholder="Seu nome completo"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={isLoading}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Celular</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        id="phone"
+                        placeholder="(99) 99999-9999"
+                        value={phone}
+                        onChange={handlePhoneChange}
+                        disabled={isLoading}
+                        className="pl-10"
+                        maxLength={15}
+                        type="tel"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Digite seu número com DDD (Ex: 11999999999)
+                    </p>
+                  </div>
+                </>
               )}
               
               <div className="space-y-2">
@@ -218,6 +353,11 @@ export default function Register() {
                     )}
                   </button>
                 </div>
+                {!isLoginMode && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    A senha deve conter pelo menos 8 caracteres, incluindo maiúsculas, minúsculas, números e caracteres especiais.
+                  </p>
+                )}
               </div>
               
               {!isLoginMode && (

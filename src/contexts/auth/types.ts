@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -15,12 +14,14 @@ export interface Plan {
 
 export interface User {
   id: string;
-  name: string | null;
-  email: string | null;
+  name: string;
+  email: string;
+  phone: string;
   role: 'admin' | 'user';
   createdAt: string;
   lastLogin?: string;
   isBanned?: boolean;
+  emailVerified?: boolean;
   credits: number;
   activePlan?: Plan | null;
   planExpiryDate?: string | null;
@@ -33,17 +34,16 @@ export interface AuthContextType {
   users: User[];
   isInitialized: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: {
+  register: (data: {
     name: string;
     email: string;
+    phone: string;
     password: string;
-    credits?: number;
-    role?: 'admin' | 'user';
   }) => Promise<void>;
   logout: () => Promise<void>;
-  deleteUser: (id: string) => void;
-  updateUser: (id: string, data: Partial<User>) => void;
-  getAllUsers: () => User[];
+  deleteUser: (userId: string) => Promise<void>;
+  updateUser: (userId: string, updates: Partial<User>) => Promise<void>;
+  getAllUsers: () => Promise<User[]>;
   refreshUserCredits: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   addExtraCredits: (userId: string, extraCredits: number) => Promise<number | undefined>;

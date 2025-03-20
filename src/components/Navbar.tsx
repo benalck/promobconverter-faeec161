@@ -1,8 +1,7 @@
-
-import { useAuth } from "@/contexts/AuthContext";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useNavigate, Link } from "react-router-dom";
-import { LogOut, User, ChevronDown, Menu } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,21 +10,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
+import { ChevronDown, LogOut, Menu, User } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
-    navigate("/register");
-    setMenuOpen(false);
   };
 
   return (
-    <nav className="bg-white/90 backdrop-blur-sm shadow-sm border-b sticky top-0 z-50">
+    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-6xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -56,11 +52,6 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem asChild>
-                  <Link to="/plans" className="w-full cursor-pointer">
-                    Planos
-                  </Link>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer">
                   <LogOut className="h-4 w-4 mr-2" />
@@ -70,7 +61,6 @@ export default function Navbar() {
             </DropdownMenu>
           </div>
           
-          {/* Menu para mobile */}
           <div className="md:hidden">
             <Button variant="ghost" size="sm" onClick={() => setMenuOpen(!menuOpen)}>
               <Menu className="h-5 w-5" />
@@ -91,10 +81,6 @@ export default function Navbar() {
                   Painel Admin
                 </Link>
               )}
-              
-              <Link to="/plans" className="px-2 py-1 hover:bg-gray-100 rounded-md" onClick={() => setMenuOpen(false)}>
-                Planos
-              </Link>
               
               <button 
                 onClick={handleLogout}

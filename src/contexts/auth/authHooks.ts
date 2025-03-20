@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -48,79 +47,143 @@ export const useAuthentication = (
     }
   };
 
-  const register = async (userData: {
-    name: string,
-    email: string,
-    password: string,
-    credits?: number,
-    role?: 'admin' | 'user'
-  }) => {
+  const register = async (data: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+  }): Promise<{ success: boolean; message: string }> => {
     try {
-      const { name, email, password } = userData;
-      const { data, error } = await supabase.auth.signUp({
+      // Validar dados antes de prosseguir
+      if (!data.name || !data.email || !data.phone || !data.password) {
+        return {
+          success: false,
+          message: 'Todos os campos são obrigatórios'
+        };
+      }
+
+      // Validar formato do email
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(data.email)) {
+        return {
+          success: false,
+          message: 'Email inválido'
+        };
+      }
+
+      // Validar formato do telefone
+      const phoneRegex = /^\(\d{2}\) \d{5}-\d{4}$/;
+      if (!phoneRegex.test(data.phone)) {
+        return {
+          success: false,
+          message: 'Telefone inválido. Use o formato (99) 99999-9999'
+        };
+      }
+
+      const { name, email, phone, password } = data;
+      
+      // Verificar se o email já está em uso
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        return {
+          success: false,
+          message: 'Este email já está em uso'
+        };
+      }
+
+      // Criar usuário no Supabase Auth
+      const { data: authData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/verify`,
           data: {
-            name
+            name,
+            phone,
+            action: 'confirm_email'
           }
         }
       });
 
-      if (error) throw error;
-
-      if (data.user) {
-        const { count, error: countError } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
-          
-        const isFirstUser = count === 0 || countError;
-        const userRole = userData.role || (isFirstUser ? 'admin' : 'user');
-
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              name,
-              created_at: new Date().toISOString(),
-              last_login: new Date().toISOString(),
-              is_banned: false,
-              role: userRole,
-              credits: userData.credits || 0
-            }
-          ]);
-
-        if (profileError) throw profileError;
-
-        try {
-          await supabase.auth.updateUser({
-            data: { 
-              role: userRole 
-            }
-          });
-          
-          console.log(`Usuário registrado com role: ${userRole}`);
-        } catch (roleError) {
-          console.error('Erro ao definir role nos metadados:', roleError);
+      if (error) {
+        if (error.message.includes('email')) {
+          return {
+            success: false,
+            message: 'Este email já está em uso'
+          };
         }
-
-        const newUser = await convertSupabaseUser(data.user);
-        newUser.role = userRole;
-        setUser(newUser);
-        await syncUsers();
+        throw error;
       }
+
+      if (!authData.user) {
+        return {
+          success: false,
+          message: 'Erro ao criar usuário'
+        };
+      }
+
+      // Verificar se é o primeiro usuário (será admin)
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+        
+      const isFirstUser = count === 0;
+      const userRole = isFirstUser ? 'admin' : 'user';
+
+      // Criar perfil do usuário
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: authData.user.id,
+            name,
+            email,
+            phone,
+            created_at: new Date().toISOString(),
+            last_login: new Date().toISOString(),
+            is_banned: false,
+            role: userRole,
+            email_verified: false,
+            credits: 0
+          }
+        ]);
+
+      if (profileError) {
+        console.error('Erro ao criar perfil:', profileError);
+        return {
+          success: false,
+          message: 'Erro ao criar perfil do usuário'
+        };
+      }
+
+      // Atualizar metadados do usuário
+      await supabase.auth.updateUser({
+        data: { 
+          role: userRole,
+          phone
+        }
+      });
+
+      const newUser = await convertSupabaseUser(authData.user);
+      setUser(newUser);
+      await syncUsers();
+
+      return {
+        success: true,
+        message: 'Conta criada com sucesso! Enviamos um email de confirmação.'
+      };
+
     } catch (error) {
       console.error('Erro ao registrar:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('duplicate key')) {
-          throw new Error('Este email já está em uso');
-        } else {
-          throw new Error('Falha ao registrar usuário');
-        }
-      } else {
-        throw new Error('Falha ao registrar usuário');
-      }
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Falha ao registrar usuário'
+      };
     }
   };
 

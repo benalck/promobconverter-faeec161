@@ -260,3 +260,78 @@ export const useUserManagement = (
     addExtraCredits
   };
 };
+
+export type UserProfile = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  created_at: string;
+};
+
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
+  }
+
+  return profile;
+}
+
+export async function createUserProfile(user: User, name: string): Promise<UserProfile | null> {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .insert([
+      {
+        id: user.id,
+        name,
+        email: user.email,
+        role: 'user',
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating user profile:', error);
+    return null;
+  }
+
+  return profile;
+}
+
+export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating user profile:', error);
+    return null;
+  }
+
+  return profile;
+}
+
+export async function deleteUserProfile(userId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Error deleting user profile:', error);
+    return false;
+  }
+
+  return true;
+}

@@ -1,42 +1,30 @@
 require('dotenv').config();
 
-module.exports = {
-  stripe: {
-    secretKey: process.env.STRIPE_SECRET_KEY,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-    prices: {
-      credits: {
-        '10': process.env.STRIPE_PRICE_10_CREDITS,
-        '50': process.env.STRIPE_PRICE_50_CREDITS,
-        '100': process.env.STRIPE_PRICE_100_CREDITS
-      },
-      subscriptions: {
-        monthly: process.env.STRIPE_PRICE_MONTHLY,
-        annual: process.env.STRIPE_PRICE_ANNUAL
-      }
-    }
-  },
+const config = {
   supabase: {
-    url: process.env.SUPABASE_URL,
-    serviceKey: process.env.SUPABASE_SERVICE_KEY
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   },
-  server: {
-    port: process.env.PORT || 3000,
-    env: process.env.NODE_ENV || 'development'
+  app: {
+    name: "Promob Converter",
+    description: "Converta arquivos XML do Promob para Excel",
+    url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   },
-  creditPlans: {
-    [process.env.STRIPE_PRICE_10_CREDITS]: 10,
-    [process.env.STRIPE_PRICE_50_CREDITS]: 50,
-    [process.env.STRIPE_PRICE_100_CREDITS]: 100
-  },
-  subscriptionPlans: {
-    [process.env.STRIPE_PRICE_MONTHLY]: {
-      type: 'monthly',
-      credits: 200
+  email: {
+    from: {
+      name: "Promob Converter",
+      email: process.env.EMAIL_FROM || "noreply@promobconverter.cloud",
     },
-    [process.env.STRIPE_PRICE_ANNUAL]: {
-      type: 'annual',
-      credits: 250
-    }
-  }
-}; 
+    transport: {
+      host: process.env.EMAIL_SERVER_HOST,
+      port: process.env.EMAIL_SERVER_PORT,
+      auth: {
+        user: process.env.EMAIL_SERVER_USER,
+        pass: process.env.EMAIL_SERVER_PASSWORD,
+      },
+    },
+  },
+};
+
+module.exports = config; 
