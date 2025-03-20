@@ -28,11 +28,11 @@ export function useUserMetrics() {
     setError(null);
 
     try {
-      // Type assert the RPC call result
+      // Remove type assertion and use proper typing
       const { data, error } = await supabase.rpc(
         'get_user_metrics', 
         { p_user_id: user.id }
-      ) as unknown as { data: any, error: any };
+      );
 
       if (error) {
         throw new Error(error.message);
@@ -68,6 +68,6 @@ export function useUserMetrics() {
     metrics,
     isLoading,
     error,
-    fetchUserMetrics,
+    fetchUserMetrics
   };
 }

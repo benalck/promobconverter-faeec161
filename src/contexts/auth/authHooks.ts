@@ -3,6 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
 
+interface RegisterData {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
+interface RegisterResponse {
+  success: boolean;
+  message: string;
+}
+
 export const useAuthentication = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
   syncUsers: () => Promise<void>,
@@ -49,12 +61,7 @@ export const useAuthentication = (
   };
 
   // Fixed infinite type instantiation by specifying the exact return type
-  const register = async (data: {
-    name: string;
-    email: string;
-    phone: string;
-    password: string;
-  }): Promise<{ success: boolean; message: string }> => {
+  const register = async (data: RegisterData): Promise<RegisterResponse> => {
     try {
       // Validar dados antes de prosseguir
       if (!data.name || !data.email || !data.phone || !data.password) {

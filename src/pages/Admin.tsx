@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSystemMetrics } from "@/hooks/useSystemMetrics";
@@ -69,6 +68,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { User } from "@/contexts/auth/types";
 
+// Add a type for handling register user form
+interface RegisterUserForm {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
 export default function Admin() {
   const { 
     users, 
@@ -97,6 +104,7 @@ export default function Admin() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserCredits, setNewUserCredits] = useState("5");
+  const [newUserPhone, setNewUserPhone] = useState(""); // Add missing phone state
   const [isNewUserAdmin, setIsNewUserAdmin] = useState(false);
   
   // Credits dialog state
@@ -111,15 +119,16 @@ export default function Admin() {
     dailyStats,
     isLoading: isLoadingSystem,
     error: systemError,
+    fetchSystemMetrics,
     refetch: refetchSystemMetrics
-  } = useSystemMetrics(timeFilter);
+  } = useSystemMetrics();
 
   const {
     metrics: userMetrics,
     isLoading: isLoadingUsers,
     error: userError,
-    refetch: refetchUserMetrics
-  } = useUserMetrics(users.map(u => u.id), timeFilter);
+    fetchUserMetrics
+  } = useUserMetrics();
 
   const filteredUsers = users.filter((user) =>
     user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -132,7 +141,7 @@ export default function Admin() {
     try {
       await Promise.all([
         refetchSystemMetrics(),
-        refetchUserMetrics(),
+        fetchUserMetrics(),
         refreshUserCredits()
       ]);
       toast({
@@ -281,24 +290,45 @@ export default function Admin() {
 
   const handleAddUser = async () => {
     try {
-      await register({
+      // Create user data object with proper type
+      const userData: RegisterUserForm = {
         name: newUserName,
         email: newUserEmail,
         password: newUserPassword,
-        credits: parseInt(newUserCredits),
-        role: isNewUserAdmin ? "admin" : "user",
-      });
+        phone: newUserPhone || "(00) 00000-0000" // Add a default phone
+      };
+      
+      const result = await register(userData);
+      
+      if (result.success) {
+        // If registration successful, optionally update credits separately
+        if (parseInt(newUserCredits) > 0) {
+          const newUser = users.find(u => u.email === newUserEmail);
+          if (newUser) {
+            await updateUser(newUser.id, { 
+              credits: parseInt(newUserCredits),
+              role: isNewUserAdmin ? "admin" : "user"
+            });
+          }
+        }
 
-      toast({
-        title: "Usuário adicionado",
-        description: "O novo usuário foi adicionado com sucesso.",
-      });
+        toast({
+          title: "Usuário adicionado",
+          description: "O novo usuário foi adicionado com sucesso.",
+        });
 
-      setNewUserName("");
-      setNewUserEmail("");
-      setNewUserPassword("");
-      setNewUserCredits("5");
-      setIsNewUserAdmin(false);
+        setNewUserName("");
+        setNewUserEmail("");
+        setNewUserPassword("");
+        setNewUserCredits("5");
+        setIsNewUserAdmin(false);
+      } else {
+        toast({
+          title: "Erro ao adicionar usuário",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error adding user:", error);
       toast({
@@ -473,9 +503,9 @@ export default function Admin() {
                         <Users className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">{systemMetrics.activeUsers}</div>
+                        <div className="text-2xl font-bold">{systemMetrics?.activeUsers || 0}</div>
                         <p className="text-xs text-muted-foreground">
-                          de {systemMetrics.totalUsers} usuários totais
+                          de {systemMetrics?.totalUsers || 0} usuários totais
                         </p>
                       </CardContent>
                     </Card>
@@ -489,10 +519,10 @@ export default function Admin() {
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
-                          {systemMetrics.successRate.toFixed(1)}%
+                          {(systemMetrics?.successRate || 0).toFixed(1)}%
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          em {systemMetrics.totalConversions} conversões
+                          em {systemMetrics?.totalConversions || 0} conversões
                         </p>
                       </CardContent>
                     </Card>
@@ -506,7 +536,7 @@ export default function Admin() {
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
-                          {(systemMetrics.averageResponseTime / 1000).toFixed(2)}s
+                          {((systemMetrics?.averageConversionTime || 0) / 1000).toFixed(2)}s
                         </div>
                         <p className="text-xs text-muted-foreground">
                           por conversão
@@ -515,7 +545,7 @@ export default function Admin() {
                     </Card>
                   </div>
 
-                  <ConversionMetricsChart data={dailyStats} timeFilter={timeFilter} />
+                  {dailyStats && <ConversionMetricsChart data={dailyStats} timeFilter={timeFilter} />}
                 </TabsContent>
                 
                 <TabsContent value="users">
@@ -947,50 +977,3 @@ export default function Admin() {
                   Senha
                 </Label>
                 <Input
-                  id="password"
-                  type="password"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="form-group">
-                <Label htmlFor="credits" className="text-right">
-                  Créditos
-                </Label>
-                <Input
-                  id="credits"
-                  type="number"
-                  value={newUserCredits}
-                  onChange={(e) => setNewUserCredits(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="form-group">
-                <Label htmlFor="isAdmin" className="text-right">
-                  Administrador
-                </Label>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isAdmin"
-                    checked={isNewUserAdmin}
-                    onCheckedChange={setIsNewUserAdmin}
-                  />
-                  <Label htmlFor="isAdmin">
-                    {isNewUserAdmin ? "Sim" : "Não"}
-                  </Label>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleAddUser}>Adicionar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </AppLayout>
-  );
-}
