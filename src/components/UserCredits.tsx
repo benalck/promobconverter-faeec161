@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,9 @@ export default function UserCredits() {
   return (
     <div className="flex flex-col items-center justify-center p-4 space-y-4 text-center">
       <h2 className="text-xl font-semibold">Bem-vindo, {user.name}!</h2>
+      <p className="text-gray-600">
+        Você tem {user.credits} créditos disponíveis.
+      </p>
       <p className="text-gray-600">
         Você pode converter arquivos XML do Promob para Excel.
       </p>

@@ -71,19 +71,19 @@ export function useSystemMetrics(timeFilter: string): UseSystemMetricsReturn {
         p_end_date: endDate?.toISOString() || null
       };
 
-      // Fetch system metrics with explicit type for data
+      // Fetch system metrics with proper type assertion
       const { data: metricsData, error: metricsError } = await supabase.rpc(
         'get_system_metrics',
         params
-      ) as { data: any, error: any };
+      ) as unknown as { data: any, error: any };
 
       if (metricsError) throw metricsError;
 
-      // Fetch daily statistics with explicit type for data
+      // Fetch daily statistics with proper type assertion
       const { data: statsData, error: statsError } = await supabase.rpc(
         'get_daily_conversion_stats',
         params
-      ) as { data: any, error: any };
+      ) as unknown as { data: any, error: any };
 
       if (statsError) throw statsError;
 

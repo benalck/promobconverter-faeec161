@@ -61,7 +61,7 @@ export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMe
             p_end_date: endDate?.toISOString() || null
           };
 
-          const { data, error } = await supabase.rpc('get_user_metrics', params) as { data: any, error: any };
+          const { data, error } = await supabase.rpc('get_user_metrics', params) as unknown as { data: any, error: any };
 
           if (error) throw error;
 

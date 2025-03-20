@@ -6,45 +6,219 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
-      profiles: {
+      conversions: {
         Row: {
+          conversion_type: string | null
+          converted_filename: string | null
           created_at: string
-          email: string
+          file_content: string | null
           id: string
-          is_banned: boolean | null
           name: string
-          phone: string
-          role: string
+          original_filename: string | null
+          user_id: string
         }
         Insert: {
+          conversion_type?: string | null
+          converted_filename?: string | null
           created_at?: string
-          email: string
-          id: string
-          is_banned?: boolean | null
+          file_content?: string | null
+          id?: string
           name: string
-          phone: string
-          role?: string
+          original_filename?: string | null
+          user_id: string
         }
         Update: {
+          conversion_type?: string | null
+          converted_filename?: string | null
           created_at?: string
-          email?: string
+          file_content?: string | null
           id?: string
-          is_banned?: boolean | null
           name?: string
-          phone?: string
-          role?: string
+          original_filename?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_purchases: {
+        Row: {
+          amount: number
+          credits: number
+          expiry_date: string
+          id: string
+          plan_id: string
+          purchase_date: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          credits: number
+          expiry_date: string
+          id?: string
+          plan_id: string
+          purchase_date?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          credits?: number
+          expiry_date?: string
+          id?: string
+          plan_id?: string
+          purchase_date?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            referencedRelation: "users"
+            foreignKeyName: "credit_purchases_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
-          }
+          },
         ]
+      }
+      plans: {
+        Row: {
+          created_at: string
+          credits: number
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          description?: string | null
+          duration_days: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price: number
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          active_plan: string | null
+          created_at: string
+          credits: number | null
+          email_verified: boolean | null
+          id: string
+          is_banned: boolean | null
+          last_login: string | null
+          name: string | null
+          plan_expiry_date: string | null
+          role: string | null
+        }
+        Insert: {
+          active_plan?: string | null
+          created_at?: string
+          credits?: number | null
+          email_verified?: boolean | null
+          id: string
+          is_banned?: boolean | null
+          last_login?: string | null
+          name?: string | null
+          plan_expiry_date?: string | null
+          role?: string | null
+        }
+        Update: {
+          active_plan?: string | null
+          created_at?: string
+          credits?: number | null
+          email_verified?: boolean | null
+          id?: string
+          is_banned?: boolean | null
+          last_login?: string | null
+          name?: string | null
+          plan_expiry_date?: string | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_active_plan_fkey"
+            columns: ["active_plan"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      verification_codes: {
+        Row: {
+          code: string
+          created_at: string
+          email: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          email: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          email?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
