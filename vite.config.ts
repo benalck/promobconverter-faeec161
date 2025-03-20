@@ -1,4 +1,3 @@
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -24,6 +23,7 @@ export default defineConfig(({ mode }) => ({
     emptyOutDir: true,
     minify: 'terser',
     sourcemap: true,
+    chunkSizeWarningLimit: 1600,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
@@ -39,7 +39,14 @@ export default defineConfig(({ mode }) => ({
           return;
         }
         warn(warning);
-      }
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        },
+      },
     }
   }
 }));
