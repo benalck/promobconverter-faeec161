@@ -1,112 +1,73 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface UserMetrics {
+export interface UserMetrics {
   totalConversions: number;
-  successfulConversions: number;
-  failedConversions: number;
+  successRate: number;
   averageConversionTime: number;
-  lastConversion: string;
+  creditsUsed: number;
+  creditsRemaining: number;
+  conversionsByDate: {
+    date: string;
+    count: number;
+  }[];
 }
 
-interface UseUserMetricsReturn {
-  metrics: Record<string, UserMetrics>;
-  isLoading: boolean;
-  error: Error | null;
-  refetch: () => Promise<void>;
-}
-
-export function useUserMetrics(userIds: string[], timeFilter: string): UseUserMetricsReturn {
-  const [metrics, setMetrics] = useState<Record<string, UserMetrics>>({});
-  const [isLoading, setIsLoading] = useState(true);
+export function useUserMetrics() {
+  const { user } = useAuth();
+  const [metrics, setMetrics] = useState<UserMetrics | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const getDateRange = () => {
-    const now = new Date();
-    const startDate = new Date();
+  const fetchUserMetrics = useCallback(async (): Promise<UserMetrics | null> => {
+    if (!user) return null;
+    
+    setIsLoading(true);
+    setError(null);
 
-    switch (timeFilter) {
-      case 'today':
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        startDate.setMonth(now.getMonth() - 1);
-        break;
-      default:
-        return { startDate: null, endDate: null };
-    }
-
-    return { startDate, endDate: now };
-  };
-
-  const fetchMetrics = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
+      // Type assert the RPC call result
+      const { data, error } = await supabase.rpc(
+        'get_user_metrics', 
+        { p_user_id: user.id }
+      ) as unknown as { data: any, error: any };
 
-      const { startDate, endDate } = getDateRange();
-      const metricsData: Record<string, UserMetrics> = {};
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      // Fetch metrics for each user
-      await Promise.all(
-        userIds.map(async (userId) => {
-          // Define parameters with proper type for RPC
-          const params = {
-            p_user_id: userId,
-            p_start_date: startDate?.toISOString() || null,
-            p_end_date: endDate?.toISOString() || null
-          };
+      if (!data) {
+        throw new Error('No data returned from user metrics');
+      }
 
-          const { data, error } = await supabase.rpc('get_user_metrics', params) as { data: any, error: any };
+      // Map data to our expected format
+      const userMetrics: UserMetrics = {
+        totalConversions: data.total_conversions || 0,
+        successRate: data.success_rate || 0,
+        averageConversionTime: data.average_conversion_time || 0,
+        creditsUsed: data.credits_used || 0,
+        creditsRemaining: user.credits || 0,
+        conversionsByDate: data.conversions_by_date || [],
+      };
 
-          if (error) throw error;
-
-          // Safely handle the data
-          if (data && Array.isArray(data) && data.length > 0) {
-            const userData = data[0] as any;
-            metricsData[userId] = {
-              totalConversions: userData.total_conversions || 0,
-              successfulConversions: userData.successful_conversions || 0,
-              failedConversions: userData.failed_conversions || 0,
-              averageConversionTime: userData.average_conversion_time || 0,
-              lastConversion: userData.last_conversion || '-'
-            };
-          } else {
-            // Default metrics if no data found
-            metricsData[userId] = {
-              totalConversions: 0,
-              successfulConversions: 0,
-              failedConversions: 0,
-              averageConversionTime: 0,
-              lastConversion: '-'
-            };
-          }
-        })
-      );
-
-      setMetrics(metricsData);
+      setMetrics(userMetrics);
+      return userMetrics;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Error fetching user metrics'));
-      console.error('Error fetching user metrics:', err);
+      const error = err as Error;
+      console.error('Error fetching user metrics:', error);
+      setError(error);
+      return null;
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (userIds.length > 0) {
-      fetchMetrics();
-    }
-  }, [userIds.join(','), timeFilter]);
+  }, [user]);
 
   return {
     metrics,
     isLoading,
     error,
-    refetch: fetchMetrics
+    fetchUserMetrics,
   };
 }

@@ -14,11 +14,15 @@ export interface UserProfile {
 
 export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<User> {
   try {
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', supabaseUser.id)
       .single();
+
+    if (error) {
+      throw error;
+    }
 
     let userRole: 'admin' | 'user' = 'user';
     
@@ -32,7 +36,8 @@ export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<U
       id: supabaseUser.id,
       name: profile?.name || supabaseUser.user_metadata?.name || 'Usuário',
       email: supabaseUser.email || '',
-      phone: profile?.phone || supabaseUser.user_metadata?.phone || '',
+      // Use phone from user_metadata since it doesn't exist in profile
+      phone: supabaseUser.user_metadata?.phone || '',
       role: userRole,
       createdAt: supabaseUser.created_at || new Date().toISOString(),
       lastLogin: supabaseUser.last_sign_in_at || null,
@@ -62,49 +67,59 @@ export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<U
 }
 
 export async function fetchUserProfile(user: User): Promise<UserProfile | null> {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*, email:email')
-    .eq('id', user.id)
-    .single();
+  try {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
-  if (error) {
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+
+    return {
+      id: profile.id,
+      name: profile.name || '',
+      email: user.email, // Use the email from the User object
+      role: profile.role || 'user',
+      created_at: profile.created_at || new Date().toISOString(),
+      phone: user.phone
+    };
+  } catch (error) {
     console.error('Error fetching user profile:', error);
     return null;
   }
-
-  return {
-    id: profile.id,
-    name: profile.name,
-    email: user.email, // Use the email from the User object
-    role: profile.role,
-    created_at: profile.created_at,
-    phone: user.phone
-  };
 }
 
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
-  // Filter out properties that don't exist in the profiles table
-  const { email, ...validUpdates } = updates;
-  
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .update(validUpdates)
-    .eq('id', userId)
-    .select()
-    .single();
+  try {
+    // Filter out properties that don't exist in the profiles table
+    const { email, phone, ...validUpdates } = updates;
+    
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update(validUpdates)
+      .eq('id', userId)
+      .select()
+      .single();
 
-  if (error) {
+    if (error) {
+      console.error('Error updating user profile:', error);
+      return null;
+    }
+
+    return {
+      id: profile.id,
+      name: profile.name || '',
+      email: updates.email || '',
+      role: profile.role || 'user',
+      created_at: profile.created_at || new Date().toISOString(),
+      phone: updates.phone
+    };
+  } catch (error) {
     console.error('Error updating user profile:', error);
     return null;
   }
-
-  return {
-    id: profile.id,
-    name: profile.name,
-    email: updates.email || '',
-    role: profile.role,
-    created_at: profile.created_at,
-    phone: updates.phone
-  };
 }

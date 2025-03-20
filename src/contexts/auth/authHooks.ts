@@ -48,6 +48,7 @@ export const useAuthentication = (
     }
   };
 
+  // Fixed infinite type instantiation by specifying the exact return type
   const register = async (data: {
     name: string;
     email: string;
@@ -84,11 +85,19 @@ export const useAuthentication = (
       const { name, email, phone, password } = data;
       
       // Verificar se o email já está em uso
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: userError } = await supabase
         .from('profiles')
-        .select('email')
+        .select('*')
         .eq('email', email)
-        .single();
+        .maybeSingle();
+
+      if (userError && !userError.message.includes('does not exist')) {
+        console.error('Error checking existing user:', userError);
+        return {
+          success: false,
+          message: 'Erro ao verificar email existente'
+        };
+      }
 
       if (existingUser) {
         return {
@@ -143,12 +152,10 @@ export const useAuthentication = (
           {
             id: authData.user.id,
             name,
-            email,
-            phone,
+            role: userRole,
             created_at: new Date().toISOString(),
             last_login: new Date().toISOString(),
             is_banned: false,
-            role: userRole,
             email_verified: false,
             credits: 0
           }
