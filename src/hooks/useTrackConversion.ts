@@ -38,7 +38,7 @@ export function useTrackConversion() {
       };
 
       // Use proper typing for supabase RPC call
-      const { data, error } = await supabase.rpc('track_conversion', params);
+      const { data, error } = await supabase.rpc('track_conversion', params) as { data: any; error: any };
 
       if (error) {
         console.error('Error tracking conversion:', error);

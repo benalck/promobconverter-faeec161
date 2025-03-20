@@ -15,24 +15,33 @@ export interface UserMetrics {
   }[];
 }
 
+export interface UserMetricsCollection {
+  [userId: string]: {
+    totalConversions: number;
+    successfulConversions: number;
+    failedConversions: number;
+    averageConversionTime: number;
+    lastConversion: string;
+  };
+}
+
 export function useUserMetrics() {
   const { user } = useAuth();
-  const [metrics, setMetrics] = useState<UserMetrics | null>(null);
+  const [metrics, setMetrics] = useState<UserMetricsCollection>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchUserMetrics = useCallback(async (): Promise<UserMetrics | null> => {
-    if (!user) return null;
+  const fetchUserMetrics = useCallback(async (): Promise<UserMetricsCollection> => {
+    if (!user) return {};
     
     setIsLoading(true);
     setError(null);
 
     try {
-      // Remove type assertion and use proper typing
+      // Use explicit type casting for RPC function
       const { data, error } = await supabase.rpc(
-        'get_user_metrics', 
-        { p_user_id: user.id }
-      );
+        'get_user_metrics'
+      ) as { data: UserMetricsCollection | null; error: any };
 
       if (error) {
         throw new Error(error.message);
@@ -42,23 +51,13 @@ export function useUserMetrics() {
         throw new Error('No data returned from user metrics');
       }
 
-      // Map data to our expected format
-      const userMetrics: UserMetrics = {
-        totalConversions: data.total_conversions || 0,
-        successRate: data.success_rate || 0,
-        averageConversionTime: data.average_conversion_time || 0,
-        creditsUsed: data.credits_used || 0,
-        creditsRemaining: user.credits || 0,
-        conversionsByDate: data.conversions_by_date || [],
-      };
-
-      setMetrics(userMetrics);
-      return userMetrics;
+      setMetrics(data);
+      return data;
     } catch (err) {
       const error = err as Error;
       console.error('Error fetching user metrics:', error);
       setError(error);
-      return null;
+      return {};
     } finally {
       setIsLoading(false);
     }
