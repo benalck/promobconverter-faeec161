@@ -38,7 +38,7 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Use explicit type casting for RPC function
+      // Use proper type assertion for the specific function
       const { data, error } = await supabase.rpc(
         'get_system_metrics'
       ) as { data: SystemMetrics | null; error: any };
@@ -68,7 +68,7 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Use explicit type casting for RPC function
+      // Use proper type assertion for the specific function
       const { data, error } = await supabase.rpc(
         'get_conversions_by_date_range',
         { p_start_date: startDate, p_end_date: endDate }
@@ -99,7 +99,7 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Use explicit type casting for RPC function
+      // Use proper type assertion for the specific function
       const { data, error } = await supabase.rpc(
         'get_conversions_by_type'
       ) as { data: ConversionsByType[] | null; error: any };
@@ -137,6 +137,6 @@ export function useSystemMetrics() {
     fetchSystemMetrics,
     fetchConversionsByDateRange,
     fetchConversionsByType,
-    refetch: refetch
+    refetch
   };
 }

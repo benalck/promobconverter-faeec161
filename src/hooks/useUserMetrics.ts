@@ -38,7 +38,7 @@ export function useUserMetrics() {
     setError(null);
 
     try {
-      // Use explicit type casting for RPC function
+      // Use proper type assertion for the specific function
       const { data, error } = await supabase.rpc(
         'get_user_metrics'
       ) as { data: UserMetricsCollection | null; error: any };

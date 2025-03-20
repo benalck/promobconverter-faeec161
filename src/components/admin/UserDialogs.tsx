@@ -1,0 +1,291 @@
+
+import { Button } from "@/components/ui/button";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { User } from "@/contexts/auth/types";
+
+interface DeleteDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}
+
+export function DeleteDialog({ open, onOpenChange, onConfirm }: DeleteDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Excluir Usuário</DialogTitle>
+          <DialogDescription>
+            Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Excluir
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface BanDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  selectedUser: string | null;
+  users: User[];
+}
+
+export function BanDialog({ open, onOpenChange, onConfirm, selectedUser, users }: BanDialogProps) {
+  const user = users.find(u => u.id === selectedUser);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {user?.isBanned ? "Desbanir Usuário" : "Banir Usuário"}
+          </DialogTitle>
+          <DialogDescription>
+            {user?.isBanned 
+              ? "Tem certeza que deseja desbanir este usuário?" 
+              : "Tem certeza que deseja banir este usuário?"}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant={user?.isBanned ? "default" : "destructive"}
+            onClick={onConfirm}
+          >
+            {user?.isBanned ? "Desbanir" : "Banir"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface RoleDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  selectedUser: string | null;
+  users: User[];
+}
+
+export function RoleDialog({ open, onOpenChange, onConfirm, selectedUser, users }: RoleDialogProps) {
+  const user = users.find(u => u.id === selectedUser);
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Alterar Função</DialogTitle>
+          <DialogDescription>
+            {user?.role === "admin" 
+              ? "Remover privilégios de administrador deste usuário?" 
+              : "Tornar este usuário um administrador?"}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={onConfirm}>Confirmar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface CreditsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  creditsToAdd: string;
+  setCreditsToAdd: (value: string) => void;
+}
+
+export function CreditsDialog({ 
+  open, 
+  onOpenChange, 
+  onConfirm, 
+  creditsToAdd, 
+  setCreditsToAdd 
+}: CreditsDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Alterar Créditos</DialogTitle>
+          <DialogDescription>
+            Adicione ou remova créditos do usuário.
+            Use números negativos para remover créditos.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="credits" className="text-right">
+              Créditos
+            </Label>
+            <Input
+              id="credits"
+              type="number"
+              value={creditsToAdd}
+              onChange={(e) => setCreditsToAdd(e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={onConfirm}>Confirmar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface AddUserDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  newUserName: string;
+  setNewUserName: (value: string) => void;
+  newUserEmail: string;
+  setNewUserEmail: (value: string) => void;
+  newUserPassword: string;
+  setNewUserPassword: (value: string) => void;
+  newUserPhone: string;
+  setNewUserPhone: (value: string) => void;
+  newUserCredits: string;
+  setNewUserCredits: (value: string) => void;
+  isNewUserAdmin: boolean;
+  setIsNewUserAdmin: (value: boolean) => void;
+}
+
+export function AddUserDialog({ 
+  open, 
+  onOpenChange, 
+  onConfirm,
+  newUserName,
+  setNewUserName,
+  newUserEmail,
+  setNewUserEmail,
+  newUserPassword,
+  setNewUserPassword,
+  newUserPhone,
+  setNewUserPhone,
+  newUserCredits,
+  setNewUserCredits,
+  isNewUserAdmin,
+  setIsNewUserAdmin
+}: AddUserDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+          <DialogDescription>
+            Preencha os dados do novo usuário.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="form-group">
+            <Label htmlFor="name" className="text-right">
+              Nome
+            </Label>
+            <Input
+              id="name"
+              value={newUserName}
+              onChange={(e) => setNewUserName(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="form-group">
+            <Label htmlFor="email" className="text-right">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={newUserEmail}
+              onChange={(e) => setNewUserEmail(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="form-group">
+            <Label htmlFor="password" className="text-right">
+              Senha
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              value={newUserPassword}
+              onChange={(e) => setNewUserPassword(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="form-group">
+            <Label htmlFor="phone" className="text-right">
+              Telefone
+            </Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={newUserPhone}
+              onChange={(e) => setNewUserPhone(e.target.value)}
+              placeholder="(00) 00000-0000"
+              className="mt-1"
+            />
+          </div>
+          <div className="form-group">
+            <Label htmlFor="credits" className="text-right">
+              Créditos Iniciais
+            </Label>
+            <Input
+              id="credits"
+              type="number"
+              value={newUserCredits}
+              onChange={(e) => setNewUserCredits(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div className="form-group flex items-center space-x-2">
+            <Switch
+              id="admin"
+              checked={isNewUserAdmin}
+              onCheckedChange={setIsNewUserAdmin}
+            />
+            <Label htmlFor="admin">Usuário Administrador</Label>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={onConfirm}>Adicionar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
