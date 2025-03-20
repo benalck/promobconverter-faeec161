@@ -40,7 +40,7 @@ export function useMonthlyCredits() {
         const { error: rpcError } = await supabase.rpc(
           'add_monthly_credits_for_user',
           { user_id: userId }
-        ) as unknown as { data: any, error: any };
+        );
         
         if (rpcError) {
           console.error('Error adding monthly credits:', rpcError);

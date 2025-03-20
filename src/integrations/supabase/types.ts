@@ -229,6 +229,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      add_monthly_credits_for_user: {
+        Args: {
+          user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
