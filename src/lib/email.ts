@@ -1,8 +1,5 @@
-import { Resend } from 'resend';
 
-const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
-
-export const sendConfirmationEmail = async (email: string, confirmationUrl: string) => {
+export const sendConfirmationEmail = async (email: string, confirmationUrl?: string) => {
   try {
     const response = await fetch('/api/send-email', {
       method: 'POST',
@@ -11,7 +8,7 @@ export const sendConfirmationEmail = async (email: string, confirmationUrl: stri
       },
       body: JSON.stringify({
         email,
-        confirmationUrl
+        confirmationUrl: confirmationUrl || `${window.location.origin}/verify`
       }),
     });
 
@@ -27,4 +24,4 @@ export const sendConfirmationEmail = async (email: string, confirmationUrl: stri
     console.error('Erro ao enviar email de confirmação:', error);
     return { success: false, error };
   }
-}; 
+};

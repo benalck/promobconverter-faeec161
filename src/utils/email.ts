@@ -1,9 +1,16 @@
+
 import { Resend } from 'resend';
 
-const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
+const resendKey = import.meta.env.VITE_RESEND_API_KEY;
+const resend = resendKey ? new Resend(resendKey) : null;
 
-export async function sendConfirmationEmail(email: string, confirmationUrl: string) {
+export const sendConfirmationEmail = async (email: string, confirmationUrl: string) => {
   try {
+    if (!resend) {
+      console.error('Resend API key is not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const { data, error } = await resend.emails.send({
       from: 'Conversor XML Promob <noreply@promobconverter.cloud>',
       to: email,
@@ -35,12 +42,12 @@ export async function sendConfirmationEmail(email: string, confirmationUrl: stri
 
     if (error) {
       console.error('Erro ao enviar email:', error);
-      throw error;
+      return { success: false, error };
     }
 
-    return data;
+    return { success: true, data };
   } catch (error) {
     console.error('Erro ao enviar email:', error);
-    throw error;
+    return { success: false, error };
   }
-} 
+};

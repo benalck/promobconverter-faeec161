@@ -1,21 +1,15 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
-import { UserProfile } from "./userManagement";
-import { User } from "./types";
+import { Plan, User } from "./types";
 
-export interface User {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  role: 'admin' | 'user';
-  createdAt: string;
-  lastLogin?: string;
-  isBanned?: boolean;
-  emailVerified: boolean;
-  credits: number;
-  activePlan: string | null;
-  planExpiryDate: string | null;
+  role: string;
+  created_at: string;
+  phone?: string;
 }
 
 export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<User> {
@@ -45,7 +39,7 @@ export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<U
       isBanned: profile?.is_banned || false,
       emailVerified: profile?.email_verified || false,
       credits: profile?.credits || 0,
-      activePlan: profile?.active_plan || null,
+      activePlan: null,
       planExpiryDate: profile?.plan_expiry_date || null
     };
   } catch (error) {
@@ -70,7 +64,7 @@ export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<U
 export async function fetchUserProfile(user: User): Promise<UserProfile | null> {
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('*, email:email')
     .eq('id', user.id)
     .single();
 
@@ -79,13 +73,23 @@ export async function fetchUserProfile(user: User): Promise<UserProfile | null> 
     return null;
   }
 
-  return profile;
+  return {
+    id: profile.id,
+    name: profile.name,
+    email: user.email, // Use the email from the User object
+    role: profile.role,
+    created_at: profile.created_at,
+    phone: user.phone
+  };
 }
 
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
+  // Filter out properties that don't exist in the profiles table
+  const { email, ...validUpdates } = updates;
+  
   const { data: profile, error } = await supabase
     .from('profiles')
-    .update(updates)
+    .update(validUpdates)
     .eq('id', userId)
     .select()
     .single();
@@ -95,5 +99,12 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
     return null;
   }
 
-  return profile;
+  return {
+    id: profile.id,
+    name: profile.name,
+    email: updates.email || '',
+    role: profile.role,
+    created_at: profile.created_at,
+    phone: updates.phone
+  };
 }

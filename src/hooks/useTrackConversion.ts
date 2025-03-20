@@ -38,7 +38,7 @@ export function useTrackConversion() {
       };
 
       // Use type assertion for the Supabase RPC call
-      const { data, error } = await supabase.rpc('track_conversion', params) as unknown as { data: any, error: any };
+      const { data, error } = await supabase.rpc('track_conversion', params) as { data: any, error: any };
 
       if (error) {
         console.error('Error tracking conversion:', error);

@@ -1,7 +1,17 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { User } from './types';
+import { User, Plan } from './types';
 import { convertSupabaseUser } from './userUtils';
 import { useToast } from '@/hooks/use-toast';
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  created_at: string;
+  phone?: string;
+}
 
 export const useUserManagement = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -31,10 +41,12 @@ export const useUserManagement = (
         try {
           let userEmail = null;
           let userRole: 'admin' | 'user' = 'user';
+          let userPhone = '';
           
           try {
             const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
             userEmail = userData?.user?.email || null;
+            userPhone = userData?.user?.user_metadata?.phone || '';
           } catch (error) {
             console.log('Erro ao buscar metadados do usuário:', error);
           }
@@ -46,7 +58,8 @@ export const useUserManagement = (
           formattedUsers.push({
             id: profile.id,
             name: profile.name,
-            email: userEmail,
+            email: userEmail || '',
+            phone: userPhone,
             role: userRole,
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
@@ -145,9 +158,12 @@ export const useUserManagement = (
       
       // Update local state
       if (user?.id === userId) {
-        setUser({
-          ...user,
-          credits: newCredits
+        setUser(prevUser => {
+          if (!prevUser) return null;
+          return {
+            ...prevUser,
+            credits: newCredits
+          };
         });
       }
       
@@ -163,27 +179,29 @@ export const useUserManagement = (
     }
   };
 
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
     if (user?.id === id) {
       throw new Error('Não é possível excluir o usuário atual');
     }
     
     try {
-      supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ is_banned: true })
-        .eq('id', id)
-        .then(() => syncUsers());
+        .eq('id', id);
         
-      const newUsers = users.filter(u => u.id !== id);
-      setUsers(newUsers);
+      if (error) throw error;
+      
+      await syncUsers();
+      
+      return;
     } catch (error) {
       console.error('Erro ao excluir usuário:', error);
       throw new Error('Falha ao excluir usuário');
     }
   };
 
-  const updateUser = (id: string, data: Partial<User>) => {
+  const updateUser = async (id: string, data: Partial<User>) => {
     try {
       const profileData: { 
         name?: string; 
@@ -211,17 +229,20 @@ export const useUserManagement = (
       if (data.planExpiryDate !== undefined) profileData.plan_expiry_date = data.planExpiryDate;
       
       if (Object.keys(profileData).length > 0) {
-        supabase
+        const { error } = await supabase
           .from('profiles')
           .update(profileData)
-          .eq('id', id)
-          .then(() => syncUsers());
+          .eq('id', id);
+          
+        if (error) throw error;
+        
+        await syncUsers();
       }
         
       if (data.role) {
         try {
           console.log(`Tentando atualizar role para: ${data.role}`);
-          supabase.auth.updateUser({
+          await supabase.auth.updateUser({
             data: { role: data.role }
           });
         } catch (e) {
@@ -229,24 +250,23 @@ export const useUserManagement = (
         }
       }
       
-      const newUsers = users.map(u => 
-        u.id === id ? { ...u, ...data } : u
-      );
-      setUsers(newUsers);
-
       if (user?.id === id && data.isBanned) {
-        logout();
+        await logout();
       } else if (user?.id === id) {
-        const updatedUser = { ...user, ...data };
-        setUser(updatedUser);
+        setUser(prevUser => {
+          if (!prevUser) return null;
+          return { ...prevUser, ...data };
+        });
       }
+      
+      return;
     } catch (error) {
       console.error('Erro ao atualizar usuário:', error);
       throw new Error('Falha ao atualizar usuário');
     }
   };
 
-  const getAllUsers = () => {
+  const getAllUsers = async () => {
     return users;
   };
 
@@ -261,14 +281,6 @@ export const useUserManagement = (
   };
 };
 
-export type UserProfile = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  created_at: string;
-};
-
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -281,7 +293,17 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     return null;
   }
 
-  return profile;
+  const { data: userData } = await supabase.auth.admin.getUserById(userId);
+  const email = userData?.user?.email || '';
+
+  return {
+    id: profile.id,
+    name: profile.name,
+    email,
+    role: profile.role,
+    created_at: profile.created_at,
+    phone: userData?.user?.user_metadata?.phone
+  };
 }
 
 export async function createUserProfile(user: User, name: string): Promise<UserProfile | null> {
@@ -291,7 +313,6 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
       {
         id: user.id,
         name,
-        email: user.email,
         role: 'user',
       }
     ])
@@ -303,13 +324,23 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
     return null;
   }
 
-  return profile;
+  return {
+    id: profile.id,
+    name: profile.name,
+    email: user.email,
+    role: profile.role,
+    created_at: profile.created_at,
+    phone: user.phone
+  };
 }
 
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
+  // Filter out properties that don't exist in the profiles table
+  const { email, phone, ...validUpdates } = updates;
+  
   const { data: profile, error } = await supabase
     .from('profiles')
-    .update(updates)
+    .update(validUpdates)
     .eq('id', userId)
     .select()
     .single();
@@ -319,7 +350,18 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
     return null;
   }
 
-  return profile;
+  // Retrieve user email from auth
+  const { data: userData } = await supabase.auth.admin.getUserById(userId);
+  const userEmail = userData?.user?.email || '';
+
+  return {
+    id: profile.id,
+    name: profile.name,
+    email: userEmail,
+    role: profile.role,
+    created_at: profile.created_at,
+    phone: userData?.user?.user_metadata?.phone
+  };
 }
 
 export async function deleteUserProfile(userId: string): Promise<boolean> {
@@ -335,3 +377,10 @@ export async function deleteUserProfile(userId: string): Promise<boolean> {
 
   return true;
 }
+
+export const userManagement = {
+  getUserProfile,
+  createUserProfile,
+  updateUserProfile,
+  deleteUserProfile
+};

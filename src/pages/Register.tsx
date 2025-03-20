@@ -23,7 +23,6 @@ export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Funções de validação
   const validateName = (name: string) => {
     if (name.length < 3) return "Nome deve ter pelo menos 3 caracteres";
     if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(name)) return "Nome deve conter apenas letras";
@@ -38,7 +37,6 @@ export default function Register() {
   };
 
   const validatePhone = (phone: string) => {
-    // Remove todos os caracteres não numéricos para validação
     const numbers = phone.replace(/\D/g, '');
     if (numbers.length !== 11) return "Telefone deve ter 11 números (DDD + 9 dígitos)";
     if (!/^[1-9]{2}9[0-9]{8}$/.test(numbers)) return "Formato de telefone inválido";
@@ -54,14 +52,11 @@ export default function Register() {
     return null;
   };
 
-  // Formatar telefone automaticamente
   const formatPhone = (value: string) => {
     let numbers = value.replace(/\D/g, '');
     
-    // Limita a 11 dígitos
     numbers = numbers.slice(0, 11);
     
-    // Aplica a máscara conforme o usuário digita
     let formatted = numbers;
     if (numbers.length > 0) formatted = '(' + formatted;
     if (numbers.length > 2) formatted = formatted.slice(0, 3) + ') ' + formatted.slice(3);
@@ -79,7 +74,6 @@ export default function Register() {
     e.preventDefault();
     
     if (isLoginMode) {
-      // Login mode
       if (!email || !password) {
         toast({
           title: "Campos obrigatórios",
@@ -99,7 +93,6 @@ export default function Register() {
         navigate("/");
       } catch (error) {
         if (error instanceof Error && error.message.includes('banida')) {
-          // Isso será tratado pelo AuthContext
           throw error;
         } else {
           toast({
@@ -112,7 +105,6 @@ export default function Register() {
         setIsLoading(false);
       }
     } else {
-      // Register mode
       if (!name || !email || !phone || !password || !confirmPassword) {
         toast({
           title: "Campos obrigatórios",
@@ -122,7 +114,6 @@ export default function Register() {
         return;
       }
 
-      // Validações
       const nameError = validateName(name);
       if (nameError) {
         toast({
@@ -175,7 +166,6 @@ export default function Register() {
       try {
         setIsLoading(true);
         
-        // Registrar usuário
         const result = await register({
           name,
           email,
@@ -184,8 +174,8 @@ export default function Register() {
         });
 
         if (result.success) {
-          // Enviar email de confirmação
-          const { success: emailSuccess, error: emailError } = await sendConfirmationEmail(email);
+          const confirmationUrl = `${window.location.origin}/verify`;
+          const { success: emailSuccess, error: emailError } = await sendConfirmationEmail(email, confirmationUrl);
 
           toast({
             title: result.message,
@@ -222,7 +212,6 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="w-full max-w-5xl flex flex-col md:flex-row shadow-xl rounded-xl overflow-hidden">
-        {/* Banner lateral */}
         <div className="hidden md:block md:w-1/2 bg-primary/90 p-12 text-white relative">
           <div className="h-full flex flex-col justify-between">
             <div>
@@ -259,7 +248,6 @@ export default function Register() {
           </div>
         </div>
         
-        {/* Formulário de cadastro/login */}
         <Card className="md:w-1/2 border-0 rounded-none shadow-none">
           <CardHeader className="pt-12 pb-6 text-center">
             <CardTitle className="text-2xl font-bold">

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -39,7 +40,7 @@ export interface AuthContextType {
     email: string;
     phone: string;
     password: string;
-  }) => Promise<void>;
+  }) => Promise<{ success: boolean; message: string; }>;
   logout: () => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   updateUser: (userId: string, updates: Partial<User>) => Promise<void>;
