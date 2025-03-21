@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, Plan } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -107,32 +106,11 @@ export const useUserManagement = (
 
   const addInitialCreditsIfNeeded = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('last_login, credits')
-        .eq('id', userId)
-        .single();
-        
-      if (error) throw error;
-      
-      if (profile && profile.credits === 0) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ credits: 3 })
-          .eq('id', userId);
-          
-        if (updateError) throw updateError;
-        
-        toast({
-          title: "Boas-vindas!",
-          description: "Você recebeu 3 créditos gratuitos para começar a usar o conversor.",
-          variant: "default",
-        });
-        
-        await refreshUserCredits();
-      }
+      // Função mantida apenas para compatibilidade, mas não adiciona mais créditos
+      // e não exibe nenhuma mensagem de boas-vindas
+      await refreshUserCredits();
     } catch (error) {
-      console.error('Erro ao adicionar créditos iniciais:', error);
+      console.error('Erro ao sincronizar dados do usuário:', error);
     }
   };
 
