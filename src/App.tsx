@@ -72,6 +72,13 @@ function App() {
             <Route path="/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
             <Route path="/verify" element={<VerifyEmail />} />
             <Route path="/auth/confirm" element={<VerifyEmail />} />
+            <Route path="/register/verify" element={<VerifyEmail />} />
+            <Route path="/register/confirm" element={<VerifyEmail />} />
+            <Route path="/register/auth/confirm" element={<VerifyEmail />} />
+            <Route path="/register/access/*" element={<VerifyEmail />} />
+            <Route path="/access/*" element={<VerifyEmail />} />
+            <Route path="/verify-email/*" element={<VerifyEmail />} />
+            <Route path="/verify-redirect/*" element={<VerifyEmail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
