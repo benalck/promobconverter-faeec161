@@ -4,34 +4,52 @@ Este documento contém instruções para resolver o problema do link de confirma
 
 ## 1. Executar Script SQL para Corrigir URLs
 
-Execute o script `supabase/migrations/20240329_fix_email_redirect_urls.sql` no Supabase Studio:
+Para executar o script SQL no Supabase Studio:
 
 1. Acesse o [Supabase Studio](https://supabase.com/dashboard/)
 2. Selecione o projeto "Promob Converter"
 3. Clique em "SQL Editor" no menu lateral
 4. Crie uma nova consulta
-5. Cole o conteúdo completo do arquivo SQL
+5. Cole os comandos SQL abaixo
 6. Clique em "Run" para executar
 
-Este script configura corretamente as URLs de redirecionamento para emails de confirmação.
+```sql
+-- Script simplificado para corrigir a confirmação de email
 
-## 2. Verificar Configurações de Autenticação
+-- Adicionar URLs de redirecionamento válidas
+INSERT INTO auth.redirect_urls (uri)
+VALUES
+  ('https://promobconverter.cloud'),
+  ('https://promobconverter.cloud/verify'),
+  ('https://promobconverter.cloud/auth/confirm'),
+  ('https://promobconverter.cloud/register/verify'),
+  ('https://promobconverter.cloud/register/confirm'),
+  ('https://promobconverter.cloud/register/auth/confirm'),
+  ('https://promobconverter.cloud/access'),
+  ('https://promobconverter.cloud/register/access'),
+  ('https://promobconverter.cloud/verify-email'),
+  ('https://promobconverter.cloud/verify-redirect'),
+  ('https://promobconverter.cloud/register')
+ON CONFLICT (uri) DO NOTHING;
+
+-- Marcar todos os usuários como verificados
+UPDATE public.profiles SET email_verified = TRUE;
+
+-- Registrar a ação
+INSERT INTO public.debug_logs (message)
+VALUES ('URLs de redirecionamento atualizadas e todos os usuários marcados como verificados.');
+```
+
+## 2. Verificar Configurações de Autenticação no Supabase
 
 Ainda no Supabase Studio, verifique as configurações de autenticação:
 
 1. No menu lateral, clique em "Authentication"
 2. Vá para "URL Configuration"
 3. Verifique se "Site URL" está configurado como `https://promobconverter.cloud`
-4. Na seção "Redirect URLs", confirme que todas estas URLs estão presentes:
-   - `https://promobconverter.cloud`
-   - `https://promobconverter.cloud/verify`
-   - `https://promobconverter.cloud/auth/confirm`
-   - `https://promobconverter.cloud/register/verify`
-   - `https://promobconverter.cloud/register/confirm`
-   - `https://promobconverter.cloud/register/auth/confirm`
-   - `https://promobconverter.cloud/access`
-   - `https://promobconverter.cloud/register/access`
-5. Adicione qualquer URL faltante e clique em "Save"
+4. Na seção "Redirect URLs", adicione manualmente as URLs listadas acima
+5. Ative a opção "Confirm email" para "Auto-confirm"
+6. Clique em "Save"
 
 ## 3. Verificar Template de Email
 
@@ -60,15 +78,10 @@ Se mesmo após todas estas etapas o problema persistir:
    SELECT * FROM public.debug_logs ORDER BY created_at DESC LIMIT 20;
    ```
 
-2. Tente definir a verificação automática de email:
-   ```sql
-   UPDATE auth.config SET mailer_autoconfirm = true;
-   ```
-
-3. Marque todos os usuários como verificados manualmente:
-   ```sql
-   UPDATE public.profiles SET email_verified = TRUE;
-   ```
+2. Tente a solução mais radical - Desativar completamente a verificação de email:
+   1. Adicione um gatilho para marcar automaticamente todos os novos usuários como verificados
+   2. Certifique-se que todas as rotas de verificação no App.tsx estão corretas
+   3. Contate o suporte do Supabase se necessário
 
 ## Observações
 
