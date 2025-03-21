@@ -148,7 +148,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     <>
       <Card className={cn("w-full", className)}>
         <CardHeader>
-          <CardTitle>Conversor de XML Promob para Excel</CardTitle>
+          <CardTitle>Conversor Promob</CardTitle>
           <CardDescription>
             Transforme seus planos de corte do Promob em planilhas Excel formatadas
           </CardDescription>
