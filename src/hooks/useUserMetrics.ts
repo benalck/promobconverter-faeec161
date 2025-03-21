@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,8 +36,9 @@ export function useUserMetrics() {
     try {
       console.log(`Buscando métricas para o usuário ${userId}...`);
       
+      // Use type assertion for the RPC call
       const result = await supabase.rpc(
-        'get_user_metrics',
+        'get_user_metrics' as any,
         {
           p_user_id: userId,
           p_start_date: null,

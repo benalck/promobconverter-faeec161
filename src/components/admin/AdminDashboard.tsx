@@ -2,9 +2,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Activity, Clock } from "lucide-react";
-import { ConversionsByDate } from "@/hooks/useSystemMetrics";
+import { ConversionsByDate, SystemMetrics } from "@/hooks/useSystemMetrics";
 import ConversionMetricsChart from "./ConversionMetricsChart";
-import { SystemMetrics } from "@/hooks/useSystemMetrics";
 
 interface AdminDashboardProps {
   systemMetrics: SystemMetrics | null;

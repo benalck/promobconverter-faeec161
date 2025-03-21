@@ -1,9 +1,10 @@
+
 import { Database } from '@/integrations/supabase/types';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SystemMetrics, ConversionsByDate, ConversionsByType } from '@/hooks/useSystemMetrics';
 import { UserMetricsCollection } from '@/hooks/useUserMetrics';
 
-// Estendendo a interface do cliente Supabase para adicionar nossas funções RPC
+// Extending the Supabase client interface to add our RPC functions
 declare module '@supabase/supabase-js' {
   interface SupabaseClient<T extends Database = any> {
     rpc<
@@ -12,7 +13,7 @@ declare module '@supabase/supabase-js' {
         ? ReturnType<Database['public']['Functions'][Schema]>
         : unknown
     >(
-      fn: Schema,
+      fn: Schema | string,
       params?: Schema extends keyof Database['public']['Functions']
         ? Parameters<Database['public']['Functions'][Schema]>[0]
         : Record<string, any>

@@ -11,57 +11,65 @@ export type Database = {
     Tables: {
       conversions: {
         Row: {
+          conversion_time: number | null
           conversion_type: string | null
           converted_filename: string | null
           created_at: string
+          error_message: string | null
           file_content: string | null
+          file_size: number | null
           id: string
+          input_format: string | null
           name: string
           original_filename: string | null
+          output_format: string | null
+          success: boolean | null
+          timestamp: string | null
           user_id: string
-          success: boolean
-          file_size: number
-          conversion_time: number
-          error_message: string | null
-          input_format: string
-          output_format: string
-          timestamp: string
         }
         Insert: {
+          conversion_time?: number | null
           conversion_type?: string | null
           converted_filename?: string | null
           created_at?: string
+          error_message?: string | null
           file_content?: string | null
+          file_size?: number | null
           id?: string
+          input_format?: string | null
           name: string
           original_filename?: string | null
+          output_format?: string | null
+          success?: boolean | null
+          timestamp?: string | null
           user_id: string
-          success?: boolean
-          file_size?: number
-          conversion_time?: number
-          error_message?: string | null
-          input_format?: string
-          output_format?: string
-          timestamp?: string
         }
         Update: {
+          conversion_time?: number | null
           conversion_type?: string | null
           converted_filename?: string | null
           created_at?: string
+          error_message?: string | null
           file_content?: string | null
+          file_size?: number | null
           id?: string
+          input_format?: string | null
           name?: string
           original_filename?: string | null
+          output_format?: string | null
+          success?: boolean | null
+          timestamp?: string | null
           user_id?: string
-          success?: boolean
-          file_size?: number
-          conversion_time?: number
-          error_message?: string | null
-          input_format?: string
-          output_format?: string
-          timestamp?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_without_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_purchases: {
         Row: {
@@ -99,7 +107,38 @@ export type Database = {
             referencedRelation: "plans"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_purchases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_without_profiles"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      debug_logs: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          id: number
+          message: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          id?: number
+          message?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          id?: number
+          message?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       plans: {
         Row: {
@@ -139,6 +178,7 @@ export type Database = {
           active_plan: string | null
           created_at: string
           credits: number | null
+          email: string | null
           email_verified: boolean | null
           id: string
           is_banned: boolean | null
@@ -151,6 +191,7 @@ export type Database = {
           active_plan?: string | null
           created_at?: string
           credits?: number | null
+          email?: string | null
           email_verified?: boolean | null
           id: string
           is_banned?: boolean | null
@@ -163,6 +204,7 @@ export type Database = {
           active_plan?: string | null
           created_at?: string
           credits?: number | null
+          email?: string | null
           email_verified?: boolean | null
           id?: string
           is_banned?: boolean | null
@@ -177,6 +219,13 @@ export type Database = {
             columns: ["active_plan"]
             isOneToOne: false
             referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users_without_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -215,7 +264,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_without_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       verification_codes: {
         Row: {
@@ -239,11 +296,47 @@ export type Database = {
           id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "verification_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_without_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      system_metrics: {
+        Row: {
+          active_users: number | null
+          average_response_time: number | null
+          success_rate: number | null
+          total_conversions: number | null
+          total_users: number | null
+        }
+        Relationships: []
+      }
+      user_metrics: {
+        Row: {
+          average_response_time: number | null
+          success_rate: number | null
+          total_conversions: number | null
+          total_file_size: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      users_without_profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string | null
+          last_sign_in_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_monthly_credits: {
@@ -256,65 +349,124 @@ export type Database = {
         }
         Returns: undefined
       }
-      track_conversion: {
+      create_user_profile: {
         Args: {
-          p_user_id: string
-          p_success: boolean
-          p_file_size: number
-          p_conversion_time: number
-          p_error_message: string | null
-          p_input_format: string
-          p_output_format: string
+          user_id: string
+          user_name: string
+          user_email: string
+          user_role?: string
         }
-        Returns: string // UUID of the created conversion
+        Returns: boolean
       }
-      get_system_metrics: {
-        Args: {
-          p_start_date: string | null
-          p_end_date: string | null
-        }
+      diagnose_registration_issues: {
+        Args: Record<PropertyKey, never>
         Returns: {
-          total_users: number
-          active_users: number
-          total_conversions: number
-          success_rate: number
-          average_response_time: number
-        }
+          issue_type: string
+          count: number
+        }[]
       }
-      get_user_metrics: {
-        Args: {
-          p_user_id: string
-          p_start_date: string | null
-          p_end_date: string | null
-        }
+      fix_missing_profiles: {
+        Args: Record<PropertyKey, never>
         Returns: {
-          total_conversions: number
-          successful_conversions: number
-          failed_conversions: number
-          average_conversion_time: number
-          last_conversion: string
-        }
+          user_id: string
+          email: string
+          status: string
+        }[]
       }
       get_conversions_by_date_range: {
         Args: {
           p_start_date: string
           p_end_date: string
         }
-        Returns: Array<{
+        Returns: {
           date: string
           total: number
           successful: number
           failed: number
-        }>
+        }[]
       }
       get_conversions_by_type: {
         Args: Record<PropertyKey, never>
-        Returns: Array<{
+        Returns: {
           input_format: string
           output_format: string
           count: number
-          success_rate: number
-        }>
+        }[]
+      }
+      get_metrics_system: {
+        Args: {
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: Json
+      }
+      get_metrics_user: {
+        Args: {
+          p_user_id: string
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: Json
+      }
+      get_system_metrics: {
+        Args: {
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: Json
+      }
+      get_user_metrics: {
+        Args: {
+          p_user_id: string
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: Json
+      }
+      register_user: {
+        Args: {
+          user_id: string
+          user_name: string
+          user_email: string
+          user_role?: string
+        }
+        Returns: Json
+      }
+      register_user_verified: {
+        Args: {
+          user_id: string
+          user_name: string
+          user_email: string
+          user_role?: string
+        }
+        Returns: Json
+      }
+      system_metrics_calc: {
+        Args: {
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: Json
+      }
+      track_conversion: {
+        Args: {
+          p_user_id: string
+          p_success: boolean
+          p_file_size: number
+          p_conversion_time: number
+          p_error_message?: string
+          p_input_format?: string
+          p_output_format?: string
+        }
+        Returns: string
+      }
+      user_metrics_calc: {
+        Args: {
+          p_user_id: string
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: Json
       }
     }
     Enums: {

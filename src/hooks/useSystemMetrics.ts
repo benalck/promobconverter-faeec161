@@ -1,8 +1,9 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Interface para manter compatibilidade com os componentes existentes
+// Interface for manter compatibilidade com os componentes existentes
 export interface SystemMetrics {
   totalUsers: number;
   activeUsers: number;
@@ -54,9 +55,9 @@ export function useSystemMetrics() {
       // Console log para debug
       console.log('Buscando métricas do sistema...');
 
-      // Corrigindo para passar parâmetros para a função get_system_metrics
+      // Use a type assertion to call the RPC function
       const result = await supabase.rpc(
-        'get_system_metrics',
+        'get_system_metrics' as any,
         { 
           p_start_date: null,
           p_end_date: null
@@ -124,24 +125,14 @@ export function useSystemMetrics() {
     }
   }, [isAdmin]);
 
-  // Adicionar efeito para buscar métricas automaticamente
-  useEffect(() => {
-    // Só tenta buscar métricas se o usuário for admin
-    if (isAdmin) {
-      fetchSystemMetrics().catch((error) => {
-        console.error('Erro ao carregar métricas iniciais:', error);
-      });
-    }
-  }, [fetchSystemMetrics, isAdmin]);
-
   const fetchConversionsByDateRange = useCallback(async (startDate: string, endDate: string): Promise<ConversionsByDate[]> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Agora com os tipos definidos corretamente
+      // Use a type assertion for the RPC call
       const { data, error } = await supabase.rpc(
-        'get_conversions_by_date_range',
+        'get_conversions_by_date_range' as any,
         { p_start_date: startDate, p_end_date: endDate }
       );
 
@@ -170,9 +161,9 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Agora com os tipos definidos corretamente
+      // Use a type assertion for the RPC call
       const { data, error } = await supabase.rpc(
-        'get_conversions_by_type'
+        'get_conversions_by_type' as any
       );
 
       if (error) {
@@ -198,6 +189,16 @@ export function useSystemMetrics() {
   const refetch = useCallback(async () => {
     return fetchSystemMetrics();
   }, [fetchSystemMetrics]);
+
+  // Add effect to fetch metrics automatically
+  useEffect(() => {
+    // Only attempt to fetch metrics if user is admin
+    if (isAdmin) {
+      fetchSystemMetrics().catch((error) => {
+        console.error('Error loading initial metrics:', error);
+      });
+    }
+  }, [fetchSystemMetrics, isAdmin]);
 
   return {
     metrics,

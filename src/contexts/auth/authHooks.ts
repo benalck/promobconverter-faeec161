@@ -24,7 +24,7 @@ const handleDefaultError = (error: unknown): string => {
     try {
       return JSON.stringify(error);
     } catch (e) {
-      return "Erro desconhecido: " + (error.toString ? error.toString() : "Objeto de erro não pode ser convertido");
+      return "Erro desconhecido: " + (Object.prototype.toString.call(error));
     }
   }
   
