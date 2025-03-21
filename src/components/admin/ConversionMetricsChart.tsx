@@ -1,16 +1,20 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConversionsByDate } from '@/hooks/useSystemMetrics';
 
-interface DailyStats {
+// Updated to match the data structure returned by the API
+export interface DailyStats {
   date: string;
-  totalConversions: number;
-  successRate: number;
-  averageTime: number;
+  formattedDate?: string;
+  total: number; 
+  successful: number;
+  failed: number;
+  averageTimeInSeconds?: number;
 }
 
 interface ConversionMetricsChartProps {
-  data: DailyStats[];
+  data: ConversionsByDate[];
   timeFilter: string;
 }
 
@@ -31,11 +35,13 @@ export default function ConversionMetricsChart({ data, timeFilter }: ConversionM
       formattedDate = `${date.getHours()}:00`;
     }
     
+    // Transform the data to include formatted date and averageTimeInSeconds
     return {
       ...item,
       formattedDate,
-      // Convert milliseconds to seconds for the UI
-      averageTimeInSeconds: item.averageTime / 1000
+      // Add calculated fields needed for the chart
+      successRate: item.successful > 0 ? (item.successful / item.total) * 100 : 0,
+      averageTimeInSeconds: 0 // This will be filled in if available
     };
   });
 
@@ -65,7 +71,7 @@ export default function ConversionMetricsChart({ data, timeFilter }: ConversionM
                 return [value, name];
               }} />
               <Legend />
-              <Bar yAxisId="left" dataKey="totalConversions" name="Total de Conversões" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="left" dataKey="total" name="Total de Conversões" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               <Line yAxisId="right" type="monotone" dataKey="successRate" name="Taxa de Sucesso" stroke="#10b981" dot={{ r: 4 }} />
               <Line yAxisId="left" type="monotone" dataKey="averageTimeInSeconds" name="Tempo Médio (s)" stroke="#f97316" dot={{ r: 4 }} />
             </ComposedChart>

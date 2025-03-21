@@ -34,25 +34,23 @@ interface AdminRouteProps {
 }
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-    const { user, isInitialized } = useAuth();
+  const { user, isInitialized } = useAuth();
 
-    if (!isInitialized) {
-        return <div>Loading...</div>;
-    }
+  if (!isInitialized) {
+    return <div>Loading...</div>;
+  }
 
-    if (!user || !user.role || user.role !== 'admin') {
-        return <Navigate to="/register" replace />;
-    }
+  if (!user || !user.role || user.role !== 'admin') {
+    return <Navigate to="/register" replace />;
+  }
 
-    return <>{children}</>;
+  return <>{children}</>;
 };
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simula um tempo de carregamento mínimo para garantir que
-    // a animação seja visível mesmo em dispositivos rápidos
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1500);
@@ -70,15 +68,20 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
+            
             <Route path="/verify" element={<VerifyEmail />} />
             <Route path="/auth/confirm" element={<VerifyEmail />} />
             <Route path="/register/verify" element={<VerifyEmail />} />
             <Route path="/register/confirm" element={<VerifyEmail />} />
             <Route path="/register/auth/confirm" element={<VerifyEmail />} />
             <Route path="/register/access/*" element={<VerifyEmail />} />
+            <Route path="/register/access" element={<VerifyEmail />} />
             <Route path="/access/*" element={<VerifyEmail />} />
             <Route path="/verify-email/*" element={<VerifyEmail />} />
             <Route path="/verify-redirect/*" element={<VerifyEmail />} />
+            <Route path="/#access_token=*" element={<VerifyEmail />} />
+            <Route path="/*access_token=*" element={<VerifyEmail />} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />

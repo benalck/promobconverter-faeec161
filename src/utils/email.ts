@@ -11,6 +11,12 @@ export const sendConfirmationEmail = async (email: string, confirmationUrl: stri
       return { success: false, error: 'Email service not configured' };
     }
 
+    // Garantir que a URL de confirmação seja limpa de parâmetros adicionais
+    const baseUrl = new URL(confirmationUrl).origin;
+    const cleanUrl = `${baseUrl}/verify`;
+
+    console.log('Enviando email com URL de confirmação:', cleanUrl);
+
     const { data, error } = await resend.emails.send({
       from: 'Conversor XML Promob <noreply@promobconverter.cloud>',
       to: email,
@@ -21,7 +27,7 @@ export const sendConfirmationEmail = async (email: string, confirmationUrl: stri
           <p>Olá,</p>
           <p>Estamos felizes em ter você conosco! Para começar a usar nosso conversor, por favor, confirme seu email clicando no botão abaixo:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${confirmationUrl}" 
+            <a href="${cleanUrl}" 
                style="background-color: #1a73e8; 
                       color: white; 
                       padding: 12px 30px; 

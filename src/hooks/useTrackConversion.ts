@@ -12,6 +12,10 @@ interface TrackConversionParams {
   outputFormat: string;
 }
 
+interface TrackConversionResponse {
+  id: string;
+}
+
 export function useTrackConversion() {
   const { user } = useAuth();
 
@@ -37,8 +41,11 @@ export function useTrackConversion() {
         p_output_format: outputFormat
       };
 
-      // Use proper typing for supabase RPC call
-      const { data, error } = await supabase.rpc('track_conversion', params) as { data: any; error: any };
+      // Use track_conversion function which is defined in the database with proper type assertion
+      const { data, error } = await supabase.rpc<'track_conversion', TrackConversionResponse>(
+        'track_conversion', 
+        params
+      );
 
       if (error) {
         console.error('Error tracking conversion:', error);

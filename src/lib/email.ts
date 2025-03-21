@@ -2,6 +2,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 export async function sendConfirmationEmail(email: string, redirectUrl: string) {
   try {
+    console.log("Tentando enviar email para:", email);
+    
     // Garantir que a URL de redirecionamento seja absoluta
     let completeRedirectUrl = redirectUrl;
     if (!redirectUrl.startsWith('http')) {
@@ -9,6 +11,7 @@ export async function sendConfirmationEmail(email: string, redirectUrl: string) 
       completeRedirectUrl = window.location.origin + (redirectUrl.startsWith('/') ? '' : '/') + redirectUrl;
     }
     
+    // Para diagnóstico
     console.log('Enviando email com redirecionamento para:', completeRedirectUrl);
     
     // Tentar enviar email de confirmação usando método apropriado
@@ -49,6 +52,9 @@ export async function sendConfirmationEmail(email: string, redirectUrl: string) 
       };
     }
 
+    console.log('Email de confirmação enviado com sucesso para:', email);
+    console.log('URL de redirecionamento configurado:', completeRedirectUrl);
+    
     return {
       success: true,
       error: null

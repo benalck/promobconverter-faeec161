@@ -18,42 +18,10 @@ import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
-import { supabase } from "@/integrations/supabase/client";
+import { useTrackConversion } from "@/hooks/useTrackConversion";
 
 interface ConverterFormProps {
   className?: string;
-}
-
-// Função para registrar uma conversão no banco de dados
-async function registrarConversao(
-  inputFormat: string,   // 'XML', 'JSON', etc
-  outputFormat: string,  // 'XML', 'JSON', etc
-  fileSize: number,      // tamanho do arquivo em bytes
-  conversionTime: number, // tempo de conversão em milissegundos
-  success: boolean,      // se a conversão foi bem sucedida
-  errorMessage?: string  // mensagem de erro (opcional)
-) {
-  try {
-    const { data, error } = await supabase.rpc('register_conversion_js', {
-      input_format: inputFormat,
-      output_format: outputFormat,
-      file_size: fileSize,
-      conversion_time: conversionTime,
-      success: success,
-      error_message: errorMessage || null
-    });
-    
-    if (error) {
-      console.error('Erro ao registrar conversão:', error);
-      return false;
-    }
-    
-    console.log('Conversão registrada com sucesso:', data);
-    return true;
-  } catch (err) {
-    console.error('Exceção ao registrar conversão:', err);
-    return false;
-  }
 }
 
 const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
@@ -63,6 +31,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { trackConversion } = useTrackConversion();
 
   // Função auxiliar para ler arquivo como texto
   const readFileAsText = (file: File): Promise<string> => {
@@ -161,15 +130,15 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       const endTime = Date.now();
       const conversionTime = endTime - startTime;
       
-      // Registrar a conversão no banco de dados
-      await registrarConversao(
-        'XML',           // formato de entrada
-        'Excel',         // formato de saída 
-        fileSize,        // tamanho do arquivo
-        conversionTime,  // tempo de conversão
-        success,         // sucesso ou falha
-        errorMsg         // mensagem de erro (se houver)
-      );
+      // Registrar a conversão no banco de dados usando o hook
+      await trackConversion({
+        inputFormat: 'XML',
+        outputFormat: 'Excel',
+        fileSize,
+        conversionTime,
+        success,
+        errorMessage: errorMsg
+      });
       
       setIsConverting(false);
     }

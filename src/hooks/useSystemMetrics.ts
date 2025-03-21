@@ -1,8 +1,9 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Interface para manter compatibilidade com os componentes existentes
+// Interface for manter compatibilidade com os componentes existentes
 export interface SystemMetrics {
   totalUsers: number;
   activeUsers: number;
@@ -25,6 +26,14 @@ export interface ConversionsByType {
   output_format: string;
   count: number;
   success_rate: number;
+}
+
+interface SystemMetricsResponse {
+  total_users: number;
+  active_users: number;
+  total_conversions: number;
+  success_rate: number;
+  average_response_time: number;
 }
 
 export function useSystemMetrics() {
@@ -54,8 +63,8 @@ export function useSystemMetrics() {
       // Console log para debug
       console.log('Buscando métricas do sistema...');
 
-      // Corrigindo para passar parâmetros para a função get_system_metrics
-      const result = await supabase.rpc(
+      // Use a type assertion for the RPC call
+      const result = await supabase.rpc<'get_system_metrics', SystemMetricsResponse>(
         'get_system_metrics',
         { 
           p_start_date: null,
@@ -88,14 +97,6 @@ export function useSystemMetrics() {
         throw new Error('Nenhum dado retornado das métricas do sistema');
       }
 
-      // Verificar se as propriedades esperadas existem
-      if (typeof data.total_users === 'undefined' || 
-          typeof data.active_users === 'undefined' || 
-          typeof data.total_conversions === 'undefined') {
-        console.error('Dados retornados em formato inesperado:', data);
-        throw new Error('Formato de dados inesperado nas métricas do sistema');
-      }
-
       // Mapear os dados da resposta SQL para nosso formato da interface
       const mappedData: SystemMetrics = {
         totalUsers: data.total_users || 0,
@@ -124,23 +125,13 @@ export function useSystemMetrics() {
     }
   }, [isAdmin]);
 
-  // Adicionar efeito para buscar métricas automaticamente
-  useEffect(() => {
-    // Só tenta buscar métricas se o usuário for admin
-    if (isAdmin) {
-      fetchSystemMetrics().catch((error) => {
-        console.error('Erro ao carregar métricas iniciais:', error);
-      });
-    }
-  }, [fetchSystemMetrics, isAdmin]);
-
   const fetchConversionsByDateRange = useCallback(async (startDate: string, endDate: string): Promise<ConversionsByDate[]> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Agora com os tipos definidos corretamente
-      const { data, error } = await supabase.rpc(
+      // Use a type assertion for the RPC call
+      const { data, error } = await supabase.rpc<'get_conversions_by_date_range', ConversionsByDate[]>(
         'get_conversions_by_date_range',
         { p_start_date: startDate, p_end_date: endDate }
       );
@@ -170,8 +161,8 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Agora com os tipos definidos corretamente
-      const { data, error } = await supabase.rpc(
+      // Use a type assertion for the RPC call
+      const { data, error } = await supabase.rpc<'get_conversions_by_type', ConversionsByType[]>(
         'get_conversions_by_type'
       );
 
@@ -198,6 +189,16 @@ export function useSystemMetrics() {
   const refetch = useCallback(async () => {
     return fetchSystemMetrics();
   }, [fetchSystemMetrics]);
+
+  // Add effect to fetch metrics automatically
+  useEffect(() => {
+    // Only attempt to fetch metrics if user is admin
+    if (isAdmin) {
+      fetchSystemMetrics().catch((error) => {
+        console.error('Error loading initial metrics:', error);
+      });
+    }
+  }, [fetchSystemMetrics, isAdmin]);
 
   return {
     metrics,
