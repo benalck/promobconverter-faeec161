@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -190,6 +189,7 @@ export const useAuthentication = (
           password,
           options: {
             // Não redirecionar para verificação - marcaremos como verificado automaticamente no trigger SQL
+            // NOTA: Confirmação de email completamente desabilitada
             data: {
               name,
               phone,
