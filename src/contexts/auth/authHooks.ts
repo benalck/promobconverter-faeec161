@@ -15,13 +15,13 @@ interface RegisterResponse {
   message: string;
 }
 
-// Interface for register_user RPC response
+// Interface para resposta da RPC register_user_verified
 interface RegisterUserResponse {
   success: boolean;
   message: string;
 }
 
-// Nova função para tratamento de erro padrão
+// Função para tratamento de erro padrão
 const handleDefaultError = (error: unknown): string => {
   console.error("Erro capturado:", error);
   
@@ -234,7 +234,32 @@ export const useAuthentication = (
       const isFirstUser = count === 0;
       const userRole = isFirstUser ? 'admin' : 'user';
 
-      // Criar perfil do usuário
+      // Verificar se o perfil já existe antes de tentar criá-lo
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authResponse.data.user.id)
+        .maybeSingle();
+        
+      // Se o perfil já existe, não tente criá-lo novamente
+      if (existingProfile) {
+        console.log('Perfil já existe, pulando criação:', existingProfile.id);
+        
+        try {
+          const newUser = await convertSupabaseUser(authResponse.data.user);
+          setUser(newUser);
+          await syncUsers();
+        } catch (finalizeError) {
+          console.error('Erro ao finalizar registro com perfil existente:', finalizeError);
+        }
+        
+        return {
+          success: true,
+          message: 'Login realizado com sucesso!'
+        };
+      }
+
+      // Criar perfil do usuário apenas se não existir
       let profileCreated = false;
       try {
         // Primeiro tenta usar a função RPC personalizada para registro verificado
@@ -282,10 +307,16 @@ export const useAuthentication = (
               
             if (profileError) {
               console.error('Erro ao criar perfil (fallback):', profileError);
-              return {
-                success: false,
-                message: 'Erro ao criar perfil do usuário: ' + profileError.message
-              };
+              // Se o erro for de chave duplicada, consideramos como sucesso
+              if (profileError.message.includes('duplicate key') || profileError.message.includes('violates unique constraint')) {
+                console.log('Perfil já existe (inserção direta detectou), considerando sucesso');
+                profileCreated = true;
+              } else {
+                return {
+                  success: false,
+                  message: 'Erro ao criar perfil do usuário: ' + profileError.message
+                };
+              }
             } else {
               profileCreated = true;
             }
@@ -319,10 +350,18 @@ export const useAuthentication = (
         }
       } catch (profileErr) {
         console.error('Exceção ao criar perfil:', profileErr);
-        return {
-          success: false,
-          message: 'Erro ao criar perfil do usuário: ' + (profileErr instanceof Error ? profileErr.message : 'Erro desconhecido')
-        };
+        // Se for um erro de chave duplicada, consideramos como sucesso
+        if (profileErr instanceof Error && 
+            (profileErr.message.includes('duplicate key') || 
+             profileErr.message.includes('violates unique constraint'))) {
+          console.log('Perfil já existe (exceção detectou), considerando sucesso');
+          profileCreated = true;
+        } else {
+          return {
+            success: false,
+            message: 'Erro ao criar perfil do usuário: ' + (profileErr instanceof Error ? profileErr.message : 'Erro desconhecido')
+          };
+        }
       }
       
       if (!profileCreated) {

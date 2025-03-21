@@ -6,16 +6,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Formats a phone number string into the pattern (99) 99999-9999
+ * Formats a phone number to the pattern (99) 99999-9999
  */
 export function formatPhoneNumber(value: string): string {
-  // Remove non-numeric characters
   let numbers = value.replace(/\D/g, '');
   
-  // Limit to 11 digits
   numbers = numbers.slice(0, 11);
   
-  // Format the phone number
   let formatted = numbers;
   if (numbers.length > 0) formatted = '(' + formatted;
   if (numbers.length > 2) formatted = formatted.slice(0, 3) + ') ' + formatted.slice(3);
