@@ -2,7 +2,7 @@
 
 Este documento contém instruções para resolver o problema do link de confirmação de email que leva à página 404 (NOT FOUND).
 
-## 1. Executar Script SQL para Corrigir URLs
+## 1. Script SQL Simplificado
 
 Para executar o script SQL no Supabase Studio:
 
@@ -14,60 +14,81 @@ Para executar o script SQL no Supabase Studio:
 6. Clique em "Run" para executar
 
 ```sql
--- Script simplificado para corrigir a confirmação de email
-
--- Adicionar URLs de redirecionamento válidas
-INSERT INTO auth.redirect_urls (uri)
-VALUES
-  ('https://promobconverter.cloud'),
-  ('https://promobconverter.cloud/verify'),
-  ('https://promobconverter.cloud/auth/confirm'),
-  ('https://promobconverter.cloud/register/verify'),
-  ('https://promobconverter.cloud/register/confirm'),
-  ('https://promobconverter.cloud/register/auth/confirm'),
-  ('https://promobconverter.cloud/access'),
-  ('https://promobconverter.cloud/register/access'),
-  ('https://promobconverter.cloud/verify-email'),
-  ('https://promobconverter.cloud/verify-redirect'),
-  ('https://promobconverter.cloud/register')
-ON CONFLICT (uri) DO NOTHING;
+-- Script ultra simplificado para corrigir o problema de confirmação de email
 
 -- Marcar todos os usuários como verificados
 UPDATE public.profiles SET email_verified = TRUE;
 
+-- Criar ou substituir a função que verifica emails automaticamente
+CREATE OR REPLACE FUNCTION public.auto_verify_email()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Atualiza o perfil do usuário para marcar email como verificado
+  UPDATE public.profiles
+  SET email_verified = TRUE
+  WHERE id = NEW.id;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Criar o gatilho se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'auto_verify_email_trigger'
+  ) THEN
+    CREATE TRIGGER auto_verify_email_trigger
+    AFTER INSERT ON public.profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION public.auto_verify_email();
+  END IF;
+END
+$$;
+
 -- Registrar a ação
 INSERT INTO public.debug_logs (message)
-VALUES ('URLs de redirecionamento atualizadas e todos os usuários marcados como verificados.');
+VALUES ('Todos os usuários marcados como verificados e configurado sistema de verificação automática.');
 ```
 
-## 2. Verificar Configurações de Autenticação no Supabase
+## 2. Configurar Manualmente o Supabase
 
-Ainda no Supabase Studio, verifique as configurações de autenticação:
+Como não é possível acessar algumas tabelas internas do Supabase, você precisará configurar manualmente através da interface:
 
 1. No menu lateral, clique em "Authentication"
 2. Vá para "URL Configuration"
-3. Verifique se "Site URL" está configurado como `https://promobconverter.cloud`
-4. Na seção "Redirect URLs", adicione manualmente as URLs listadas acima
-5. Ative a opção "Confirm email" para "Auto-confirm"
+3. Configure o "Site URL" como `https://promobconverter.cloud`
+4. Na seção "Redirect URLs", adicione manualmente as URLs:
+   - `https://promobconverter.cloud`
+   - `https://promobconverter.cloud/verify`
+   - `https://promobconverter.cloud/register`
+   - `https://promobconverter.cloud/login`
+5. **Importante:** Em "Email Confirmation", selecione "Disable email confirmation"
 6. Clique em "Save"
 
-## 3. Verificar Template de Email
+## 3. Verificar o Código Frontend
 
-Verifique o template de email de confirmação:
+Verifique se o código frontend está configurado para não depender da confirmação de email:
 
-1. No menu Authentication, vá para "Email Templates"
-2. Selecione "Confirmation"
-3. Certifique-se de que o botão usa a URL correta
-4. Clique em "Save" se fizer alguma alteração
+1. No arquivo `src/contexts/auth/authHooks.ts`, certifique-se que a função de registro não requer confirmação:
+   ```typescript
+   // Exemplo correto
+   const { data, error } = await supabase.auth.signUp({
+     email: values.email,
+     password: values.password,
+     // Sem emailRedirectTo
+   });
+   ```
+
+2. Em `src/pages/Register.tsx`, certifique-se que o fluxo não espera confirmação de email.
 
 ## 4. Testar o Processo de Registro
 
 Após aplicar as correções:
 
 1. Registre um novo usuário com um email válido
-2. Verifique a caixa de entrada do email (e a pasta de spam)
-3. Clique no link de confirmação enviado
-4. Você deve ser redirecionado para a página de verificação e então para o login
+2. Você deve conseguir fazer login imediatamente sem precisar confirmar o email
+3. Todos os usuários existentes devem ter seus emails marcados como verificados
 
 ## 5. Se o Problema Persistir
 
@@ -78,13 +99,11 @@ Se mesmo após todas estas etapas o problema persistir:
    SELECT * FROM public.debug_logs ORDER BY created_at DESC LIMIT 20;
    ```
 
-2. Tente a solução mais radical - Desativar completamente a verificação de email:
-   1. Adicione um gatilho para marcar automaticamente todos os novos usuários como verificados
-   2. Certifique-se que todas as rotas de verificação no App.tsx estão corretas
-   3. Contate o suporte do Supabase se necessário
+2. Entre em contato com o suporte do Supabase para obter assistência com as tabelas específicas de autenticação
 
 ## Observações
 
-- As mudanças nas rotas React são aplicadas automaticamente com o deploy
-- As configurações do Supabase precisam ser feitas manualmente através do SQL ou da interface
-- Se necessário, é possível reenviar emails de confirmação para usuários específicos 
+- Esta solução desabilita completamente a confirmação de email
+- Todos os usuários serão automaticamente verificados
+- Use esta abordagem apenas se você estiver enfrentando problemas persistentes com a confirmação de email
+- Lembre-se de fazer deploy do código frontend após estas alterações 
