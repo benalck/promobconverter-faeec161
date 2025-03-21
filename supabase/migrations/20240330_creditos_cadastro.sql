@@ -1,7 +1,9 @@
 -- Script para adicionar 10 créditos iniciais a cada usuário que se cadastra
 -- Data: 30/03/2024
 
--- Parte 1: Atualizar funções de registro existentes para conceder 10 créditos
+-- Parte 1: Remover funções existentes antes de criar as novas versões
+DROP FUNCTION IF EXISTS public.register_user(uuid, text, text, text);
+DROP FUNCTION IF EXISTS public.register_user_verified(uuid, text, text, text);
 
 -- Atualizar a função register_user para incluir 10 créditos
 CREATE OR REPLACE FUNCTION public.register_user(user_id uuid, user_name text, user_email text, user_role text)
@@ -116,20 +118,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Criar o gatilho se não existir
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_trigger WHERE tgname = 'ensure_initial_credits_trigger'
-  ) THEN
-    CREATE TRIGGER ensure_initial_credits_trigger
-    BEFORE INSERT ON public.profiles
-    FOR EACH ROW
-    EXECUTE FUNCTION public.ensure_initial_credits();
-  END IF;
-END
-$$;
+-- Remover o gatilho se já existir
+DROP TRIGGER IF EXISTS ensure_initial_credits_trigger ON public.profiles;
+
+-- Criar o gatilho
+CREATE TRIGGER ensure_initial_credits_trigger
+BEFORE INSERT ON public.profiles
+FOR EACH ROW
+EXECUTE FUNCTION public.ensure_initial_credits();
+
+-- Atualizar créditos de usuários existentes
+UPDATE public.profiles
+SET credits = 10
+WHERE credits < 10;
 
 -- Registrar a atualização nos logs
 INSERT INTO public.debug_logs (message)
-VALUES ('Configuração de créditos iniciais (10) para novos usuários implementada.'); 
+VALUES ('Configuração de créditos iniciais (10) para novos usuários implementada e usuários existentes atualizados.'); 
