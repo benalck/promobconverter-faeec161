@@ -3,15 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 
 export async function sendConfirmationEmail(email: string, redirectUrl: string) {
   try {
-    // Verificar se a URL de redirecionamento está correta e não tem hash ou parâmetros extras
-    const cleanRedirectUrl = new URL(redirectUrl).origin + '/verify';
+    console.log("Tentando enviar email para:", email);
+    console.log("URL de redirecionamento original:", redirectUrl);
     
-    // Tentar enviar email de confirmação usando método apropriado
+    // Garantir que estamos usando a URL base do site (sem caminhos adicionais)
+    const siteUrl = window.location.origin;
+    
+    // Configurar o Supabase para usar a URL correta para redirecionamento
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: cleanRedirectUrl
+        emailRedirectTo: siteUrl
       }
     });
 
@@ -24,7 +27,7 @@ export async function sendConfirmationEmail(email: string, redirectUrl: string) 
     }
 
     console.log('Email de confirmação enviado com sucesso para:', email);
-    console.log('URL de redirecionamento configurado:', cleanRedirectUrl);
+    console.log('URL de redirecionamento configurado:', siteUrl);
     
     return {
       success: true,

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -22,42 +21,72 @@ export default function VerifyEmail() {
   useEffect(() => {
     const handleEmailVerification = async () => {
       try {
-        console.log("Iniciando verificação de email. Path:", location.pathname);
+        console.log("Verificação de email iniciada");
+        console.log("URL completa:", window.location.href);
+        console.log("Pathname:", location.pathname);
         console.log("Search params:", Object.fromEntries(searchParams.entries()));
+        console.log("Hash:", location.hash);
         
-        // Verificar parâmetros de erro
+        // Verificar se há token no hash (formato do Supabase)
+        let token_hash = null;
+        let access_token = null;
+        
+        // Verificar parâmetros de erro primeiro
         const error = searchParams.get('error');
+        const error_code = searchParams.get('error_code');
         const errorDescription = searchParams.get('error_description');
         
-        if (error) {
+        if (error || error_code) {
+          console.error("Erro detectado na URL:", error || error_code, errorDescription);
           setIsSuccess(false);
           setErrorMessage(errorDescription || 'Ocorreu um erro ao verificar seu email');
           setIsVerifying(false);
           
-          console.error("Erro na verificação:", error, errorDescription);
-          
           // Se o erro for de link expirado, oferecer opção de reenvio
-          if (error === 'access_denied' && errorDescription?.includes('expired')) {
+          if ((error === 'access_denied' || error_code === 'otp_expired') && 
+              (errorDescription?.includes('expired') || errorDescription?.includes('invalid'))) {
             // Buscar o email do usuário atual
             const { data } = await supabase.auth.getSession();
             if (data.session?.user?.email) {
               setUserEmail(data.session.user.email);
             }
           }
-          
           return;
         }
         
-        // Verificar se há token na URL
-        const token_hash = searchParams.get('token_hash');
+        // Verifica no hash para tokens no formato #access_token=...
+        if (location.hash.includes('access_token')) {
+          const hashParams = new URLSearchParams(location.hash.substring(1));
+          access_token = hashParams.get('access_token');
+          console.log("Access token encontrado no hash:", access_token ? "Sim (token oculto)" : "Não");
+          
+          if (access_token) {
+            // Se temos um access_token, é um login ou confirmação bem-sucedida
+            // Vamos atualizar a sessão com este token
+            const { error } = await supabase.auth.setSession({
+              access_token: access_token,
+              refresh_token: hashParams.get('refresh_token') || '',
+            });
+            
+            if (error) {
+              console.error("Erro ao definir sessão:", error);
+              throw error;
+            }
+            
+            console.log("Sessão atualizada com token do hash");
+          }
+        }
+        
+        // Verificar se há token na query string (formato token_hash=...)
+        token_hash = searchParams.get('token_hash');
         const type = searchParams.get('type');
         
-        console.log("Token hash:", token_hash);
-        console.log("Type:", type);
+        console.log("Token hash na query:", token_hash);
+        console.log("Type na query:", type);
         
         // Se tiver token na URL, confirmar o email
         if (token_hash && type === 'email_confirmation') {
-          console.log("Tentando verificar token...");
+          console.log("Tentando verificar OTP com token_hash");
           
           const { error } = await supabase.auth.verifyOtp({
             token_hash,
@@ -78,6 +107,7 @@ export default function VerifyEmail() {
         console.log("Usuário atual:", user);
         
         if (!user) {
+          console.error("Usuário não encontrado após verificação");
           setIsSuccess(false);
           setErrorMessage('Não foi possível verificar seu email. Usuário não encontrado.');
           setIsVerifying(false);
@@ -92,7 +122,9 @@ export default function VerifyEmail() {
 
         if (updateError) {
           console.error("Erro ao atualizar perfil:", updateError);
-          throw updateError;
+          // Não vamos falhar aqui, apenas logar o erro
+        } else {
+          console.log("Perfil atualizado com sucesso - email verificado");
         }
 
         setIsSuccess(true);
@@ -150,7 +182,7 @@ export default function VerifyEmail() {
     setIsSendingNewEmail(true);
     try {
       const baseUrl = window.location.origin;
-      await sendConfirmationEmail(userEmail, `${baseUrl}/verify`);
+      await sendConfirmationEmail(userEmail, baseUrl);
       
       toast({
         title: "Email enviado",
