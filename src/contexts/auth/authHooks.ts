@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -14,6 +13,23 @@ interface RegisterResponse {
   success: boolean;
   message: string;
 }
+
+// Nova função para tratamento de erro padrão
+const handleDefaultError = (error: unknown): string => {
+  console.error("Erro capturado:", error);
+  
+  if (error instanceof Error) {
+    return error.message;
+  } else if (typeof error === 'object' && error !== null) {
+    try {
+      return JSON.stringify(error);
+    } catch (e) {
+      return "Erro desconhecido: " + (error.toString ? error.toString() : "Objeto de erro não pode ser convertido");
+    }
+  }
+  
+  return "Ocorreu um erro desconhecido";
+};
 
 export const useAuthentication = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
@@ -60,10 +76,48 @@ export const useAuthentication = (
     }
   };
 
-  // Fixed infinite type instantiation by specifying the exact return type
+  // Nova implementação da função de registro com timeout
   const register = async (data: RegisterData): Promise<RegisterResponse> => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    
     try {
-      // Validar dados antes de prosseguir
+      // Criar uma Promise com timeout que rejeita após 20 segundos
+      const registerWithTimeout = async (): Promise<RegisterResponse> => {
+        return new Promise((resolve, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error("Tempo limite excedido ao tentar registrar. Verifique sua conexão e tente novamente."));
+          }, 20000); // 20 segundos
+          
+          // Continuação da função original de registro
+          performRegistration(data)
+            .then(resolve)
+            .catch(reject)
+            .finally(() => {
+              if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+            });
+        });
+      };
+      
+      return await registerWithTimeout();
+    } catch (error) {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      console.error("Erro geral no registro com timeout:", error);
+      return {
+        success: false,
+        message: handleDefaultError(error)
+      };
+    }
+  };
+  
+  // Função que realiza o registro separadamente para melhor organização
+  const performRegistration = async (data: RegisterData): Promise<RegisterResponse> => {
+    try {
+      // Validações iniciais
       if (!data.name || !data.email || !data.phone || !data.password) {
         return {
           success: false,
@@ -92,55 +146,76 @@ export const useAuthentication = (
       const { name, email, phone, password } = data;
       
       // Verificar se o email já está em uso
-      const { data: existingUser, error: userError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
+      try {
+        const { data: existingUser, error: userError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
 
-      if (userError && !userError.message.includes('does not exist')) {
-        console.error('Error checking existing user:', userError);
-        return {
-          success: false,
-          message: 'Erro ao verificar email existente'
-        };
-      }
-
-      if (existingUser) {
-        return {
-          success: false,
-          message: 'Este email já está em uso'
-        };
-      }
-
-      // Criar usuário no Supabase Auth
-      const { data: authData, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/verify`,
-          data: {
-            name,
-            phone,
-            action: 'confirm_email'
-          }
+        if (userError && !userError.message.includes('does not exist')) {
+          console.error('Error checking existing user:', userError);
+          return {
+            success: false,
+            message: 'Erro ao verificar email existente'
+          };
         }
-      });
 
-      if (error) {
-        if (error.message.includes('email')) {
+        if (existingUser) {
           return {
             success: false,
             message: 'Este email já está em uso'
           };
         }
-        throw error;
-      }
-
-      if (!authData.user) {
+      } catch (checkError) {
+        console.error('Exceção ao verificar email existente:', checkError);
         return {
           success: false,
-          message: 'Erro ao criar usuário'
+          message: 'Erro ao verificar disponibilidade do email: ' + handleDefaultError(checkError)
+        };
+      }
+
+      // Criar usuário no Supabase Auth
+      let authResponse;
+      try {
+        authResponse = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            // Não redirecionar para verificação - marcaremos como verificado automaticamente no trigger SQL
+            data: {
+              name,
+              phone,
+              action: 'confirm_email'
+            }
+          }
+        });
+        
+        if (authResponse.error) {
+          console.error('Erro na criação do usuário:', authResponse.error);
+          if (authResponse.error.message.includes('email')) {
+            return {
+              success: false,
+              message: 'Este email já está em uso'
+            };
+          }
+          return {
+            success: false,
+            message: `Erro na criação do usuário: ${authResponse.error.message}`
+          };
+        }
+
+        if (!authResponse.data.user) {
+          return {
+            success: false,
+            message: 'Erro ao criar usuário: Resposta vazia do servidor'
+          };
+        }
+      } catch (authError) {
+        console.error('Exceção na criação do usuário:', authError);
+        return {
+          success: false,
+          message: 'Falha ao criar usuário no sistema de autenticação: ' + handleDefaultError(authError)
         };
       }
 
@@ -153,51 +228,135 @@ export const useAuthentication = (
       const userRole = isFirstUser ? 'admin' : 'user';
 
       // Criar perfil do usuário
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
+      let profileCreated = false;
+      try {
+        // Primeiro tenta usar a função RPC personalizada para registro verificado
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
+          'register_user_verified',  // Nova função que garante verificação
           {
-            id: authData.user.id,
-            name,
-            role: userRole,
-            created_at: new Date().toISOString(),
-            last_login: new Date().toISOString(),
-            is_banned: false,
-            email_verified: false,
-            credits: 0
+            user_id: authResponse.data.user.id,
+            user_name: name,
+            user_email: email,
+            user_role: userRole
           }
-        ]);
-
-      if (profileError) {
-        console.error('Erro ao criar perfil:', profileError);
+        );
+        
+        if (rpcError) {
+          console.error('Erro ao chamar register_user_verified RPC:', rpcError);
+          // Tentar a função RPC antiga como fallback
+          const { data: oldRpcResult, error: oldRpcError } = await supabase.rpc(
+            'register_user',
+            {
+              user_id: authResponse.data.user.id,
+              user_name: name,
+              user_email: email,
+              user_role: userRole
+            }
+          );
+          
+          if (oldRpcError) {
+            console.error('Erro ao chamar register_user RPC:', oldRpcError);
+            // Fallback para inserção direta
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert([
+                {
+                  id: authResponse.data.user.id,
+                  name,
+                  email,
+                  role: userRole,
+                  created_at: new Date().toISOString(),
+                  last_login: new Date().toISOString(),
+                  is_banned: false,
+                  email_verified: true,  // Garantir que o email é verificado
+                  credits: 0
+                }
+              ]);
+              
+            if (profileError) {
+              console.error('Erro ao criar perfil (fallback):', profileError);
+              return {
+                success: false,
+                message: 'Erro ao criar perfil do usuário: ' + profileError.message
+              };
+            } else {
+              profileCreated = true;
+            }
+          } else {
+            console.log('RPC register_user resultado:', oldRpcResult);
+            profileCreated = oldRpcResult.success;
+            
+            if (!profileCreated) {
+              return {
+                success: false,
+                message: oldRpcResult.message || 'Erro ao criar perfil do usuário'
+              };
+            }
+            
+            // Atualizar verificação de email manualmente
+            await supabase
+              .from('profiles')
+              .update({ email_verified: true })
+              .eq('id', authResponse.data.user.id);
+          }
+        } else {
+          console.log('RPC register_user_verified resultado:', rpcResult);
+          profileCreated = rpcResult.success;
+          
+          if (!profileCreated) {
+            return {
+              success: false,
+              message: rpcResult.message || 'Erro ao criar perfil do usuário'
+            };
+          }
+        }
+      } catch (profileErr) {
+        console.error('Exceção ao criar perfil:', profileErr);
         return {
           success: false,
-          message: 'Erro ao criar perfil do usuário'
+          message: 'Erro ao criar perfil do usuário: ' + (profileErr instanceof Error ? profileErr.message : 'Erro desconhecido')
+        };
+      }
+      
+      if (!profileCreated) {
+        return {
+          success: false,
+          message: 'Falha ao criar perfil do usuário'
         };
       }
 
       // Atualizar metadados do usuário
-      await supabase.auth.updateUser({
-        data: { 
-          role: userRole,
-          phone
-        }
-      });
+      try {
+        await supabase.auth.updateUser({
+          data: { 
+            role: userRole,
+            phone
+          }
+        });
+      } catch (updateError) {
+        console.error('Erro ao atualizar metadados do usuário:', updateError);
+        // Continuar mesmo se falhar a atualização dos metadados
+      }
 
-      const newUser = await convertSupabaseUser(authData.user);
-      setUser(newUser);
-      await syncUsers();
+      try {
+        const newUser = await convertSupabaseUser(authResponse.data.user);
+        setUser(newUser);
+        await syncUsers();
+      } catch (finalizeError) {
+        console.error('Erro ao finalizar registro:', finalizeError);
+        // Continuar mesmo se falhar a conversão do usuário
+      }
 
       return {
         success: true,
-        message: 'Conta criada com sucesso! Enviamos um email de confirmação.'
+        message: 'Conta criada com sucesso!'
       };
 
     } catch (error) {
-      console.error('Erro ao registrar:', error);
+      console.error('Erro completo no processo de registro:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Falha ao registrar usuário'
+        message: handleDefaultError(error)
       };
     }
   };

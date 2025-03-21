@@ -18,9 +18,42 @@ import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ConverterFormProps {
   className?: string;
+}
+
+// Função para registrar uma conversão no banco de dados
+async function registrarConversao(
+  inputFormat: string,   // 'XML', 'JSON', etc
+  outputFormat: string,  // 'XML', 'JSON', etc
+  fileSize: number,      // tamanho do arquivo em bytes
+  conversionTime: number, // tempo de conversão em milissegundos
+  success: boolean,      // se a conversão foi bem sucedida
+  errorMessage?: string  // mensagem de erro (opcional)
+) {
+  try {
+    const { data, error } = await supabase.rpc('register_conversion_js', {
+      input_format: inputFormat,
+      output_format: outputFormat,
+      file_size: fileSize,
+      conversion_time: conversionTime,
+      success: success,
+      error_message: errorMessage || null
+    });
+    
+    if (error) {
+      console.error('Erro ao registrar conversão:', error);
+      return false;
+    }
+    
+    console.log('Conversão registrada com sucesso:', data);
+    return true;
+  } catch (err) {
+    console.error('Exceção ao registrar conversão:', err);
+    return false;
+  }
 }
 
 const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
@@ -78,6 +111,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
 
     setIsConverting(true);
+    
+    // Variáveis para registrar a conversão
+    const startTime = Date.now();
+    let success = false;
+    let errorMsg = '';
+    let fileSize = xmlFile.size;
 
     try {
       // 1. Converter o arquivo
@@ -98,6 +137,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       link.click();
       document.body.removeChild(link);
 
+      // Marcar como sucesso
+      success = true;
+
       // Mostrar sucesso
       toast({
         title: "Conversão concluída",
@@ -106,12 +148,29 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       });
     } catch (error) {
       console.error("Erro durante a conversão:", error);
+      success = false;
+      errorMsg = error instanceof Error ? error.message : "Erro desconhecido";
+      
       toast({
         title: "Erro na conversão",
         description: error instanceof Error ? error.message : "Ocorreu um erro ao processar o arquivo XML.",
         variant: "destructive",
       });
     } finally {
+      // Calcular tempo de conversão
+      const endTime = Date.now();
+      const conversionTime = endTime - startTime;
+      
+      // Registrar a conversão no banco de dados
+      await registrarConversao(
+        'XML',           // formato de entrada
+        'Excel',         // formato de saída 
+        fileSize,        // tamanho do arquivo
+        conversionTime,  // tempo de conversão
+        success,         // sucesso ou falha
+        errorMsg         // mensagem de erro (se houver)
+      );
+      
       setIsConverting(false);
     }
   };

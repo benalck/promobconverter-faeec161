@@ -1,27 +1,33 @@
+import { supabase } from '@/integrations/supabase/client';
 
-export const sendConfirmationEmail = async (email: string, confirmationUrl?: string) => {
+export async function sendConfirmationEmail(email: string, redirectUrl: string) {
   try {
-    const response = await fetch('/api/send-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        confirmationUrl: confirmationUrl || `${window.location.origin}/verify`
-      }),
+    // Tentar enviar email de confirmação usando método apropriado
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: redirectUrl
+      }
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Erro ao enviar email de confirmação:', data.error);
-      return { success: false, error: data.error };
+    if (error) {
+      console.error('Erro ao enviar email de confirmação:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
 
-    return { success: true, data };
+    return {
+      success: true,
+      error: null
+    };
   } catch (error) {
     console.error('Erro ao enviar email de confirmação:', error);
-    return { success: false, error };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido'
+    };
   }
-};
+}

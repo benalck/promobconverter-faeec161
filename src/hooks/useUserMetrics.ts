@@ -1,5 +1,4 @@
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -26,42 +25,104 @@ export interface UserMetricsCollection {
 }
 
 export function useUserMetrics() {
-  const { user } = useAuth();
+  const { user, users } = useAuth();
   const [metrics, setMetrics] = useState<UserMetricsCollection>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  // Função para buscar métricas de um único usuário
+  const fetchUserMetric = useCallback(async (userId: string) => {
+    try {
+      console.log(`Buscando métricas para o usuário ${userId}...`);
+      
+      const result = await supabase.rpc(
+        'get_user_metrics',
+        {
+          p_user_id: userId,
+          p_start_date: null,
+          p_end_date: null
+        }
+      );
+
+      console.log(`Resultado para usuário ${userId}:`, result);
+
+      if (result.error) {
+        console.error(`Erro na função RPC para usuário ${userId}:`, result.error);
+        throw new Error(result.error.message);
+      }
+
+      const data = result.data;
+      if (!data) {
+        console.warn(`Sem dados para o usuário ${userId}`);
+        return null;
+      }
+
+      // Verificar se as propriedades esperadas existem
+      if (typeof data.total_conversions === 'undefined') {
+        console.error('Dados retornados em formato inesperado:', data);
+        return null;
+      }
+
+      const userMetrics = {
+        totalConversions: data.total_conversions,
+        successfulConversions: data.successful_conversions,
+        failedConversions: data.failed_conversions,
+        averageConversionTime: data.average_conversion_time,
+        lastConversion: data.last_conversion
+      };
+
+      console.log(`Métricas mapeadas para usuário ${userId}:`, userMetrics);
+      return userMetrics;
+    } catch (err) {
+      console.error(`Erro buscando métricas para ${userId}:`, err);
+      return null;
+    }
+  }, []);
+
   const fetchUserMetrics = useCallback(async (): Promise<UserMetricsCollection> => {
-    if (!user) return {};
+    if (!user || !users || users.length === 0) return {};
     
     setIsLoading(true);
     setError(null);
 
     try {
-      // Use proper type assertion for the specific function
-      const { data, error } = await supabase.rpc(
-        'get_user_metrics'
-      ) as { data: UserMetricsCollection | null; error: any };
+      // Buscar métricas para todos os usuários
+      const userMetricsPromises = users.map(async (u) => {
+        const userData = await fetchUserMetric(u.id);
+        return { userId: u.id, data: userData };
+      });
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      const results = await Promise.all(userMetricsPromises);
+      
+      // Montar o objeto de métricas
+      const metricsCollection: UserMetricsCollection = {};
+      
+      results.forEach(result => {
+        if (result.data) {
+          metricsCollection[result.userId] = result.data;
+        }
+      });
 
-      if (!data) {
-        throw new Error('No data returned from user metrics');
-      }
-
-      setMetrics(data);
-      return data;
+      setMetrics(metricsCollection);
+      return metricsCollection;
     } catch (err) {
       const error = err as Error;
-      console.error('Error fetching user metrics:', error);
+      console.error('Erro buscando métricas dos usuários:', error);
       setError(error);
       return {};
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, users, fetchUserMetric]);
+
+  // Efeito para buscar métricas automaticamente quando o componente montar
+  useEffect(() => {
+    if (users && users.length > 0) {
+      fetchUserMetrics().catch(error => {
+        console.error('Erro ao carregar métricas de usuários:', error);
+      });
+    }
+  }, [users, fetchUserMetrics]);
 
   return {
     metrics,

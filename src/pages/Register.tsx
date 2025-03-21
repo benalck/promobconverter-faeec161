@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, Lock, Mail, User, EyeOff, Eye, Phone } from "lucide-react";
 import HowItWorksButton from "@/components/HowItWorksButton";
+import { formatPhoneNumber } from "@/lib/utils";
 import { sendConfirmationEmail } from "@/lib/email";
+import React from "react";
 
 export default function Register() {
   const [isLoginMode, setIsLoginMode] = useState(false);
@@ -19,9 +21,46 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [hasEmailError, setHasEmailError] = useState(false);
   const { register, login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const loadingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const clearLoadingTimeout = () => {
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    const loginModeParam = searchParams.get('isLoginMode');
+    if (loginModeParam === 'true') {
+      setIsLoginMode(true);
+    }
+    
+    const errorCode = searchParams.get('error_code');
+    const errorDescription = searchParams.get('error_description');
+    
+    if (errorCode === 'otp_expired' || (errorDescription && errorDescription.includes('link is invalid or has expired'))) {
+      setHasEmailError(true);
+      toast({
+        title: "Link expirado",
+        description: "O link de confirmação expirou ou é inválido. Por favor, faça login para receber um novo email.",
+        variant: "destructive",
+      });
+      setIsLoginMode(true);
+    }
+  }, [searchParams, toast]);
+
+  useEffect(() => {
+    return () => {
+      clearLoadingTimeout();
+    };
+  }, []);
 
   const validateName = (name: string) => {
     if (name.length < 3) return "Nome deve ter pelo menos 3 caracteres";
@@ -72,6 +111,8 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    clearLoadingTimeout();
     
     if (isLoginMode) {
       if (!email || !password) {
@@ -166,6 +207,15 @@ export default function Register() {
       try {
         setIsLoading(true);
         
+        loadingTimeoutRef.current = setTimeout(() => {
+          setIsLoading(false);
+          toast({
+            title: "Tempo limite excedido",
+            description: "A operação está demorando mais do que o esperado. Por favor, tente novamente.",
+            variant: "destructive",
+          });
+        }, 15000);
+        
         const result = await register({
           name,
           email,
@@ -173,33 +223,35 @@ export default function Register() {
           password
         });
 
-        if (result.success) {
-          const confirmationUrl = `${window.location.origin}/verify`;
-          const { success: emailSuccess, error: emailError } = await sendConfirmationEmail(email, confirmationUrl);
+        clearLoadingTimeout();
 
+        if (result.success) {
           toast({
-            title: result.message,
-            description: emailSuccess 
-              ? "Por favor, verifique sua caixa de entrada."
-              : "Não foi possível enviar o email de confirmação. Tente novamente mais tarde.",
-            variant: emailSuccess ? "default" : "destructive",
+            title: "Conta criada com sucesso!",
+            description: "Seu cadastro foi realizado com sucesso. Você já pode fazer login.",
+            variant: "success",
           });
 
-          navigate("/");
+          setIsLoginMode(true);
+          navigate("/register?isLoginMode=true");
         } else {
           toast({
             title: "Erro ao registrar",
-            description: result.message,
+            description: result.message || "Ocorreu um erro ao criar sua conta. Tente novamente.",
             variant: "destructive",
           });
         }
       } catch (error) {
+        clearLoadingTimeout();
+        
+        console.error("Erro no registro:", error);
         toast({
           title: "Erro ao registrar",
           description: error instanceof Error ? error.message : "Ocorreu um erro ao criar sua conta. Tente novamente.",
           variant: "destructive",
         });
       } finally {
+        clearLoadingTimeout();
         setIsLoading(false);
       }
     }
@@ -207,6 +259,37 @@ export default function Register() {
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      toast({
+        title: "Email necessário",
+        description: "Por favor, informe seu email para receber o link de confirmação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await sendConfirmationEmail(email, `${window.location.origin}/verify`);
+      
+      toast({
+        title: "Email enviado",
+        description: "Um novo link de confirmação foi enviado para seu email.",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Erro ao reenviar email:", error);
+      toast({
+        title: "Erro ao enviar email",
+        description: "Não foi possível enviar o email de confirmação. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -258,6 +341,23 @@ export default function Register() {
                 ? "Entre com suas credenciais para acessar o conversor" 
                 : "Registre-se para acessar todos os recursos do conversor"}
             </CardDescription>
+            
+            {/* Mensagem de erro para link expirado */}
+            {hasEmailError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-md">
+                <p className="text-sm text-red-800 mb-2">
+                  O link de confirmação expirou ou é inválido.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={handleResendConfirmation}
+                  disabled={isLoading}
+                  className="w-full text-sm mt-2"
+                >
+                  {isLoading ? "Enviando..." : "Reenviar email de confirmação"}
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -366,15 +466,27 @@ export default function Register() {
                 </div>
               )}
               
-              <Button
-                type="submit"
-                className="w-full py-6 font-medium transition-all duration-300 bg-primary hover:bg-primary/90 mt-4"
-                disabled={isLoading}
-              >
-                {isLoading 
-                  ? (isLoginMode ? "Entrando..." : "Registrando...") 
-                  : (isLoginMode ? "Entrar" : "Criar conta")}
-              </Button>
+              <div className="pt-2">
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="mr-2">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </span>
+                      {isLoginMode ? "Entrando..." : "Registrando..."}
+                    </>
+                  ) : (
+                    isLoginMode ? "Entrar" : "Registrar"
+                  )}
+                </Button>
+              </div>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4 pb-12">

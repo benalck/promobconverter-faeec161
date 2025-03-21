@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -83,23 +82,57 @@ export default function Admin() {
     fetchUserMetrics
   } = useUserMetrics();
 
+  // Efeito para recarregar dados quando houver erro
+  useEffect(() => {
+    if (systemError || userError) {
+      const retryTimeout = setTimeout(() => {
+        refreshData();
+      }, 5000); // Tenta novamente após 5 segundos
+
+      return () => clearTimeout(retryTimeout);
+    }
+  }, [systemError, userError]);
+
   // Function to refresh data
   const refreshData = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([
-        refetchSystemMetrics(),
-        fetchUserMetrics(),
-        refreshUserCredits()
-      ]);
+      console.log('Iniciando atualização de dados...');
+      
+      // Tentativas individuais para identificar qual está falhando
+      try {
+        console.log('Atualizando métricas do sistema...');
+        await refetchSystemMetrics();
+        console.log('Métricas do sistema atualizadas com sucesso!');
+      } catch (e) {
+        console.error('Falha ao atualizar métricas do sistema:', e);
+      }
+      
+      try {
+        console.log('Atualizando métricas de usuários...');
+        await fetchUserMetrics();
+        console.log('Métricas de usuários atualizadas com sucesso!');
+      } catch (e) {
+        console.error('Falha ao atualizar métricas de usuários:', e);
+      }
+      
+      try {
+        console.log('Atualizando créditos de usuários...');
+        await refreshUserCredits();
+        console.log('Créditos atualizados com sucesso!');
+      } catch (e) {
+        console.error('Falha ao atualizar créditos:', e);
+      }
+      
       toast({
         title: "Dados atualizados",
         description: "Os dados da administração foram atualizados com sucesso.",
       });
     } catch (error) {
+      console.error('Erro ao atualizar dados:', error);
       toast({
         title: "Erro ao atualizar dados",
-        description: "Ocorreu um erro ao atualizar os dados.",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao atualizar os dados.",
         variant: "destructive",
       });
     } finally {
@@ -300,9 +333,9 @@ export default function Admin() {
   if (isLoadingSystem || isLoadingUsers) {
     return (
       <AppLayout>
-        <div className="container mx-auto py-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
             <span className="ml-3">Carregando métricas...</span>
           </div>
         </div>
@@ -311,12 +344,41 @@ export default function Admin() {
   }
 
   if (systemError || userError) {
+    const errorMessage = systemError?.message || userError?.message || "Erro ao carregar métricas. Por favor, tente novamente.";
+    console.error('Erro específico:', systemError || userError);
+    
     return (
       <AppLayout>
-        <div className="container mx-auto py-8">
-          <div className="flex items-center justify-center text-red-500">
-            <AlertCircle className="h-6 w-6 mr-2" />
-            <span>Erro ao carregar métricas. Por favor, tente novamente.</span>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="flex items-center space-x-2 text-destructive">
+              <AlertCircle className="h-6 w-6" />
+              <span>{errorMessage}</span>
+            </div>
+            <div className="text-sm text-gray-500 max-w-md text-center mt-2">
+              {errorMessage.includes("Could not find the function") && 
+                "As funções de métricas podem não estar disponíveis no banco de dados. Verifique as migrações."}
+              {errorMessage.includes("permission denied") && 
+                "Você não tem permissão para acessar estas métricas. Verifique suas permissões de administrador."}
+            </div>
+            <Button
+              variant="outline"
+              onClick={refreshData}
+              disabled={isRefreshing}
+              className="mt-4"
+            >
+              {isRefreshing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Atualizando...
+                </>
+              ) : (
+                <>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  Tentar novamente
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </AppLayout>

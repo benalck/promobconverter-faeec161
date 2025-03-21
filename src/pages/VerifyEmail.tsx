@@ -1,24 +1,69 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, CheckCircle2, XCircle } from "lucide-react";
+import { Mail, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { sendConfirmationEmail } from "@/lib/email";
 
 export default function VerifyEmail() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isSendingNewEmail, setIsSendingNewEmail] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   useEffect(() => {
     const handleEmailVerification = async () => {
       try {
+        // Verificar parâmetros de erro
+        const error = searchParams.get('error');
+        const errorDescription = searchParams.get('error_description');
+        
+        if (error) {
+          setIsSuccess(false);
+          setErrorMessage(errorDescription || 'Ocorreu um erro ao verificar seu email');
+          setIsVerifying(false);
+          
+          // Se o erro for de link expirado, oferecer opção de reenvio
+          if (error === 'access_denied' && errorDescription?.includes('expired')) {
+            // Buscar o email do usuário atual
+            const { data } = await supabase.auth.getSession();
+            if (data.session?.user?.email) {
+              setUserEmail(data.session.user.email);
+            }
+          }
+          
+          return;
+        }
+        
+        // Verificar se há token na URL
+        const token_hash = searchParams.get('token_hash');
+        const type = searchParams.get('type');
+        
+        // Se tiver token na URL, confirmar o email
+        if (token_hash && type === 'email_confirmation') {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash,
+            type: 'email_confirmation',
+          });
+          
+          if (error) {
+            throw error;
+          }
+        }
+        
+        // Obter usuário atual
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
           setIsSuccess(false);
+          setErrorMessage('Não foi possível verificar seu email. Usuário não encontrado.');
           setIsVerifying(false);
           return;
         }
@@ -37,19 +82,34 @@ export default function VerifyEmail() {
         toast({
           title: "Email verificado com sucesso!",
           description: "Sua conta está pronta para uso.",
+          variant: "success",
         });
 
-        // Redirecionar após 3 segundos
+        // Guardar o email do usuário
+        setUserEmail(user.email);
+
+        // Redirecionar após 3 segundos para a página de login
         setTimeout(() => {
-          navigate("/");
+          navigate("/register?isLoginMode=true");
         }, 3000);
 
       } catch (error) {
         console.error('Erro na verificação:', error);
         setIsSuccess(false);
+        let errorMsg = 'Não foi possível verificar seu email.';
+        
+        if (error instanceof Error) {
+          if (error.message.includes('expired')) {
+            errorMsg = 'O link de confirmação expirou. Por favor, solicite um novo email.';
+          } else {
+            errorMsg = error.message;
+          }
+        }
+        
+        setErrorMessage(errorMsg);
         toast({
           title: "Erro na verificação",
-          description: "Não foi possível verificar seu email. Tente novamente.",
+          description: errorMsg,
           variant: "destructive",
         });
       } finally {
@@ -58,7 +118,38 @@ export default function VerifyEmail() {
     };
 
     handleEmailVerification();
-  }, [navigate, toast]);
+  }, [navigate, toast, location, searchParams]);
+
+  const handleResendConfirmation = async () => {
+    if (!userEmail) {
+      toast({
+        title: "Email necessário",
+        description: "Não foi possível identificar seu email. Por favor, faça login novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingNewEmail(true);
+    try {
+      await sendConfirmationEmail(userEmail, `${window.location.origin}/verify`);
+      
+      toast({
+        title: "Email enviado",
+        description: "Um novo link de confirmação foi enviado para seu email.",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Erro ao reenviar email:", error);
+      toast({
+        title: "Erro ao enviar email",
+        description: "Não foi possível enviar o email de confirmação. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingNewEmail(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
@@ -80,7 +171,7 @@ export default function VerifyEmail() {
             ) : isSuccess ? (
               <CheckCircle2 className="h-8 w-8 text-green-500" />
             ) : (
-              <XCircle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-8 w-8 text-amber-500" />
             )}
           </div>
 
@@ -89,20 +180,37 @@ export default function VerifyEmail() {
               {isVerifying
                 ? "Aguarde enquanto verificamos seu email..."
                 : isSuccess
-                  ? "Seu email foi verificado com sucesso! Você será redirecionado em alguns segundos."
-                  : "Não foi possível verificar seu email. Por favor, tente novamente ou entre em contato com o suporte."}
+                  ? "Seu email foi verificado com sucesso! Você será redirecionado para a página de login em alguns segundos."
+                  : errorMessage || "Não foi possível verificar seu email. Por favor, tente novamente ou entre em contato com o suporte."}
             </p>
+            
+            {!isSuccess && !isVerifying && userEmail && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-md">
+                <p className="text-sm text-amber-800 mb-2">
+                  O link de confirmação pode ter expirado. Solicite um novo email de confirmação.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={handleResendConfirmation}
+                  disabled={isSendingNewEmail}
+                  className="w-full text-sm mt-2"
+                >
+                  {isSendingNewEmail ? "Enviando..." : "Reenviar email de confirmação"}
+                </Button>
+              </div>
+            )}
           </div>
-
-          {!isVerifying && !isSuccess && (
+        </CardContent>
+        <CardFooter className="flex justify-center mt-4">
+          {!isVerifying && (
             <Button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/register?isLoginMode=true")}
               className="w-full"
             >
-              Voltar para o início
+              {isSuccess ? "Ir para página de login agora" : "Voltar para o login"}
             </Button>
           )}
-        </CardContent>
+        </CardFooter>
       </Card>
     </div>
   );
