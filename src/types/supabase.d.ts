@@ -8,15 +8,12 @@ import { UserMetricsCollection } from '@/hooks/useUserMetrics';
 declare module '@supabase/supabase-js' {
   interface SupabaseClient<T extends Database = any> {
     rpc<
-      Schema extends keyof Database['public']['Functions'] = keyof Database['public']['Functions'],
-      Result = Schema extends keyof Database['public']['Functions']
-        ? ReturnType<Database['public']['Functions'][Schema]>
-        : unknown
+      Schema extends keyof Database['public']['Functions'] | string = string,
+      Result = unknown
     >(
-      fn: Schema | string,
-      params?: Schema extends keyof Database['public']['Functions']
-        ? Parameters<Database['public']['Functions'][Schema]>[0]
-        : Record<string, any>
+      fn: Schema,
+      params?: Record<string, any>,
+      options?: { count?: null | 'exact' | 'planned' | 'estimated' }
     ): Promise<{ data: Result; error: null } | { data: null; error: any }>;
   }
 } 

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -10,6 +11,12 @@ interface RegisterData {
 }
 
 interface RegisterResponse {
+  success: boolean;
+  message: string;
+}
+
+// Interface for register_user RPC response
+interface RegisterUserResponse {
   success: boolean;
   message: string;
 }
@@ -231,8 +238,8 @@ export const useAuthentication = (
       let profileCreated = false;
       try {
         // Primeiro tenta usar a função RPC personalizada para registro verificado
-        const { data: rpcResult, error: rpcError } = await supabase.rpc(
-          'register_user_verified',  // Nova função que garante verificação
+        const { data: rpcResult, error: rpcError } = await supabase.rpc<'register_user_verified', RegisterUserResponse>(
+          'register_user_verified',
           {
             user_id: authResponse.data.user.id,
             user_name: name,
@@ -244,7 +251,7 @@ export const useAuthentication = (
         if (rpcError) {
           console.error('Erro ao chamar register_user_verified RPC:', rpcError);
           // Tentar a função RPC antiga como fallback
-          const { data: oldRpcResult, error: oldRpcError } = await supabase.rpc(
+          const { data: oldRpcResult, error: oldRpcError } = await supabase.rpc<'register_user', RegisterUserResponse>(
             'register_user',
             {
               user_id: authResponse.data.user.id,
@@ -284,12 +291,12 @@ export const useAuthentication = (
             }
           } else {
             console.log('RPC register_user resultado:', oldRpcResult);
-            profileCreated = oldRpcResult.success;
+            profileCreated = oldRpcResult?.success || false;
             
             if (!profileCreated) {
               return {
                 success: false,
-                message: oldRpcResult.message || 'Erro ao criar perfil do usuário'
+                message: oldRpcResult?.message || 'Erro ao criar perfil do usuário'
               };
             }
             
@@ -301,12 +308,12 @@ export const useAuthentication = (
           }
         } else {
           console.log('RPC register_user_verified resultado:', rpcResult);
-          profileCreated = rpcResult.success;
+          profileCreated = rpcResult?.success || false;
           
           if (!profileCreated) {
             return {
               success: false,
-              message: rpcResult.message || 'Erro ao criar perfil do usuário'
+              message: rpcResult?.message || 'Erro ao criar perfil do usuário'
             };
           }
         }

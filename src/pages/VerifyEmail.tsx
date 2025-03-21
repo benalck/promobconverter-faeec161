@@ -50,7 +50,7 @@ export default function VerifyEmail() {
         if (token_hash && type === 'email_confirmation') {
           const { error } = await supabase.auth.verifyOtp({
             token_hash,
-            type: 'email_confirmation',
+            type: 'signup',
           });
           
           if (error) {
@@ -215,4 +215,3 @@ export default function VerifyEmail() {
     </div>
   );
 }
- 
