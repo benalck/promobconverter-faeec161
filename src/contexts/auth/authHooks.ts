@@ -301,7 +301,7 @@ export const useAuthentication = (
                   last_login: new Date().toISOString(),
                   is_banned: false,
                   email_verified: true,  // Garantir que o email é verificado
-                  credits: 0
+                  credits: 10  // 10 créditos iniciais para cada novo usuário
                 }
               ]);
               
