@@ -22,6 +22,9 @@ export default function VerifyEmail() {
   useEffect(() => {
     const handleEmailVerification = async () => {
       try {
+        console.log("Iniciando verificação de email. Path:", location.pathname);
+        console.log("Search params:", Object.fromEntries(searchParams.entries()));
+        
         // Verificar parâmetros de erro
         const error = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
@@ -30,6 +33,8 @@ export default function VerifyEmail() {
           setIsSuccess(false);
           setErrorMessage(errorDescription || 'Ocorreu um erro ao verificar seu email');
           setIsVerifying(false);
+          
+          console.error("Erro na verificação:", error, errorDescription);
           
           // Se o erro for de link expirado, oferecer opção de reenvio
           if (error === 'access_denied' && errorDescription?.includes('expired')) {
@@ -47,20 +52,30 @@ export default function VerifyEmail() {
         const token_hash = searchParams.get('token_hash');
         const type = searchParams.get('type');
         
+        console.log("Token hash:", token_hash);
+        console.log("Type:", type);
+        
         // Se tiver token na URL, confirmar o email
         if (token_hash && type === 'email_confirmation') {
+          console.log("Tentando verificar token...");
+          
           const { error } = await supabase.auth.verifyOtp({
             token_hash,
             type: 'signup',
           });
           
           if (error) {
+            console.error("Erro ao verificar OTP:", error);
             throw error;
           }
+          
+          console.log("OTP verificado com sucesso!");
         }
         
         // Obter usuário atual
         const { data: { user } } = await supabase.auth.getUser();
+        
+        console.log("Usuário atual:", user);
         
         if (!user) {
           setIsSuccess(false);
@@ -76,6 +91,7 @@ export default function VerifyEmail() {
           .eq('id', user.id);
 
         if (updateError) {
+          console.error("Erro ao atualizar perfil:", updateError);
           throw updateError;
         }
 
@@ -133,7 +149,8 @@ export default function VerifyEmail() {
 
     setIsSendingNewEmail(true);
     try {
-      await sendConfirmationEmail(userEmail, `${window.location.origin}/verify`);
+      const baseUrl = window.location.origin;
+      await sendConfirmationEmail(userEmail, `${baseUrl}/verify`);
       
       toast({
         title: "Email enviado",

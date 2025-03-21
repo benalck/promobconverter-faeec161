@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useState, useEffect } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -72,6 +73,7 @@ function App() {
             <Route path="/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
             <Route path="/verify" element={<VerifyEmail />} />
             <Route path="/auth/confirm" element={<VerifyEmail />} />
+            <Route path="/register/access" element={<VerifyEmail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
