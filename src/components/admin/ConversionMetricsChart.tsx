@@ -11,9 +11,6 @@ export interface DailyStats {
   successful: number;
   failed: number;
   averageTimeInSeconds?: number;
-  totalConversions: number;
-  successRate: number;
-  averageTime: number;
 }
 
 interface ConversionMetricsChartProps {
@@ -38,14 +35,12 @@ export default function ConversionMetricsChart({ data, timeFilter }: ConversionM
       formattedDate = `${date.getHours()}:00`;
     }
     
-    // Transform the data to match the expected DailyStats format
+    // Transform the data to include formatted date and averageTimeInSeconds
     return {
       ...item,
       formattedDate,
-      // Convert milliseconds to seconds for the UI
-      totalConversions: item.total,
+      // Add calculated fields needed for the chart
       successRate: item.successful > 0 ? (item.successful / item.total) * 100 : 0,
-      averageTime: 0, // This will be filled in if available
       averageTimeInSeconds: 0 // This will be filled in if available
     };
   });

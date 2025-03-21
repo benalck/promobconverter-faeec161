@@ -25,6 +25,14 @@ export interface UserMetricsCollection {
   };
 }
 
+interface UserMetricResponse {
+  total_conversions: number;
+  successful_conversions: number;
+  failed_conversions: number;
+  average_conversion_time: number;
+  last_conversion: string;
+}
+
 export function useUserMetrics() {
   const { user, users } = useAuth();
   const [metrics, setMetrics] = useState<UserMetricsCollection>({});
@@ -37,8 +45,8 @@ export function useUserMetrics() {
       console.log(`Buscando métricas para o usuário ${userId}...`);
       
       // Use type assertion for the RPC call
-      const result = await supabase.rpc(
-        'get_user_metrics' as any,
+      const result = await supabase.rpc<'get_user_metrics', UserMetricResponse>(
+        'get_user_metrics',
         {
           p_user_id: userId,
           p_start_date: null,

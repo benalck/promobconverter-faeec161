@@ -28,6 +28,14 @@ export interface ConversionsByType {
   success_rate: number;
 }
 
+interface SystemMetricsResponse {
+  total_users: number;
+  active_users: number;
+  total_conversions: number;
+  success_rate: number;
+  average_response_time: number;
+}
+
 export function useSystemMetrics() {
   const { user, isAdmin } = useAuth();
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -55,9 +63,9 @@ export function useSystemMetrics() {
       // Console log para debug
       console.log('Buscando métricas do sistema...');
 
-      // Use a type assertion to call the RPC function
-      const result = await supabase.rpc(
-        'get_system_metrics' as any,
+      // Use a type assertion for the RPC call
+      const result = await supabase.rpc<'get_system_metrics', SystemMetricsResponse>(
+        'get_system_metrics',
         { 
           p_start_date: null,
           p_end_date: null
@@ -87,14 +95,6 @@ export function useSystemMetrics() {
 
       if (!data) {
         throw new Error('Nenhum dado retornado das métricas do sistema');
-      }
-
-      // Verificar se as propriedades esperadas existem
-      if (typeof data.total_users === 'undefined' || 
-          typeof data.active_users === 'undefined' || 
-          typeof data.total_conversions === 'undefined') {
-        console.error('Dados retornados em formato inesperado:', data);
-        throw new Error('Formato de dados inesperado nas métricas do sistema');
       }
 
       // Mapear os dados da resposta SQL para nosso formato da interface
@@ -131,8 +131,8 @@ export function useSystemMetrics() {
 
     try {
       // Use a type assertion for the RPC call
-      const { data, error } = await supabase.rpc(
-        'get_conversions_by_date_range' as any,
+      const { data, error } = await supabase.rpc<'get_conversions_by_date_range', ConversionsByDate[]>(
+        'get_conversions_by_date_range',
         { p_start_date: startDate, p_end_date: endDate }
       );
 
@@ -162,8 +162,8 @@ export function useSystemMetrics() {
 
     try {
       // Use a type assertion for the RPC call
-      const { data, error } = await supabase.rpc(
-        'get_conversions_by_type' as any
+      const { data, error } = await supabase.rpc<'get_conversions_by_type', ConversionsByType[]>(
+        'get_conversions_by_type'
       );
 
       if (error) {
