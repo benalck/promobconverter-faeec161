@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -39,8 +40,7 @@ const handleDefaultError = (error: unknown): string => {
 
 export const useAuthentication = (
   setUser: React.Dispatch<React.SetStateAction<User | null>>,
-  syncUsers: () => Promise<void>,
-  addInitialCreditsIfNeeded: (userId: string) => Promise<void>
+  syncUsers: () => Promise<void>
 ) => {
   const login = async (email: string, password: string) => {
     try {
@@ -300,8 +300,7 @@ export const useAuthentication = (
                   created_at: new Date().toISOString(),
                   last_login: new Date().toISOString(),
                   is_banned: false,
-                  email_verified: true,  // Garantir que o email é verificado
-                  credits: 0  // Sem créditos iniciais
+                  email_verified: true  // Garantir que o email é verificado
                 }
               ]);
               

@@ -23,9 +23,6 @@ export interface User {
   lastLogin?: string;
   isBanned?: boolean;
   emailVerified?: boolean;
-  credits: number;
-  activePlan?: Plan | null;
-  planExpiryDate?: string | null;
 }
 
 export interface AuthContextType {
@@ -45,7 +42,5 @@ export interface AuthContextType {
   deleteUser: (userId: string) => Promise<void>;
   updateUser: (userId: string, updates: Partial<User>) => Promise<void>;
   getAllUsers: () => Promise<User[]>;
-  refreshUserCredits: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
-  addExtraCredits: (userId: string, extraCredits: number) => Promise<number | undefined>;
 }

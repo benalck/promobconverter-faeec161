@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { User, Plan } from './types';
+import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,7 +26,7 @@ export const useUserManagement = (
     try {
       const { data: supabaseUsers, error } = await supabase
         .from('profiles')
-        .select('*, plans(*)');
+        .select('*');
 
       if (error) throw error;
 
@@ -62,10 +63,7 @@ export const useUserManagement = (
             role: userRole,
             createdAt: profile.created_at,
             lastLogin: profile.last_login || undefined,
-            isBanned: profile.is_banned,
-            credits: profile.credits || 0,
-            activePlan: profile.plans || null,
-            planExpiryDate: profile.plan_expiry_date || null
+            isBanned: profile.is_banned
           });
         } catch (error) {
           console.error('Erro ao processar usuário:', error);
@@ -75,85 +73,6 @@ export const useUserManagement = (
       setUsers(formattedUsers);
     } catch (error) {
       console.error('Erro ao sincronizar usuários:', error);
-    }
-  };
-
-  const refreshUserCredits = async () => {
-    if (!user) return;
-    
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*, plans(*)')
-        .eq('id', user.id)
-        .single();
-        
-      if (error) throw error;
-      
-      setUser(prevUser => {
-        if (!prevUser) return null;
-        return {
-          ...prevUser,
-          credits: profile?.credits || 0,
-          activePlan: profile?.plans || null,
-          planExpiryDate: profile?.plan_expiry_date || null
-        };
-      });
-    } catch (error) {
-      console.error('Erro ao atualizar créditos:', error);
-    }
-  };
-
-  const addInitialCreditsIfNeeded = async (userId: string) => {
-    try {
-      // Função mantida apenas para compatibilidade, mas não adiciona mais créditos
-      // e não exibe nenhuma mensagem de boas-vindas
-      await refreshUserCredits();
-    } catch (error) {
-      console.error('Erro ao sincronizar dados do usuário:', error);
-    }
-  };
-
-  const addExtraCredits = async (userId: string, credits: number) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', userId)
-        .single();
-      
-      if (error) throw error;
-      
-      const currentCredits = profile?.credits || 0;
-      const newCredits = currentCredits + credits;
-      
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ credits: newCredits })
-        .eq('id', userId);
-        
-      if (updateError) throw updateError;
-      
-      // Update local state
-      if (user?.id === userId) {
-        setUser(prevUser => {
-          if (!prevUser) return null;
-          return {
-            ...prevUser,
-            credits: newCredits
-          };
-        });
-      }
-      
-      const newUsers = users.map(u => 
-        u.id === userId ? { ...u, credits: newCredits } : u
-      );
-      setUsers(newUsers);
-      
-      return newCredits;
-    } catch (error) {
-      console.error('Erro ao adicionar créditos extras:', error);
-      throw new Error('Falha ao adicionar créditos extras');
     }
   };
 
@@ -185,9 +104,6 @@ export const useUserManagement = (
         name?: string; 
         is_banned?: boolean;
         role?: string;
-        credits?: number;
-        active_plan?: string | null;
-        plan_expiry_date?: string | null;
       } = {};
       
       if (data.name !== undefined) profileData.name = data.name;
@@ -201,10 +117,6 @@ export const useUserManagement = (
           console.warn('Invalid role provided, defaulting to "user"');
         }
       }
-      
-      if (data.credits !== undefined) profileData.credits = data.credits;
-      if (data.activePlan !== undefined) profileData.active_plan = data.activePlan?.id || null;
-      if (data.planExpiryDate !== undefined) profileData.plan_expiry_date = data.planExpiryDate;
       
       if (Object.keys(profileData).length > 0) {
         const { error } = await supabase
@@ -250,12 +162,9 @@ export const useUserManagement = (
 
   return {
     syncUsers,
-    refreshUserCredits,
-    addInitialCreditsIfNeeded,
     deleteUser,
     updateUser,
     getAllUsers,
-    addExtraCredits
   };
 };
 

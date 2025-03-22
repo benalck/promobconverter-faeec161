@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Download, PlusCircle, Eye, Shield, ShieldOff, Ban, Check, Coins, Trash } from "lucide-react";
+import { Search, Download, PlusCircle, Eye, Shield, ShieldOff, Ban, Check, Trash } from "lucide-react";
 import { User } from "@/contexts/auth/types";
 import { UserMetricsCollection } from "@/hooks/useUserMetrics";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +18,6 @@ interface UserTableProps {
   onShowUserDetails: (userId: string) => void;
   onShowRoleDialog: (userId: string) => void;
   onShowBanDialog: (userId: string) => void;
-  onShowCreditsDialog: (userId: string) => void;
   onShowDeleteDialog: (userId: string) => void;
   onShowAddUserDialog: () => void;
 }
@@ -30,7 +29,6 @@ export function UserTable({
   onShowUserDetails,
   onShowRoleDialog,
   onShowBanDialog,
-  onShowCreditsDialog,
   onShowDeleteDialog,
   onShowAddUserDialog
 }: UserTableProps) {
@@ -85,8 +83,7 @@ export function UserTable({
         role: user.role,
         createdAt: user.createdAt,
         lastLogin: user.lastLogin,
-        isBanned: user.isBanned,
-        credits: user.credits
+        isBanned: user.isBanned
       }));
     
     const dataStr = JSON.stringify(selectedUserData, null, 2);
@@ -146,7 +143,6 @@ export function UserTable({
               <TableHead>Email</TableHead>
               <TableHead>Função</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Créditos</TableHead>
               <TableHead>Conversões</TableHead>
               <TableHead>Taxa de Sucesso</TableHead>
               <TableHead>Última Conversão</TableHead>
@@ -156,7 +152,7 @@ export function UserTable({
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center">
+                <TableCell colSpan={9} className="h-24 text-center">
                   Nenhum usuário encontrado.
                 </TableCell>
               </TableRow>
@@ -191,7 +187,6 @@ export function UserTable({
                         {user.isBanned ? "Banido" : "Ativo"}
                       </Badge>
                     </TableCell>
-                    <TableCell>{user.credits}</TableCell>
                     <TableCell>{metrics.totalConversions}</TableCell>
                     <TableCell>
                       {metrics.totalConversions > 0
@@ -233,13 +228,6 @@ export function UserTable({
                           ) : (
                             <Ban className="h-4 w-4" />
                           )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => onShowCreditsDialog(user.id)}
-                        >
-                          <Coins className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"

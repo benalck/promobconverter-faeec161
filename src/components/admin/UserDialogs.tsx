@@ -115,56 +115,6 @@ export function RoleDialog({ open, onOpenChange, onConfirm, selectedUser, users 
   );
 }
 
-interface CreditsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-  creditsToAdd: string;
-  setCreditsToAdd: (value: string) => void;
-}
-
-export function CreditsDialog({ 
-  open, 
-  onOpenChange, 
-  onConfirm, 
-  creditsToAdd, 
-  setCreditsToAdd 
-}: CreditsDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Alterar Créditos</DialogTitle>
-          <DialogDescription>
-            Adicione ou remova créditos do usuário.
-            Use números negativos para remover créditos.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="credits" className="text-right">
-              Créditos
-            </Label>
-            <Input
-              id="credits"
-              type="number"
-              value={creditsToAdd}
-              onChange={(e) => setCreditsToAdd(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={onConfirm}>Confirmar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 interface AddUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -177,8 +127,6 @@ interface AddUserDialogProps {
   setNewUserPassword: (value: string) => void;
   newUserPhone: string;
   setNewUserPhone: (value: string) => void;
-  newUserCredits: string;
-  setNewUserCredits: (value: string) => void;
   isNewUserAdmin: boolean;
   setIsNewUserAdmin: (value: boolean) => void;
 }
@@ -195,8 +143,6 @@ export function AddUserDialog({
   setNewUserPassword,
   newUserPhone,
   setNewUserPhone,
-  newUserCredits,
-  setNewUserCredits,
   isNewUserAdmin,
   setIsNewUserAdmin
 }: AddUserDialogProps) {
@@ -255,18 +201,6 @@ export function AddUserDialog({
               value={newUserPhone}
               onChange={(e) => setNewUserPhone(e.target.value)}
               placeholder="(00) 00000-0000"
-              className="mt-1"
-            />
-          </div>
-          <div className="form-group">
-            <Label htmlFor="credits" className="text-right">
-              Créditos Iniciais
-            </Label>
-            <Input
-              id="credits"
-              type="number"
-              value={newUserCredits}
-              onChange={(e) => setNewUserCredits(e.target.value)}
               className="mt-1"
             />
           </div>

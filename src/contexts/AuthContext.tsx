@@ -5,7 +5,6 @@ import { User, AuthContextType } from './auth/types';
 import { convertSupabaseUser } from './auth/userUtils';
 import { useUserManagement } from './auth/userManagement';
 import { useAuthentication } from './auth/authHooks';
-import { useMonthlyCredits } from '@/hooks/useMonthlyCredits';
 import { useToast } from '@/hooks/use-toast';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,7 +14,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const { toast } = useToast();
-  const { checkAndAddMonthlyCredits } = useMonthlyCredits();
 
   // We need to partially initialize logout to break the circular dependency
   const logout = async () => {
@@ -25,19 +23,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const {
     syncUsers,
-    refreshUserCredits,
-    addInitialCreditsIfNeeded,
     deleteUser,
     updateUser,
     getAllUsers,
-    addExtraCredits
   } = useUserManagement(setUser, setUsers, user, users, logout);
 
   const {
     login,
     register,
     logout: authLogout
-  } = useAuthentication(setUser, syncUsers, addInitialCreditsIfNeeded);
+  } = useAuthentication(setUser, syncUsers);
 
   // Override the partial logout with the complete one
   const completeLogout = authLogout;
@@ -60,11 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await completeLogout();
             return;
           }
-          
-          await addInitialCreditsIfNeeded(currentUser.id);
-          
-          // Check and add monthly credits if needed
-          await checkAndAddMonthlyCredits(currentUser.id);
         }
 
         await syncUsers();
@@ -83,12 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_IN' && session?.user) {
         const newUser = await convertSupabaseUser(session.user);
         setUser(newUser);
-        
-        await addInitialCreditsIfNeeded(newUser.id);
-        
-        // Check and add monthly credits on sign in
-        await checkAndAddMonthlyCredits(newUser.id);
-        
         await syncUsers();
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -114,9 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         deleteUser,
         updateUser,
         getAllUsers,
-        refreshUserCredits,
-        setUser,
-        addExtraCredits
+        setUser
       }}
     >
       {isInitialized ? children : null}
