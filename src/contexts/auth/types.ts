@@ -23,6 +23,9 @@ export interface User {
   lastLogin?: string;
   isBanned?: boolean;
   emailVerified?: boolean;
+  credits?: number;
+  activePlan?: Plan | null;
+  planExpiryDate?: string | null;
 }
 
 export interface AuthContextType {

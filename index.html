@@ -1,116 +1,17 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Conversor Promob</title>
-    <meta name="description" content="Converta seus arquivos XML Promob para planos de corte Excel formatados" />
-    <meta property="og:title" content="Conversor Promob" />
-    <meta property="og:description" content="Converta seus arquivos XML Promob para planos de corte Excel formatados" />
-    <meta property="og:image" content="/og-image.png" />
-    
-    <!-- Preload de recursos críticos -->
-    <link rel="preconnect" href="https://npnkmbflfflqpjwhxbfu.supabase.co" crossorigin />
-    <link rel="dns-prefetch" href="https://npnkmbflfflqpjwhxbfu.supabase.co" />
-    
-    <!-- Detecção de Internet Explorer -->
-    <script>
-      if(/MSIE \d|Trident.*rv:/.test(navigator.userAgent)) {
-        window.location = 'browser-not-supported.html';
-      }
-    </script>
-    
-    <!-- Estilo inicial -->
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background-color: #f9fafb;
-      }
-      #root:empty {
-        display: none;
-      }
-      #loading-fallback {
-        display: none;
-      }
-      #root:empty + #loading-fallback {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        text-align: center;
-        padding: 2rem;
-      }
-      .spinner {
-        border: 4px solid rgba(0, 0, 0, 0.1);
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        border-left-color: #2563eb;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 1.5rem;
-      }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    </style>
+    <meta name="description" content="Conversor de XML do Promob para Excel" />
+    <meta name="theme-color" content="#0070f3" />
+    <title>Promob Converter</title>
   </head>
-  
   <body>
     <div id="root"></div>
-    
-    <!-- Fallback para caso de erro -->
-    <div id="loading-fallback">
-      <div class="spinner"></div>
-      <h2>Carregando aplicação...</h2>
-      <p>Se a página não carregar em alguns segundos, <a href="javascript:window.location.reload()">clique aqui para recarregar</a>.</p>
-    </div>
-    
-    <!-- Scripts -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- Script para detectar erros de carregamento -->
-    <script>
-      // Adiciona evento para capturar erros
-      window.addEventListener('error', function(e) {
-        console.error('Erro global capturado:', e.error || e.message);
-        showErrorMessage(e.error ? e.error.message : e.message);
-      });
-      
-      // Se a aplicação não carregar em 8 segundos, mostrar mensagem de erro
-      const loadTimeout = setTimeout(() => {
-        const root = document.getElementById('root');
-        if (!root || !root.hasChildNodes()) {
-          showErrorMessage('Tempo limite excedido ao carregar a aplicação.');
-        }
-      }, 8000);
-      
-      // Função para mostrar mensagem de erro amigável
-      function showErrorMessage(errorMsg) {
-        const fallback = document.getElementById('loading-fallback');
-        if (fallback) {
-          fallback.innerHTML = `
-            <h2 style="color: #dc2626;">Erro ao carregar a aplicação</h2>
-            <p>Não foi possível carregar a aplicação corretamente.</p>
-            <p style="font-size: 14px; color: #666; margin-top: 10px;">Erro: ${errorMsg || 'Erro desconhecido'}</p>
-            <button onclick="window.location.reload()" style="background-color: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 15px;">
-              Tentar novamente
-            </button>
-            <p style="margin-top: 20px;">
-              <a href="/debug" style="color: #2563eb;">Ir para página de diagnóstico</a>
-            </p>
-          `;
-        }
-      }
-      
-      // Quando a aplicação carregar, limpar o timeout
-      window.addEventListener('load', function() {
-        clearTimeout(loadTimeout);
-      });
-    </script>
   </body>
 </html>
