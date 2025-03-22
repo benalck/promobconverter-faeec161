@@ -2,7 +2,7 @@
 import React from "react";
 import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
-import { FileText, Download, Upload, List, Check, LayoutDashboard, MousePointerClick, Tool, FileSpreadsheet } from "lucide-react";
+import { FileText, Download, Upload, List, Check, LayoutDashboard, MousePointerClick, Wrench, FileSpreadsheet } from "lucide-react";
 import HowItWorksButton from "@/components/HowItWorksButton";
 
 const Index = () => {
@@ -72,7 +72,7 @@ const Index = () => {
                 
                 <div className="p-3 md:p-5 bg-white/60 backdrop-blur-sm rounded-lg border border-gray-100 shadow-glass-sm transition-all duration-300 hover:shadow-glass hover:translate-y-[-2px]">
                   <div className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-blue-50 text-blue-600 mx-auto mb-2 md:mb-3">
-                    <Tool className="w-4 h-4 md:w-5 md:h-5" />
+                    <Wrench className="w-4 h-4 md:w-5 md:h-5" />
                   </div>
                   <h3 className="font-medium mb-1 md:mb-2 text-sm md:text-base">Versatilidade</h3>
                   <p className="text-xs text-gray-600">Compatível com diversos formatos Promob.</p>
