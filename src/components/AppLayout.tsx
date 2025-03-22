@@ -31,6 +31,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
         {/* Conteúdo principal */}
         <div className="w-full max-w-4xl mx-auto relative z-10 animate-fade-in">
           <header className="text-center mb-6 md:mb-10">
+            <div className="flex justify-center items-center mb-4">
+              <img 
+                src="/lovable-uploads/7ab58ab0-d58d-4b1d-a0c4-d7fbecd285d6.png"
+                alt="Promob Converter Logo" 
+                className="h-16 sm:h-20 w-auto" 
+              />
+            </div>
             <h1 className={cn(
               "font-bold tracking-tight animate-slide-down",
               isMobile ? "text-2xl" : "text-3xl sm:text-4xl md:text-5xl"
@@ -52,6 +59,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className }) => {
           </main>
           
           <footer className="mt-auto pt-8 sm:pt-12 md:pt-16 text-center text-xs sm:text-sm text-muted-foreground">
+            <div className="flex justify-center items-center mb-2">
+              <img 
+                src="/lovable-uploads/7ab58ab0-d58d-4b1d-a0c4-d7fbecd285d6.png"
+                alt="Promob Converter Logo" 
+                className="h-6 w-auto mr-2" 
+              />
+              <span>XML Promob Converter</span>
+            </div>
             <p>© {new Date().getFullYear()} Arquivo XML Promob para Plano de corte Excel. Todos os direitos reservados.</p>
           </footer>
         </div>
