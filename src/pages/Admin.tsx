@@ -20,6 +20,7 @@ import {
   RoleDialog,
   AddUserDialog
 } from "@/components/admin/UserDialogs";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Type for handling register user form
 interface RegisterUserForm {
@@ -39,6 +40,7 @@ export default function Admin() {
   } = useAuth();
   
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   // State for dialog management
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
@@ -336,13 +338,13 @@ export default function Admin() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-8">
-        <div className="grid grid-cols-1 gap-6">
+      <div className={`container mx-auto ${isMobile ? 'px-2 py-4' : 'py-8'}`}>
+        <div className="grid grid-cols-1 gap-4">
           <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
+            <CardHeader className={isMobile ? "px-4 py-3" : ""}>
+              <div className={`flex ${isMobile ? 'flex-col space-y-3' : 'justify-between items-center'}`}>
                 <div>
-                  <CardTitle className="text-2xl">Painel do Administrador</CardTitle>
+                  <CardTitle className={isMobile ? "text-xl" : "text-2xl"}>Painel do Administrador</CardTitle>
                   <CardDescription>
                     Monitore e gerencie o sistema
                   </CardDescription>
@@ -351,6 +353,8 @@ export default function Admin() {
                   variant="outline" 
                   onClick={refreshData} 
                   disabled={isRefreshing}
+                  size={isMobile ? "sm" : "default"}
+                  className={isMobile ? "w-full" : ""}
                 >
                   {isRefreshing ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -361,11 +365,11 @@ export default function Admin() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className={isMobile ? "px-4 pb-4" : ""}>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="mb-4">
-                  <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                  <TabsTrigger value="users">Usuários</TabsTrigger>
+                <TabsList className="mb-4 w-full">
+                  <TabsTrigger value="dashboard" className="flex-1">Dashboard</TabsTrigger>
+                  <TabsTrigger value="users" className="flex-1">Usuários</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="dashboard">

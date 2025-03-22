@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { User } from "@/contexts/auth/types";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DeleteDialogProps {
   open: boolean;
@@ -20,16 +21,18 @@ interface DeleteDialogProps {
 }
 
 export function DeleteDialog({ open, onOpenChange, onConfirm }: DeleteDialogProps) {
+  const isMobile = useIsMobile();
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
         <DialogHeader>
           <DialogTitle>Excluir Usuário</DialogTitle>
           <DialogDescription>
             Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
@@ -52,10 +55,11 @@ interface BanDialogProps {
 
 export function BanDialog({ open, onOpenChange, onConfirm, selectedUser, users }: BanDialogProps) {
   const user = users.find(u => u.id === selectedUser);
-
+  const isMobile = useIsMobile();
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
         <DialogHeader>
           <DialogTitle>
             {user?.isBanned ? "Desbanir Usuário" : "Banir Usuário"}
@@ -66,7 +70,7 @@ export function BanDialog({ open, onOpenChange, onConfirm, selectedUser, users }
               : "Tem certeza que deseja banir este usuário?"}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
@@ -92,10 +96,11 @@ interface RoleDialogProps {
 
 export function RoleDialog({ open, onOpenChange, onConfirm, selectedUser, users }: RoleDialogProps) {
   const user = users.find(u => u.id === selectedUser);
+  const isMobile = useIsMobile();
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
         <DialogHeader>
           <DialogTitle>Alterar Função</DialogTitle>
           <DialogDescription>
@@ -104,7 +109,7 @@ export function RoleDialog({ open, onOpenChange, onConfirm, selectedUser, users 
               : "Tornar este usuário um administrador?"}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
@@ -146,9 +151,11 @@ export function AddUserDialog({
   isNewUserAdmin,
   setIsNewUserAdmin
 }: AddUserDialogProps) {
+  const isMobile = useIsMobile();
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
         <DialogHeader>
           <DialogTitle>Adicionar Novo Usuário</DialogTitle>
           <DialogDescription>
@@ -213,7 +220,7 @@ export function AddUserDialog({
             <Label htmlFor="admin">Usuário Administrador</Label>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>

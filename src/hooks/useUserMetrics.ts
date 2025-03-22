@@ -27,10 +27,12 @@ export interface UserMetricsCollection {
 
 interface UserMetricResponse {
   total_conversions: number;
-  successful_conversions: number;
-  failed_conversions: number;
-  average_conversion_time: number;
-  last_conversion: string;
+  successful_conversions?: number;
+  failed_conversions?: number;
+  average_conversion_time?: number;
+  last_conversion?: string;
+  success_rate: number;
+  average_response_time: number;
 }
 
 export function useUserMetrics() {
@@ -73,12 +75,27 @@ export function useUserMetrics() {
         return null;
       }
 
+      // Calcular conversões bem-sucedidas usando a taxa de sucesso
+      const successfulConversions = data.successful_conversions !== undefined 
+        ? data.successful_conversions 
+        : Math.round(data.total_conversions * (data.success_rate || 0) / 100);
+      
+      // Calcular conversões com falha
+      const failedConversions = data.failed_conversions !== undefined
+        ? data.failed_conversions
+        : (data.total_conversions - successfulConversions);
+
+      // Usar o tempo médio de resposta se disponível
+      const averageTime = data.average_conversion_time !== undefined
+        ? data.average_conversion_time
+        : (data.average_response_time || 0);
+
       const userMetrics = {
         totalConversions: data.total_conversions,
-        successfulConversions: data.successful_conversions,
-        failedConversions: data.failed_conversions,
-        averageConversionTime: data.average_conversion_time,
-        lastConversion: data.last_conversion
+        successfulConversions: successfulConversions,
+        failedConversions: failedConversions,
+        averageConversionTime: averageTime,
+        lastConversion: data.last_conversion || '-'
       };
 
       console.log(`Métricas mapeadas para usuário ${userId}:`, userMetrics);
@@ -110,6 +127,15 @@ export function useUserMetrics() {
       results.forEach(result => {
         if (result.data) {
           metricsCollection[result.userId] = result.data;
+        } else {
+          // Adicionar valores vazios para evitar erros de renderização
+          metricsCollection[result.userId] = {
+            totalConversions: 0,
+            successfulConversions: 0,
+            failedConversions: 0,
+            averageConversionTime: 0,
+            lastConversion: '-'
+          };
         }
       });
 
