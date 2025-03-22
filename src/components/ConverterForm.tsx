@@ -138,8 +138,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       const endTime = Date.now();
       const conversionTime = endTime - startTime;
       
-      // Registrar a conversão no banco de dados usando o hook
-      await trackConversion({
+      console.log('Registrando dados de conversão:', {
         inputFormat: 'XML',
         outputFormat: 'Excel',
         fileSize,
@@ -147,6 +146,22 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         success,
         errorMessage: errorMsg
       });
+      
+      // Registrar a conversão no banco de dados usando o hook
+      try {
+        const result = await trackConversion({
+          inputFormat: 'XML',
+          outputFormat: 'Excel',
+          fileSize,
+          conversionTime,
+          success,
+          errorMessage: errorMsg
+        });
+        
+        console.log('Resultado do registro de conversão:', result);
+      } catch (trackError) {
+        console.error('Erro ao registrar a conversão:', trackError);
+      }
       
       setIsConverting(false);
     }

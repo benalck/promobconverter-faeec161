@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,7 +29,7 @@ export function useTrackConversion() {
     if (!user) return;
 
     try {
-      // Define parameters with proper type for RPC
+      // Define parameters for RPC
       const params = {
         p_user_id: user.id,
         p_success: success,
@@ -41,19 +40,18 @@ export function useTrackConversion() {
         p_output_format: outputFormat
       };
 
-      // Use track_conversion function which is defined in the database with proper type assertion
-      const { data, error } = await supabase.rpc<'track_conversion', TrackConversionResponse>(
-        'track_conversion', 
-        params
-      );
+      // Corrigido: Chama a função track_conversion sem o uso de generic types
+      const { data, error } = await supabase.rpc('track_conversion', params);
 
       if (error) {
-        console.error('Error tracking conversion:', error);
+        console.error('Erro ao registrar conversão:', error);
+      } else {
+        console.log('Conversão registrada com sucesso:', data);
       }
 
       return data;
     } catch (error) {
-      console.error('Error tracking conversion:', error);
+      console.error('Erro ao registrar conversão:', error);
     }
   }, [user]);
 

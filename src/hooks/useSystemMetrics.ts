@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -63,35 +62,29 @@ export function useSystemMetrics() {
       // Console log para debug
       console.log('Buscando métricas do sistema...');
 
-      // Use a type assertion for the RPC call
-      const result = await supabase.rpc<'get_system_metrics', SystemMetricsResponse>(
-        'get_system_metrics',
-        { 
-          p_start_date: null,
-          p_end_date: null
-        }
-      );
+      // Corrigindo a chamada da RPC para o formato correto
+      const { data, error: rpcError } = await supabase.rpc('get_system_metrics', { 
+        p_start_date: null,
+        p_end_date: null
+      });
 
-      console.log('Resultado da função get_system_metrics:', result);
+      console.log('Resultado da função get_system_metrics:', data);
 
-      if (result.error) {
-        console.error('Erro na função RPC:', result.error);
+      if (rpcError) {
+        console.error('Erro na função RPC:', rpcError);
         
         // Verificar mensagens específicas do erro para dar feedback útil
-        if (result.error.message.includes("Could not find the function") || 
-            result.error.message.includes("function does not exist")) {
+        if (rpcError.message.includes("Could not find the function") || 
+            rpcError.message.includes("function does not exist")) {
           throw new Error('Função de métricas não encontrada no banco de dados. Verifique se as migrações foram aplicadas.');
         }
         
-        if (result.error.message.includes("permission denied")) {
+        if (rpcError.message.includes("permission denied")) {
           throw new Error('Permissão negada para acessar métricas. Verifique suas permissões.');
         }
 
-        throw new Error(result.error.message);
+        throw new Error(rpcError.message);
       }
-
-      const data = result.data;
-      console.log('Dados retornados:', data);
 
       if (!data) {
         throw new Error('Nenhum dado retornado das métricas do sistema');
@@ -130,14 +123,13 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Use a type assertion for the RPC call
-      const { data, error } = await supabase.rpc<'get_conversions_by_date_range', ConversionsByDate[]>(
-        'get_conversions_by_date_range',
+      // Corrigindo a chamada da RPC para o formato correto
+      const { data, error: rpcError } = await supabase.rpc('get_conversions_by_date_range', 
         { p_start_date: startDate, p_end_date: endDate }
       );
 
-      if (error) {
-        throw new Error(error.message);
+      if (rpcError) {
+        throw new Error(rpcError.message);
       }
 
       if (!data) {
@@ -161,13 +153,11 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Use a type assertion for the RPC call
-      const { data, error } = await supabase.rpc<'get_conversions_by_type', ConversionsByType[]>(
-        'get_conversions_by_type'
-      );
+      // Corrigindo a chamada da RPC para o formato correto
+      const { data, error: rpcError } = await supabase.rpc('get_conversions_by_type');
 
-      if (error) {
-        throw new Error(error.message);
+      if (rpcError) {
+        throw new Error(rpcError.message);
       }
 
       if (!data) {
