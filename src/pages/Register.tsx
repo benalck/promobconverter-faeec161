@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, Lock, Mail, User, EyeOff, Eye, Phone } from "lucide-react";
-import HowItWorksButton from "@/components/HowItWorksButton";
 import { formatPhoneNumber } from "@/lib/utils";
 import { sendConfirmationEmail } from "@/lib/email";
 import React from "react";
@@ -299,8 +298,8 @@ export default function Register() {
           <div className="h-full flex flex-col justify-between">
             <div>
               <ShoppingBag className="h-12 w-12 mb-6" />
-              <h1 className="text-3xl font-bold mb-2">Arquivo XML Promob para Plano de corte Excel</h1>
-              <p className="text-white/80 mb-8">Transforme seus arquivos XML Promob em planos de corte Excel profissionais com apenas alguns cliques.</p>
+              <h1 className="text-3xl font-bold mb-2">XML Promob para Excel</h1>
+              <p className="text-white/80 mb-8">Transforme arquivos XML Promob em planos de corte Excel com formatação profissional em segundos</p>
             </div>
             
             <div className="space-y-4">
@@ -515,7 +514,6 @@ export default function Register() {
                 </>
               )}
             </p>
-            <HowItWorksButton />
           </CardFooter>
         </Card>
       </div>

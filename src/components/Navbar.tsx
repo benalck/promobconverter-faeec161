@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, LogOut, Menu, User } from "lucide-react";
+import { ChevronDown, LogOut, Menu, User, Home } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -27,13 +27,20 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex items-center">
               <h1 className="text-xl font-bold text-primary hover:text-primary/80 transition-colors">
-                Arquivo XML Promob para Plano de corte Excel
+                PromobConverter Pro
               </h1>
             </Link>
           </div>
           
           {/* Menu para desktop */}
           <div className="hidden md:flex items-center space-x-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                <Home className="h-4 w-4 mr-1" />
+                <span>Início</span>
+              </Button>
+            </Link>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="flex items-center gap-1">
@@ -71,20 +78,25 @@ export default function Navbar() {
         {/* Menu mobile expandido */}
         {menuOpen && (
           <div className="md:hidden py-3 pt-4 border-t mt-3 animate-fade-in">
-            <div className="flex flex-col space-y-3">
+            <div className="flex flex-col space-y-3 items-center text-center">
               <div className="px-2 py-1 text-sm font-medium">
                 <span>Olá, {user?.name}</span>
               </div>
               
+              <Link to="/" className="flex items-center justify-center w-full px-2 py-1 hover:bg-gray-100 rounded-md" onClick={() => setMenuOpen(false)}>
+                <Home className="h-4 w-4 mr-2" />
+                Início
+              </Link>
+              
               {user?.role === 'admin' && (
-                <Link to="/admin" className="px-2 py-1 hover:bg-gray-100 rounded-md" onClick={() => setMenuOpen(false)}>
+                <Link to="/admin" className="flex items-center justify-center w-full px-2 py-1 hover:bg-gray-100 rounded-md" onClick={() => setMenuOpen(false)}>
                   Painel Admin
                 </Link>
               )}
               
               <button 
                 onClick={handleLogout}
-                className="flex items-center px-2 py-1 text-left text-red-600 hover:bg-red-50 rounded-md"
+                className="flex items-center justify-center w-full px-2 py-1 text-center text-red-600 hover:bg-red-50 rounded-md"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sair

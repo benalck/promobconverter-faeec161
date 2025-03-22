@@ -1,8 +1,44 @@
-
 import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import ErrorBoundary from "./ErrorBoundary";
 import "./index.css";
+
+/**
+ * Configurações de performance
+ */
+// Configuração para monitorar performance
+const enablePerfMetrics = process.env.NODE_ENV === 'development';
+if (enablePerfMetrics) {
+  // Monitoramento do tempo de inicialização
+  performance.mark('app-init-start');
+}
+
+// Preload de recursos críticos
+const preloadResources = () => {
+  // Lista de recursos críticos para pré-carregar
+  const criticalResources = [
+    // Imagens e ícones importantes
+    '/favicon.ico',
+    // Fontes
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+  ];
+  
+  criticalResources.forEach(resource => {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    
+    if (resource.endsWith('.css')) {
+      link.as = 'style';
+    } else if (resource.endsWith('.ico') || resource.endsWith('.png') || resource.endsWith('.jpg') || resource.endsWith('.svg')) {
+      link.as = 'image';
+    } else if (resource.includes('fonts.googleapis.com')) {
+      link.as = 'font';
+    }
+    
+    link.href = resource;
+    document.head.appendChild(link);
+  });
+};
 
 // Componente de carregamento para Suspense
 const LoadingFallback = () => (
@@ -11,8 +47,19 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Carregamento lazy do App
-const App = lazy(() => import('./App'));
+// Carregamento lazy do App com prefetch
+const App = lazy(() => {
+  // Inicia o pré-carregamento dos recursos enquanto aguarda o App ser carregado
+  preloadResources();
+  return import('./App').then(module => {
+    if (enablePerfMetrics) {
+      performance.mark('app-loaded');
+      performance.measure('app-loading-time', 'app-init-start', 'app-loaded');
+      console.log('App carregado e pronto para renderização');
+    }
+    return module;
+  });
+});
 
 // Configuração de logs e detecção de erros
 console.log('Inicializando aplicação...');
@@ -109,6 +156,9 @@ try {
     throw new Error("Elemento root não encontrado");
   }
   
+  // Iniciar preload imediatamente
+  preloadResources();
+  
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <ErrorBoundary>
@@ -125,7 +175,19 @@ try {
     loader.style.display = 'none';
   }
   
-  console.log('Aplicação renderizada com sucesso!');
+  if (enablePerfMetrics) {
+    performance.mark('app-render-complete');
+    performance.measure('app-total-time', 'app-init-start', 'app-render-complete');
+    console.log('Aplicação renderizada com sucesso!');
+    
+    // Registrar métricas importantes
+    const appLoadTime = performance.getEntriesByName('app-loading-time')[0];
+    const totalTime = performance.getEntriesByName('app-total-time')[0];
+    console.log(`Tempo de carregamento do App: ${appLoadTime?.duration.toFixed(2)}ms`);
+    console.log(`Tempo total de inicialização: ${totalTime?.duration.toFixed(2)}ms`);
+  } else {
+    console.log('Aplicação renderizada com sucesso!');
+  }
 } catch (error) {
   console.error('Erro crítico ao renderizar aplicação:', error);
   

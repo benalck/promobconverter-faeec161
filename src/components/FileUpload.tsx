@@ -1,129 +1,174 @@
-
-import React, { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { FileDown } from "lucide-react";
+import React, { useState, useCallback } from "react";
+import { UploadCloud, File, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
-  accept: string;
+  accept?: string;
   isDisabled?: boolean;
+  maxSize?: number;
   className?: string;
-  fileType?: string;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({
-  onFileSelect,
-  accept,
+const FileUpload: React.FC<FileUploadProps> = ({ 
+  onFileSelect, 
+  accept = ".xml", 
   isDisabled = false,
-  className,
-  fileType = "XML",
+  maxSize = 100, // 100 MB como limite padrão, aumentado significativamente
+  className 
 }) => {
-  const [dragActive, setDragActive] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+  const validateFile = useCallback((file: File): boolean => {
+    // Reset error state
+    setError(null);
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type === "text/xml" || file.name.endsWith(".xml")) {
-        handleFile(file);
+    // Validar tamanho (converter MB para bytes)
+    const maxSizeBytes = maxSize * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      setError(`O arquivo excede o tamanho máximo de ${maxSize}MB`);
+      return false;
+    }
+    
+    // Validar tipo
+    if (accept) {
+      const fileType = file.name.split('.').pop()?.toLowerCase() || '';
+      const acceptedTypes = accept.split(',').map(type => 
+        type.trim().replace('.', '').toLowerCase()
+      );
+      
+      if (!acceptedTypes.includes(fileType)) {
+        setError(`Tipo de arquivo inválido. Aceito apenas: ${accept}`);
+        return false;
       }
     }
-  };
+    
+    return true;
+  }, [accept, maxSize]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isDisabled) return;
+    
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) return;
+    
+    if (validateFile(selectedFile)) {
+      setFile(selectedFile);
+      onFileSelect(selectedFile);
     }
-  };
+    
+    // Reset input value to allow selecting the same file again
+    event.target.value = '';
+  }, [isDisabled, onFileSelect, validateFile]);
 
-  const handleFile = (file: File) => {
-    setFileName(file.name);
-    onFileSelect(file);
-  };
-
-  const openFileSelector = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!isDisabled) {
+      setIsDragging(true);
     }
-  };
+  }, [isDisabled]);
+
+  const handleDragLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    
+    if (isDisabled) return;
+    
+    const droppedFile = event.dataTransfer.files?.[0];
+    if (!droppedFile) return;
+    
+    if (validateFile(droppedFile)) {
+      setFile(droppedFile);
+      onFileSelect(droppedFile);
+    }
+  }, [isDisabled, onFileSelect, validateFile]);
+
+  const handleRemoveFile = useCallback(() => {
+    setFile(null);
+    setError(null);
+    // Informar o componente pai que não há arquivo
+    onFileSelect(null as unknown as File);
+  }, [onFileSelect]);
+
+  const fileSize = file ? (file.size / 1024 / 1024).toFixed(2) + " MB" : "";
 
   return (
     <div className={cn("w-full", className)}>
-      <div
-        className={cn(
-          "relative flex flex-col items-center justify-center w-full h-48 rounded-lg transition-all duration-300 overflow-hidden group",
-          "border-2 border-dashed border-gray-300 hover:border-primary",
-          dragActive ? "border-primary bg-primary/5" : "bg-gray-50/50",
-          fileName ? "border-primary/50" : "",
-          isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-        )}
-        onDragEnter={!isDisabled ? handleDrag : undefined}
-        onDragLeave={!isDisabled ? handleDrag : undefined}
-        onDragOver={!isDisabled ? handleDrag : undefined}
-        onDrop={!isDisabled ? handleDrop : undefined}
-        onClick={!isDisabled ? openFileSelector : undefined}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          accept={accept}
-          onChange={handleChange}
-          disabled={isDisabled}
-        />
-        
-        <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center p-5 text-center">
-          <div className={cn(
-            "w-16 h-16 mb-4 rounded-full flex items-center justify-center transition-all duration-500",
-            "bg-gray-100 group-hover:bg-primary/10",
-            dragActive ? "scale-110 bg-primary/10" : ""
-          )}>
-            <FileDown 
+      {!file ? (
+        <div
+          className={cn(
+            "border-2 border-dashed rounded-lg p-4 sm:p-6 text-center transition-all duration-200 cursor-pointer",
+            isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-400",
+            isDisabled ? "opacity-60 cursor-not-allowed bg-gray-100" : "hover:bg-blue-50/50",
+          )}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => !isDisabled && document.getElementById("file-upload")?.click()}
+        >
+          <UploadCloud className="mx-auto h-10 w-10 text-gray-400" />
+          <div className="mt-3 flex text-sm leading-6 text-gray-600">
+            <label
+              htmlFor="file-upload"
               className={cn(
-                "h-8 w-8 transition-all duration-300",
-                dragActive || fileName ? "text-primary" : "text-gray-400 group-hover:text-primary"
-              )} 
-            />
+                "relative cursor-pointer font-semibold text-blue-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-600 focus-within:ring-offset-2 hover:text-blue-500",
+                isDisabled && "cursor-not-allowed text-gray-500 hover:text-gray-500"
+              )}
+            >
+              <span>Clique para fazer upload</span>
+              <input
+                id="file-upload"
+                name="file-upload"
+                type="file"
+                className="sr-only"
+                onChange={handleFileChange}
+                accept={accept}
+                disabled={isDisabled}
+              />
+            </label>
+            <p className="pl-1">ou arraste e solte</p>
           </div>
-          
-          {fileName ? (
-            <div className="animate-slide-up">
-              <p className="font-medium text-primary truncate max-w-xs">{fileName}</p>
-              <p className="text-sm text-gray-500 mt-1">Clique para trocar o arquivo</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {accept} (Max. {maxSize}MB)
+          </p>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between border rounded-lg p-3 bg-blue-50">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <File className="h-6 w-6 text-blue-500" />
             </div>
-          ) : (
-            <div className="space-y-2 transition-opacity duration-300">
-              <p className="font-medium">
-                {dragActive ? `Solte o arquivo ${fileType}` : `Arraste seu arquivo ${fileType}`}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-blue-800 truncate">{file.name}</p>
+              <p className="text-xs text-blue-600">
+                {fileSize}
               </p>
-              <p className="text-sm text-gray-500">ou clique para selecionar</p>
             </div>
+          </div>
+          {!isDisabled && (
+            <button
+              type="button"
+              className="flex-shrink-0 ml-2 bg-blue-100 p-1 rounded-full hover:bg-blue-200 transition-colors"
+              onClick={handleRemoveFile}
+            >
+              <X className="h-4 w-4 text-blue-700" />
+            </button>
           )}
         </div>
+      )}
 
-        {/* Animation overlay */}
-        <div className={cn(
-          "absolute inset-0 border-2 border-primary/0 rounded-lg transition-all duration-500",
-          dragActive ? "border-primary scale-102 opacity-100" : "opacity-0"
-        )}></div>
-      </div>
+      {error && (
+        <div className="mt-2 flex items-center text-sm text-red-600">
+          <AlertTriangle className="h-4 w-4 mr-1" />
+          <span>{error}</span>
+        </div>
+      )}
     </div>
   );
 };

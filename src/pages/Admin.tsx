@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -10,7 +9,17 @@ import AppLayout from "@/components/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Loader2, RefreshCcw } from "lucide-react";
+import { 
+  AlertCircle, 
+  Loader2, 
+  RefreshCcw, 
+  CheckCircle, 
+  Clock, 
+  MessageSquare, 
+  Mail, 
+  MailCheck, 
+  MailX
+} from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { UserTable } from "@/components/admin/UserTable";
 import { UserDetailsDialog } from "@/components/admin/UserDetailsDialog";
@@ -21,6 +30,29 @@ import {
   AddUserDialog
 } from "@/components/admin/UserDialogs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  getContactForms, 
+  updateContactStatus,
+  ContactForm 
+} from "@/components/HumanizedChat";
+import { 
+  Table, 
+  TableHeader, 
+  TableRow, 
+  TableHead, 
+  TableBody, 
+  TableCell 
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog, 
+  DialogTrigger, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter
+} from "@/components/ui/dialog";
 
 // Type for handling register user form
 interface RegisterUserForm {
@@ -54,6 +86,11 @@ export default function Admin() {
   const [timeFilter, setTimeFilter] = useState("today");
   const [activeTab, setActiveTab] = useState("users");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Contacts state
+  const [contacts, setContacts] = useState<ContactForm[]>([]);
+  const [selectedContact, setSelectedContact] = useState<ContactForm | null>(null);
+  const [showContactDialog, setShowContactDialog] = useState(false);
   
   // Form states for the add user dialog
   const [newUserName, setNewUserName] = useState("");
@@ -89,6 +126,52 @@ export default function Admin() {
       return () => clearTimeout(retryTimeout);
     }
   }, [systemError, userError]);
+  
+  // Carrega os contatos
+  useEffect(() => {
+    loadContacts();
+    
+    // Configura um intervalo para atualizar a cada 30 segundos
+    const interval = setInterval(loadContacts, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Função para carregar contatos do localStorage
+  const loadContacts = () => {
+    const allContacts = getContactForms();
+    // Ordenar por data, mais recente primeiro
+    allContacts.sort((a, b) => {
+      const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp);
+      const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp);
+      return dateB.getTime() - dateA.getTime();
+    });
+    setContacts(allContacts);
+  };
+  
+  // Função para marcar contato como visualizado
+  const markAsViewed = (contactId: string) => {
+    const success = updateContactStatus(contactId, 'viewed');
+    if (success) {
+      loadContacts();
+      toast({
+        title: "Contato atualizado",
+        description: "O contato foi marcado como visualizado.",
+      });
+    }
+  };
+  
+  // Função para marcar contato como respondido
+  const markAsReplied = (contactId: string) => {
+    const success = updateContactStatus(contactId, 'replied');
+    if (success) {
+      loadContacts();
+      toast({
+        title: "Contato atualizado",
+        description: "O contato foi marcado como respondido.",
+      });
+    }
+  };
 
   // Function to refresh data
   const refreshData = async () => {
@@ -113,6 +196,9 @@ export default function Admin() {
         console.error('Falha ao atualizar métricas de usuários:', e);
       }
       
+      // Atualizar contatos
+      loadContacts();
+      
       toast({
         title: "Dados atualizados",
         description: "Os dados da administração foram atualizados com sucesso.",
@@ -129,9 +215,10 @@ export default function Admin() {
     }
   };
 
-  const formatDate = (date: string) => {
+  const formatDate = (date: string | Date) => {
     try {
-      return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: ptBR });
+      const dateObj = date instanceof Date ? date : new Date(date);
+      return format(dateObj, "dd/MM/yyyy HH:mm", { locale: ptBR });
     } catch (e) {
       return "Data inválida";
     }
@@ -248,20 +335,36 @@ export default function Admin() {
       } else {
         toast({
           title: "Erro ao adicionar usuário",
-          description: result.message,
+          description: result.message || "Ocorreu um erro ao adicionar o usuário.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Error adding user:", error);
+      console.error('Error adding user:', error);
       toast({
         title: "Erro ao adicionar usuário",
-        description: "Ocorreu um erro ao adicionar o novo usuário.",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao adicionar o usuário.",
         variant: "destructive",
       });
     }
 
     setShowAddUserDialog(false);
+  };
+  
+  // Exibe o badge de status do contato com a cor apropriada
+  const renderStatusBadge = (status: 'pending' | 'viewed' | 'replied') => {
+    if (status === 'pending') {
+      return <Badge variant="destructive">Pendente</Badge>;
+    } else if (status === 'viewed') {
+      return <Badge variant="secondary">Visualizado</Badge>;
+    } else {
+      return <Badge variant="success" className="bg-green-600 hover:bg-green-700">Respondido</Badge>;
+    }
+  };
+  
+  // Obtém a contagem total de contatos por status
+  const getContactCountByStatus = (status: 'pending' | 'viewed' | 'replied') => {
+    return contacts.filter(contact => contact.status === status).length;
   };
 
   if (!isCurrentUserAdmin) {
@@ -370,6 +473,7 @@ export default function Admin() {
                 <TabsList className="mb-4 w-full">
                   <TabsTrigger value="dashboard" className="flex-1">Dashboard</TabsTrigger>
                   <TabsTrigger value="users" className="flex-1">Usuários</TabsTrigger>
+                  <TabsTrigger value="contacts" className="flex-1">Contatos</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="dashboard">
@@ -406,6 +510,94 @@ export default function Admin() {
                       setShowAddUserDialog(true);
                     }}
                   />
+                </TabsContent>
+                
+                <TabsContent value="contacts">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className={`${isMobile ? "text-lg" : "text-xl"} font-semibold`}>
+                      Gerenciar Contatos
+                    </h2>
+                    <div className="flex gap-2">
+                      <div className="flex items-center space-x-1">
+                        <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                        <span className="text-xs">{getContactCountByStatus('pending')}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span className="inline-block w-3 h-3 rounded-full bg-gray-400"></span>
+                        <span className="text-xs">{getContactCountByStatus('viewed')}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                        <span className="text-xs">{getContactCountByStatus('replied')}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {contacts.length === 0 ? (
+                    <Card className="p-6 text-center">
+                      <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">Nenhum contato recebido ainda.</p>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <div className="overflow-auto max-h-[600px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Data</TableHead>
+                              <TableHead>Nome</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Ações</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {contacts.map((contact) => (
+                              <TableRow key={contact.id} className={contact.status === 'pending' ? 'bg-red-50' : ''}>
+                                <TableCell className="whitespace-nowrap">
+                                  {formatDate(contact.timestamp)}
+                                </TableCell>
+                                <TableCell className="font-medium">{contact.name}</TableCell>
+                                <TableCell>{contact.email}</TableCell>
+                                <TableCell>
+                                  {renderStatusBadge(contact.status)}
+                                </TableCell>
+                                <TableCell className="text-right space-x-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedContact(contact);
+                                      setShowContactDialog(true);
+                                      
+                                      // Marcar como visualizado automaticamente
+                                      if (contact.status === 'pending') {
+                                        markAsViewed(contact.id);
+                                      }
+                                    }}
+                                  >
+                                    Detalhes
+                                  </Button>
+                                  
+                                  {contact.status !== 'replied' && (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700"
+                                      onClick={() => markAsReplied(contact.id)}
+                                    >
+                                      <MailCheck className="h-4 w-4 mr-1" />
+                                      <span className={isMobile ? "sr-only" : ""}>Respondido</span>
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </Card>
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -459,6 +651,96 @@ export default function Admin() {
           isNewUserAdmin={isNewUserAdmin}
           setIsNewUserAdmin={setIsNewUserAdmin}
         />
+
+        {/* Dialog de detalhes do contato */}
+        <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <MessageSquare className="mr-2 h-5 w-5" /> 
+                Detalhes do Contato
+              </DialogTitle>
+              <DialogDescription>
+                Informações enviadas pelo usuário
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedContact && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Nome</h3>
+                  <p>{selectedContact.name}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Email</h3>
+                  <p className="flex items-center">
+                    <Mail className="h-4 w-4 mr-1 text-gray-500" />
+                    <a 
+                      href={`mailto:${selectedContact.email}`} 
+                      className="text-blue-600 hover:underline"
+                    >
+                      {selectedContact.email}
+                    </a>
+                  </p>
+                </div>
+                
+                {selectedContact.phone && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-1">Telefone</h3>
+                    <p>{selectedContact.phone}</p>
+                  </div>
+                )}
+                
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Data</h3>
+                  <p>{formatDate(selectedContact.timestamp)}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Status</h3>
+                  <p>{renderStatusBadge(selectedContact.status)}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Mensagem</h3>
+                  <div className="bg-gray-50 p-3 rounded-md border border-gray-200 whitespace-pre-wrap">
+                    {selectedContact.message}
+                  </div>
+                </div>
+                
+                <DialogFooter className="flex justify-between gap-2 sm:justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      // Abrir cliente de email do usuário
+                      window.location.href = `mailto:${selectedContact.email}?subject=PromobConverter Pro - Resposta ao seu contato&body=Olá ${selectedContact.name},%0D%0A%0D%0AObrigado por entrar em contato conosco.%0D%0A%0D%0A`;
+                      // Marcar como respondido automaticamente quando clicar em responder
+                      markAsReplied(selectedContact.id);
+                    }}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Responder por Email
+                  </Button>
+                  
+                  {selectedContact.status !== 'replied' && (
+                    <Button 
+                      type="button"
+                      onClick={() => {
+                        markAsReplied(selectedContact.id);
+                        setShowContactDialog(false);
+                      }}
+                    >
+                      <MailCheck className="h-4 w-4 mr-2" />
+                      Marcar como Respondido
+                    </Button>
+                  )}
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -8,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowRight } from "lucide-react";
+import { FileDown, ArrowRight, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "./FileUpload";
 import { Input } from "@/components/ui/input";
@@ -21,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { useTrackConversion } from "@/hooks/useTrackConversion";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AlertCircle } from "lucide-react";
 
 interface ConverterFormProps {
   className?: string;
@@ -30,14 +30,15 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [outputFileName, setOutputFileName] = useState("plano_de_corte_promob");
   const [isConverting, setIsConverting] = useState(false);
+  const [conversionSuccess, setConversionSuccess] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { trackConversion } = useTrackConversion();
   const isMobile = useIsMobile();
 
-  // Função auxiliar para ler arquivo como texto
-  const readFileAsText = (file: File): Promise<string> => {
+  // Função auxiliar para ler arquivo como texto - usando useCallback para melhor performance
+  const readFileAsText = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -50,19 +51,21 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       reader.onerror = () => reject(new Error("Erro ao ler o arquivo"));
       reader.readAsText(file);
     });
-  };
+  }, []);
 
   if (user?.isBanned) {
     return <BannedMessage />;
   }
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = useCallback((file: File) => {
     setXmlFile(file);
     const fileName = file.name.replace(/\.[^/.]+$/, "");
     setOutputFileName(fileName);
-  };
+    // Reset conversion status when a new file is selected
+    setConversionSuccess(false);
+  }, []);
 
-  const handleConvert = async () => {
+  const handleConvert = useCallback(async () => {
     if (!xmlFile) {
       toast({
         title: "Nenhum arquivo selecionado",
@@ -83,6 +86,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
 
     setIsConverting(true);
+    setConversionSuccess(false);
     
     // Variáveis para registrar a conversão
     const startTime = Date.now();
@@ -111,6 +115,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
       // Marcar como sucesso
       success = true;
+      setConversionSuccess(true);
 
       // Mostrar sucesso
       toast({
@@ -145,7 +150,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       setIsConverting(false);
     }
-  };
+  }, [xmlFile, outputFileName, user, navigate, readFileAsText, toast, trackConversion]);
 
   return (
     <>
@@ -161,7 +166,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             Conversor Promob
           </CardTitle>
           <CardDescription className="text-indigo-600 text-sm sm:text-base">
-            De XML Promob para Excel em segundos
+            Transforme arquivos XML Promob em planos de corte Excel com formatação profissional em segundos
           </CardDescription>
         </CardHeader>
         <CardContent className={cn(
@@ -172,6 +177,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               onFileSelect={handleFileSelect}
               accept=".xml"
               isDisabled={isConverting}
+              maxSize={200}
             />
 
             <div>
@@ -187,11 +193,19 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               />
             </div>
 
+            {conversionSuccess && !isConverting && (
+              <div className="rounded-md bg-green-50 p-3 flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <p className="text-sm text-green-700">Conversão realizada com sucesso!</p>
+              </div>
+            )}
+
             <Button
               type="submit"
               className={cn(
                 "w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition-all duration-300 group relative overflow-hidden",
-                isMobile ? "text-sm" : ""
+                isMobile ? "text-sm" : "",
+                conversionSuccess && !isConverting ? "from-green-600 to-green-500 hover:from-green-700 hover:to-green-600" : ""
               )}
               onClick={handleConvert}
               disabled={isConverting || !xmlFile}
@@ -223,9 +237,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                   </>
                 ) : (
                   <>
-                    <FileDown className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    <span>Converter Agora</span>
-                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
+                    {conversionSuccess ? (
+                      <>
+                        <CheckCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span>Converter Novamente</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileDown className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span>Converter Agora</span>
+                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
+                      </>
+                    )}
                   </>
                 )}
               </span>

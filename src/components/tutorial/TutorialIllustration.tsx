@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Upload, RefreshCw, FileSpreadsheet, CheckCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,7 +64,7 @@ const TutorialIllustration = ({ step }: TutorialIllustrationProps) => {
         {step === 4 && (
           <div className="flex flex-col items-center">
             <FileSpreadsheet className="h-12 w-12 text-green-600 mb-2" />
-            <p className="text-sm font-medium">dados_convertidos.xlsx</p>
+            <p className="text-sm font-medium">dados_convertidos.xls</p>
             <Button size="sm" variant="outline" className="mt-2 text-xs">
               <Download className="h-3 w-3 mr-1" /> Baixar
             </Button>
