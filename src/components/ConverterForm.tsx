@@ -147,15 +147,15 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
   return (
     <>
-      <Card className={cn("w-full", className)}>
-        <CardHeader>
-          <CardTitle>Conversor Promob</CardTitle>
-          <CardDescription>
-            Transforme seus planos de corte do Promob em planilhas Excel formatadas
+      <Card className={cn("w-full border border-gray-200 shadow-lg", className)}>
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg border-b border-gray-100">
+          <CardTitle className="text-xl text-blue-700">Conversor Promob</CardTitle>
+          <CardDescription className="text-indigo-600">
+            De XML Promob para Excel em segundos
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="pt-6">
+          <div className="space-y-5">
             <FileUpload
               onFileSelect={handleFileSelect}
               accept=".xml"
@@ -163,19 +163,19 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             />
 
             <div>
-              <Label htmlFor="output-name">Nome do arquivo de saída</Label>
+              <Label htmlFor="output-name" className="text-sm font-medium text-gray-700">Nome do arquivo de saída</Label>
               <Input
                 id="output-name"
                 value={outputFileName}
                 onChange={(e) => setOutputFileName(e.target.value)}
-                className="mt-1"
+                className="mt-1 focus:ring-blue-500 focus:border-blue-500"
                 disabled={isConverting}
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 group relative overflow-hidden"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition-all duration-300 group relative overflow-hidden"
               onClick={handleConvert}
               disabled={isConverting || !xmlFile}
             >
@@ -207,8 +207,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 ) : (
                   <>
                     <FileDown className="mr-2 h-5 w-5" />
-                    <span>Converter e Baixar</span>
-                    <ArrowRight className="h-5 w-5 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
+                    <span>Converter Agora</span>
+                    <ArrowRight className="h-5 w-5 ml-2 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
                   </>
                 )}
               </span>
