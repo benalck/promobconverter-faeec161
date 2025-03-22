@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,7 +18,6 @@ import {
   DeleteDialog,
   BanDialog,
   RoleDialog,
-  CreditsDialog,
   AddUserDialog
 } from "@/components/admin/UserDialogs";
 
@@ -35,9 +35,9 @@ export default function Admin() {
     deleteUser, 
     isAdmin: isCurrentUserAdmin, 
     updateUser, 
-    register, 
-    refreshUserCredits
+    register
   } = useAuth();
+  
   const { toast } = useToast();
   
   // State for dialog management
@@ -45,9 +45,8 @@ export default function Admin() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [showRoleDialog, setShowRoleDialog] = useState(false);
-  const [showCreditsDialog, setShowCreditsDialog] = useState(false);
-  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [showUserDetailsDialog, setShowUserDetailsDialog] = useState(false);
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   
   // UI state
   const [timeFilter, setTimeFilter] = useState("today");
@@ -58,12 +57,8 @@ export default function Admin() {
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserCredits, setNewUserCredits] = useState("5");
   const [newUserPhone, setNewUserPhone] = useState(""); 
   const [isNewUserAdmin, setIsNewUserAdmin] = useState(false);
-  
-  // Credits dialog state
-  const [creditsToAdd, setCreditsToAdd] = useState("0");
 
   // Fetch metrics data
   const {
@@ -114,14 +109,6 @@ export default function Admin() {
         console.log('Métricas de usuários atualizadas com sucesso!');
       } catch (e) {
         console.error('Falha ao atualizar métricas de usuários:', e);
-      }
-      
-      try {
-        console.log('Atualizando créditos de usuários...');
-        await refreshUserCredits();
-        console.log('Créditos atualizados com sucesso!');
-      } catch (e) {
-        console.error('Falha ao atualizar créditos:', e);
       }
       
       toast({
@@ -223,42 +210,6 @@ export default function Admin() {
     setShowRoleDialog(false);
   };
 
-  const handleUpdateCredits = async () => {
-    if (!selectedUser) return;
-
-    const user = users.find((u) => u.id === selectedUser);
-    if (!user) return;
-
-    const credits = parseInt(creditsToAdd);
-    if (isNaN(credits)) {
-      toast({
-        title: "Valor inválido",
-        description: "Por favor, insira um número válido de créditos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await updateUser(selectedUser, {
-        credits: user.credits + credits,
-      });
-      toast({
-        title: "Créditos atualizados",
-        description: `Os créditos do usuário foram atualizados com sucesso.`,
-      });
-    } catch (error) {
-      console.error("Error updating credits:", error);
-      toast({
-        title: "Erro ao atualizar créditos",
-        description: "Ocorreu um erro ao atualizar os créditos do usuário.",
-        variant: "destructive",
-      });
-    }
-
-    setShowCreditsDialog(false);
-  };
-
   const handleAddUser = async () => {
     try {
       // Create user data object with proper type
@@ -272,13 +223,12 @@ export default function Admin() {
       const result = await register(userData);
       
       if (result.success) {
-        // If registration successful, optionally update credits separately
-        if (parseInt(newUserCredits) > 0) {
+        // If registration successful, update role if admin
+        if (isNewUserAdmin) {
           const newUser = users.find(u => u.email === newUserEmail);
           if (newUser) {
             await updateUser(newUser.id, { 
-              credits: parseInt(newUserCredits),
-              role: isNewUserAdmin ? "admin" : "user"
+              role: "admin"
             });
           }
         }
@@ -291,7 +241,6 @@ export default function Admin() {
         setNewUserName("");
         setNewUserEmail("");
         setNewUserPassword("");
-        setNewUserCredits("5");
         setNewUserPhone("");
         setIsNewUserAdmin(false);
       } else {
@@ -445,10 +394,6 @@ export default function Admin() {
                       setSelectedUser(userId);
                       setShowBanDialog(true);
                     }}
-                    onShowCreditsDialog={(userId) => {
-                      setSelectedUser(userId);
-                      setShowCreditsDialog(true);
-                    }}
                     onShowDeleteDialog={(userId) => {
                       setSelectedUser(userId);
                       setShowDeleteDialog(true);
@@ -495,14 +440,6 @@ export default function Admin() {
           users={users}
         />
 
-        <CreditsDialog 
-          open={showCreditsDialog} 
-          onOpenChange={setShowCreditsDialog}
-          onConfirm={handleUpdateCredits}
-          creditsToAdd={creditsToAdd}
-          setCreditsToAdd={setCreditsToAdd}
-        />
-
         <AddUserDialog 
           open={showAddUserDialog} 
           onOpenChange={setShowAddUserDialog}
@@ -515,8 +452,6 @@ export default function Admin() {
           setNewUserPassword={setNewUserPassword}
           newUserPhone={newUserPhone}
           setNewUserPhone={setNewUserPhone}
-          newUserCredits={newUserCredits}
-          setNewUserCredits={setNewUserCredits}
           isNewUserAdmin={isNewUserAdmin}
           setIsNewUserAdmin={setIsNewUserAdmin}
         />
