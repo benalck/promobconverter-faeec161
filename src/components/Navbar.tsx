@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,13 +26,8 @@ export default function Navbar() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link to="/" className="flex items-center">
-              <img 
-                src="/lovable-uploads/7ab58ab0-d58d-4b1d-a0c4-d7fbecd285d6.png" 
-                alt="Promob Converter Logo" 
-                className="h-8 w-auto mr-2" 
-              />
               <h1 className="text-xl font-bold text-primary hover:text-primary/80 transition-colors">
-                XML Promob para Excel
+                Arquivo XML Promob para Plano de corte Excel
               </h1>
             </Link>
           </div>
