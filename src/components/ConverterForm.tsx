@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { useTrackConversion } from "@/hooks/useTrackConversion";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ConverterFormProps {
   className?: string;
@@ -33,6 +34,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { trackConversion } = useTrackConversion();
+  const isMobile = useIsMobile();
 
   // Função auxiliar para ler arquivo como texto
   const readFileAsText = (file: File): Promise<string> => {
@@ -148,14 +150,24 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   return (
     <>
       <Card className={cn("w-full border border-gray-200 shadow-lg", className)}>
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg border-b border-gray-100">
-          <CardTitle className="text-xl text-blue-700">Conversor Promob</CardTitle>
-          <CardDescription className="text-indigo-600">
+        <CardHeader className={cn(
+          "rounded-t-lg border-b border-gray-100",
+          isMobile ? "px-4 py-4" : "bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-6"
+        )}>
+          <CardTitle className={cn(
+            "text-blue-700",
+            isMobile ? "text-lg" : "text-xl"
+          )}>
+            Conversor Promob
+          </CardTitle>
+          <CardDescription className="text-indigo-600 text-sm sm:text-base">
             De XML Promob para Excel em segundos
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
-          <div className="space-y-5">
+        <CardContent className={cn(
+          isMobile ? "p-4 space-y-4" : "pt-6 px-6 space-y-5"
+        )}>
+          <div className="space-y-4 sm:space-y-5">
             <FileUpload
               onFileSelect={handleFileSelect}
               accept=".xml"
@@ -163,7 +175,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             />
 
             <div>
-              <Label htmlFor="output-name" className="text-sm font-medium text-gray-700">Nome do arquivo de saída</Label>
+              <Label htmlFor="output-name" className="text-sm font-medium text-gray-700">
+                Nome do arquivo de saída
+              </Label>
               <Input
                 id="output-name"
                 value={outputFileName}
@@ -175,7 +189,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition-all duration-300 group relative overflow-hidden"
+              className={cn(
+                "w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition-all duration-300 group relative overflow-hidden",
+                isMobile ? "text-sm" : ""
+              )}
               onClick={handleConvert}
               disabled={isConverting || !xmlFile}
             >
@@ -206,9 +223,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                   </>
                 ) : (
                   <>
-                    <FileDown className="mr-2 h-5 w-5" />
+                    <FileDown className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     <span>Converter Agora</span>
-                    <ArrowRight className="h-5 w-5 ml-2 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
+                    <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
                   </>
                 )}
               </span>
