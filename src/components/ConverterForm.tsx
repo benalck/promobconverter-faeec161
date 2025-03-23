@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import {
   Card,
@@ -22,9 +21,8 @@ import BannedMessage from "./BannedMessage";
 import { useTrackConversion } from "@/hooks/useTrackConversion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AlertCircle } from "lucide-react";
-import { extractPiecesFromXml, calculateEdgeLength } from "@/utils/extractPiecesFromXml";
+import { extractPiecesFromXml, calculateEdgeLength, calculateSheetTypes } from "@/utils/extractPiecesFromXml";
 
-// Interfaces para a funcionalidade de otimização de corte
 interface Piece {
   id: number;
   description: string;
@@ -36,6 +34,13 @@ interface Piece {
 interface Sheet {
   width: number;
   height: number;
+}
+
+interface SheetType {
+  material: string;
+  color: string;
+  thickness: string;
+  count: number;
 }
 
 interface OptimizationResult {
@@ -72,13 +77,11 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const { trackConversion, trackToolUsage } = useTrackConversion();
   const isMobile = useIsMobile();
 
-  // Estados para a otimização de corte
   const [pieces, setPieces] = useState<Piece[]>([]);
   const [sheet, setSheet] = useState<Sheet>({ width: 2750, height: 1830 });
   const [cutResult, setCutResult] = useState<OptimizationResult | null>(null);
   const [showCutOptimizer, setShowCutOptimizer] = useState(false);
   
-  // Estados para o cálculo de fita de borda
   const [edgeCalculation, setEdgeCalculation] = useState<{
     edgeBottom: number;
     edgeTop: number;
@@ -88,7 +91,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   } | null>(null);
   const [showEdgeCalculation, setShowEdgeCalculation] = useState(false);
 
-  // Função auxiliar para ler arquivo como texto - usando useCallback para melhor performance
+  const [sheetTypes, setSheetTypes] = useState<SheetType[]>([]);
+
   const readFileAsText = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -104,22 +108,20 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     });
   }, []);
 
-  // Função para extrair e processar os dados avançados do arquivo XML
   const processXmlForAdvancedFeatures = useCallback(async (fileContent: string) => {
     try {
-      // Extrair peças para o otimizador de corte
       const extractedPieces = extractPiecesFromXml(fileContent);
       setPieces(extractedPieces);
       
-      // Calcular comprimento da fita de borda
+      const types = calculateSheetTypes(extractedPieces);
+      setSheetTypes(types);
+      
       const edgeResults = calculateEdgeLength(fileContent);
       setEdgeCalculation(edgeResults);
       
-      // Mostrar as funcionalidades extras se houver dados válidos
       setShowCutOptimizer(extractedPieces.length > 0);
       setShowEdgeCalculation(edgeResults.totalEdge > 0);
       
-      // Registrar uso de ferramentas
       await Promise.all([
         trackToolUsage("cut_optimizer"),
         trackToolUsage("edge_calculator")
@@ -138,22 +140,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     setXmlFile(file);
     const fileName = file.name.replace(/\.[^/.]+$/, "");
     setOutputFileName(fileName);
-    // Reset conversion status when a new file is selected
     setConversionSuccess(false);
     
     try {
-      // Ler o conteúdo do arquivo para processamento
       const content = await readFileAsText(file);
       setXmlContent(content);
       
-      // Processar dados para recursos avançados
       await processXmlForAdvancedFeatures(content);
     } catch (error) {
       console.error("Erro ao ler o arquivo:", error);
     }
   }, [readFileAsText, processXmlForAdvancedFeatures]);
 
-  // Função para calcular a otimização de corte
   const calculateCutOptimization = useCallback(() => {
     if (pieces.length === 0) {
       toast({
@@ -164,8 +162,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       return;
     }
 
-    // Simular algoritmo de otimização (simplificado)
-    // Expand pieces based on quantity
     const expandedPieces = pieces.flatMap(piece => 
       Array(piece.quantity).fill(0).map((_, i) => ({
         id: piece.id * 100 + i,
@@ -175,7 +171,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       }))
     );
     
-    // Sort pieces by height (descending)
     expandedPieces.sort((a, b) => b.height - a.height);
     
     const distribution: OptimizationResult['pieceDistribution'] = [];
@@ -183,25 +178,20 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     let usedArea = 0;
     let totalSheetArea = 0;
     
-    // Simple algorithm: place pieces from left to right, top to bottom
     while (expandedPieces.length > 0) {
       distribution[currentSheet] = distribution[currentSheet] || { sheetIndex: currentSheet, pieces: [] };
       totalSheetArea += sheet.width * sheet.height;
       
-      // Create a simple grid to track used space
       const grid = Array(Math.ceil(sheet.height / 10)).fill(0).map(() => Array(Math.ceil(sheet.width / 10)).fill(false));
       
-      // Place each piece
       let placedAnyPiece = false;
       
       for (let i = 0; i < expandedPieces.length; i++) {
         const piece = expandedPieces[i];
         
-        // Find a spot for this piece
         let placed = false;
         for (let y = 0; y <= sheet.height - piece.height; y += 10) {
           for (let x = 0; x <= sheet.width - piece.width; x += 10) {
-            // Check if this spot is available
             let canPlace = true;
             for (let py = 0; py < Math.ceil(piece.height / 10); py++) {
               for (let px = 0; px < Math.ceil(piece.width / 10); px++) {
@@ -214,7 +204,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
             
             if (canPlace) {
-              // Mark this area as used
               for (let py = 0; py < Math.ceil(piece.height / 10); py++) {
                 for (let px = 0; px < Math.ceil(piece.width / 10); px++) {
                   if (grid[Math.floor(y / 10) + py] && grid[Math.floor(y / 10) + py][Math.floor(x / 10) + px] !== undefined) {
@@ -223,7 +212,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 }
               }
               
-              // Add this piece to the current sheet
               distribution[currentSheet].pieces.push({
                 id: piece.id,
                 description: piece.description,
@@ -242,14 +230,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           if (placed) break;
         }
         
-        // If we placed the piece, remove it from the list
         if (placed) {
           expandedPieces.splice(i, 1);
-          i--; // Adjust index after removal
+          i--;
         }
       }
       
-      // If we couldn't place any more pieces on this sheet, move to the next one
       if (!placedAnyPiece) {
         currentSheet++;
       }
@@ -259,7 +245,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     const unusedArea = totalArea - usedArea;
     const wastePercentage = (unusedArea / totalArea) * 100;
     
-    // Set the results
     setCutResult({
       wastePercentage: Math.round(wastePercentage * 100) / 100,
       usedSheets: currentSheet + 1,
@@ -298,20 +283,17 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     setIsConverting(true);
     setConversionSuccess(false);
     
-    // Variáveis para registrar a conversão
     const startTime = Date.now();
     let success = false;
     let errorMsg = '';
     let fileSize = xmlFile.size;
 
     try {
-      // 1. Converter o arquivo
       const xmlContent = await readFileAsText(xmlFile);
       const csvString = convertXMLToCSV(xmlContent);
       const htmlPrefix = generateHtmlPrefix();
       const htmlSuffix = generateHtmlSuffix();
 
-      // 2. Criar e baixar o arquivo Excel
       const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
         type: "application/vnd.ms-excel;charset=utf-8;",
       });
@@ -323,11 +305,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       link.click();
       document.body.removeChild(link);
 
-      // Marcar como sucesso
       success = true;
       setConversionSuccess(true);
 
-      // Mostrar sucesso
       toast({
         title: "Conversão concluída",
         description: "Seu arquivo foi convertido com sucesso.",
@@ -344,7 +324,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         variant: "destructive",
       });
     } finally {
-      // Calcular tempo de conversão
       const endTime = Date.now();
       const conversionTime = endTime - startTime;
       
@@ -357,7 +336,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         errorMessage: errorMsg
       });
       
-      // Registrar a conversão no banco de dados usando o hook
       try {
         const result = await trackConversion({
           inputFormat: 'XML',
@@ -425,7 +403,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               </div>
             )}
 
-            {/* Informações da otimização de corte (exibidas automaticamente se disponíveis) */}
             {showCutOptimizer && pieces.length > 0 && (
               <div className="mt-4 p-4 border border-blue-100 rounded-md bg-blue-50">
                 <div className="flex items-center mb-2">
@@ -447,6 +424,22 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                     </p>
                   </div>
                 </div>
+                
+                {sheetTypes.length > 0 && (
+                  <div className="mt-2 p-2 bg-white rounded border border-blue-200 mb-3">
+                    <p className="text-xs text-gray-600 mb-1">Tipos de Chapas Necessárias</p>
+                    <div className="max-h-28 overflow-y-auto">
+                      {sheetTypes.map((type, index) => (
+                        <div key={index} className="text-xs p-1 border-b border-gray-100 flex justify-between">
+                          <span className="font-medium text-gray-700">
+                            {type.material} {type.thickness} {type.color}
+                          </span>
+                          <span className="text-blue-600">{type.count} peça{type.count !== 1 ? 's' : ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 
                 {cutResult && (
                   <div className="grid grid-cols-2 gap-2 mt-2">
@@ -472,7 +465,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               </div>
             )}
             
-            {/* Informações do cálculo de fita de borda (exibidas automaticamente se disponíveis) */}
             {showEdgeCalculation && edgeCalculation && edgeCalculation.totalEdge > 0 && (
               <div className="mt-4 p-4 border border-emerald-100 rounded-md bg-emerald-50">
                 <div className="flex items-center mb-2">

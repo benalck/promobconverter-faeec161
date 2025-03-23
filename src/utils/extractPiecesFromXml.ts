@@ -7,6 +7,16 @@ interface XmlPiece {
   width: number;
   height: number;
   quantity: number;
+  material?: string;
+  color?: string;
+  thickness?: string;
+}
+
+interface SheetType {
+  material: string;
+  color: string;
+  thickness: string;
+  count: number;
 }
 
 /**
@@ -43,6 +53,9 @@ export const extractPiecesFromXml = (xmlContent: string): XmlPiece[] => {
       const depth = parseInt(item.getAttribute("DEPTH") || "0", 10);
       const repetition = parseInt(item.getAttribute("REPETITION") || "1", 10);
 
+      // Extrai informações de material, cor e espessura
+      const materialInfo = extractMaterialInfo(item);
+
       // Verifica se é uma peça válida (tem dimensões)
       if (width > 0 && depth > 0) {
         pieces.push({
@@ -50,7 +63,10 @@ export const extractPiecesFromXml = (xmlContent: string): XmlPiece[] => {
           description: description || `Peça ${pieceId}`,
           width: width,
           height: depth, // Profundidade (DEPTH) é a altura da peça no plano de corte
-          quantity: repetition
+          quantity: repetition,
+          material: materialInfo.material,
+          color: materialInfo.color,
+          thickness: materialInfo.thickness
         });
       }
     });
@@ -60,6 +76,69 @@ export const extractPiecesFromXml = (xmlContent: string): XmlPiece[] => {
     console.error("Erro ao extrair peças do XML:", error);
     return [];
   }
+};
+
+/**
+ * Extrai informações de material, cor e espessura de um item XML
+ */
+const extractMaterialInfo = (item: Element): { material: string; color: string; thickness: string } => {
+  let material = "MDF";
+  let color = "Branco";
+  let thickness = "15mm";  // Valor padrão já com "mm"
+  
+  const referencesElement = item.querySelector("REFERENCES");
+  
+  if (referencesElement) {
+    const materialElement = referencesElement.querySelector("MATERIAL");
+    const modelElement = referencesElement.querySelector("MODEL");
+    const thicknessElement = referencesElement.querySelector("THICKNESS");
+    
+    // Material
+    if (materialElement) {
+      material = materialElement.getAttribute("REFERENCE") || material;
+    }
+    
+    // Cor
+    if (modelElement) {
+      const modelRef = modelElement.getAttribute("REFERENCE") || "";
+      if (modelRef) {
+        // Extrai a cor do formato "Fabricante.Linha.Cor"
+        const parts = modelRef.split(".");
+        if (parts.length >= 3) {
+          color = parts[parts.length - 1]; // Pega o último elemento
+        } else {
+          color = modelRef;
+        }
+      }
+    }
+    
+    // Espessura
+    if (thicknessElement) {
+      const thicknessRef = thicknessElement.getAttribute("REFERENCE");
+      
+      if (thicknessRef && thicknessRef !== "0") {
+        // Verificar primeiro se o valor já tem "mm" ou não
+        if (thicknessRef.includes("mm")) {
+          thickness = thicknessRef;
+        } else {
+          // Extract numeric part of thickness if it contains additional text
+          const thicknessMatch = thicknessRef.match(/(\d+)/);
+          if (thicknessMatch && thicknessMatch[1]) {
+            // Se o valor extraído for 1 e isso parece estranho, usar 15mm como padrão
+            if (thicknessMatch[1] === "1" && !thicknessRef.startsWith("1")) {
+              thickness = "15mm";
+            } else {
+              thickness = `${thicknessMatch[1]}mm`;
+            }
+          } else {
+            thickness = `${thicknessRef}mm`;
+          }
+        }
+      }
+    }
+  }
+  
+  return { material, color, thickness };
 };
 
 /**
@@ -148,4 +227,36 @@ export const calculateEdgeLength = (xmlContent: string): {
     console.error("Erro ao calcular comprimento de fita:", error);
     return { edgeBottom: 0, edgeTop: 0, edgeLeft: 0, edgeRight: 0, totalEdge: 0 };
   }
+};
+
+/**
+ * Agrupa as peças por tipo de chapa (material + cor + espessura) e conta a quantidade
+ * @returns Array com os tipos de chapas e suas quantidades
+ */
+export const calculateSheetTypes = (pieces: XmlPiece[]): SheetType[] => {
+  // Mapeia as chapas únicas por combinação de material, cor e espessura
+  const sheetTypesMap = new Map<string, SheetType>();
+  
+  pieces.forEach(piece => {
+    if (!piece.material || !piece.color || !piece.thickness) return;
+    
+    // Cria uma chave única para cada tipo de chapa
+    const key = `${piece.material}-${piece.color}-${piece.thickness}`;
+    
+    if (!sheetTypesMap.has(key)) {
+      sheetTypesMap.set(key, {
+        material: piece.material,
+        color: piece.color,
+        thickness: piece.thickness,
+        count: 0
+      });
+    }
+    
+    // Incrementa a contagem baseada na quantidade da peça
+    const sheetType = sheetTypesMap.get(key)!;
+    sheetType.count += piece.quantity;
+  });
+  
+  // Converte o mapa em um array para retorno
+  return Array.from(sheetTypesMap.values());
 };

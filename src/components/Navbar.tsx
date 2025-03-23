@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,18 +39,6 @@ const Navbar: React.FC = () => {
             className="text-gray-700 hover:text-blue-600 font-medium text-sm transition-colors"
           >
             Início
-          </Link>
-          <Link 
-            to="/cut-optimizer" 
-            className="text-gray-700 hover:text-blue-600 font-medium text-sm transition-colors"
-          >
-            Otimizador de Corte
-          </Link>
-          <Link 
-            to="/edge-calculator" 
-            className="text-gray-700 hover:text-blue-600 font-medium text-sm transition-colors"
-          >
-            Calculadora de Fita
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -135,20 +124,6 @@ const Navbar: React.FC = () => {
             onClick={() => setIsMobileMenuOpen(false)}
           >
             Início
-          </Link>
-          <Link
-            to="/cut-optimizer"
-            className="text-gray-800 hover:text-blue-600 py-3 border-b border-gray-100"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Otimizador de Corte
-          </Link>
-          <Link
-            to="/edge-calculator"
-            className="text-gray-800 hover:text-blue-600 py-3 border-b border-gray-100"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Calculadora de Fita
           </Link>
           {user?.role === 'admin' && (
             <Link
