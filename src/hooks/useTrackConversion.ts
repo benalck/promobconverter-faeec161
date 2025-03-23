@@ -39,7 +39,8 @@ export function useTrackConversion() {
         p_conversion_time: conversionTime,
         p_error_message: errorMessage || null,
         p_input_format: inputFormat,
-        p_output_format: outputFormat
+        p_output_format: outputFormat,
+        p_name: `${inputFormat}_to_${outputFormat}` // Adicionando p_name para resolver o erro
       };
 
       // Call the track_conversion function with simple string type annotation
@@ -70,7 +71,8 @@ export function useTrackConversion() {
         p_conversion_time: 0,
         p_error_message: null,
         p_input_format: `tool_${toolName}`,
-        p_output_format: 'calculation'
+        p_output_format: 'calculation',
+        p_name: toolName // Adicionando p_name para resolver o erro
       };
 
       // Call the track_conversion function
