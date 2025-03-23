@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,10 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Trash2, Calculator, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTrackConversion } from "@/hooks/useTrackConversion";
 
 interface Panel {
   id: number;
@@ -57,6 +56,13 @@ const EdgeCalculator: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { trackToolUsage } = useTrackConversion();
+
+  useEffect(() => {
+    if (user) {
+      trackToolUsage("edge_calculator");
+    }
+  }, [user, trackToolUsage]);
 
   const addPanel = useCallback(() => {
     const newId = panels.length > 0 ? Math.max(...panels.map(p => p.id)) + 1 : 1;
@@ -100,7 +106,6 @@ const EdgeCalculator: React.FC = () => {
       return;
     }
 
-    // Validate inputs
     const hasInvalidPanels = panels.some(p => !p.description || p.width <= 0 || p.height <= 0 || p.quantity <= 0);
     if (hasInvalidPanels) {
       toast({
@@ -122,41 +127,37 @@ const EdgeCalculator: React.FC = () => {
 
     setIsCalculating(true);
 
-    // Simple timeout to simulate calculation
     setTimeout(() => {
       const edgeLengthByPanel: EdgeResult['edgeLengthByPanel'] = {};
       let totalEdgeLength = 0;
 
-      // Calculate edge banding required for each panel
       panels.forEach(panel => {
         let panelEdgeLength = 0;
         
-        // For each panel, calculate the edge banding required
         if (panel.edgeTop) panelEdgeLength += panel.width;
         if (panel.edgeBottom) panelEdgeLength += panel.width;
         if (panel.edgeLeft) panelEdgeLength += panel.height;
         if (panel.edgeRight) panelEdgeLength += panel.height;
         
-        // Multiply by quantity
         panelEdgeLength *= panel.quantity;
         
-        // Add to the total
         totalEdgeLength += panelEdgeLength;
         
-        // Store the result
         edgeLengthByPanel[panel.id] = {
           panel,
           edgeLength: panelEdgeLength
         };
       });
 
-      // Calculate rolls needed (adding 10% waste allowance)
       const lengthWithWastage = totalEdgeLength * 1.1;
       const rollsNeeded = Math.ceil(lengthWithWastage / rollLength);
       const wastage = rollsNeeded * rollLength - totalEdgeLength;
       const wastagePercentage = (wastage / (rollsNeeded * rollLength)) * 100;
 
-      // Set the result
+      if (user) {
+        trackToolUsage("edge_calculator_calculation");
+      }
+
       setResult({
         totalEdgeLength,
         edgeLengthByPanel,
@@ -166,7 +167,7 @@ const EdgeCalculator: React.FC = () => {
 
       setIsCalculating(false);
     }, 1000);
-  }, [panels, rollLength, user, toast, navigate]);
+  }, [panels, rollLength, user, toast, navigate, trackToolUsage]);
 
   return (
     <AppLayout>

@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Interface for manter compatibilidade com os componentes existentes
+// Simple data interface for metrics
 export interface SystemMetrics {
   totalUsers: number;
   activeUsers: number;
@@ -22,29 +22,6 @@ export interface ConversionsByDate {
 }
 
 export interface ConversionsByType {
-  input_format: string;
-  output_format: string;
-  count: number;
-  success_rate: number;
-}
-
-// Define the types for the API responses
-interface SystemMetricsResponse {
-  total_users: number;
-  active_users: number;
-  total_conversions: number;
-  success_rate: number;
-  average_response_time: number;
-}
-
-interface ConversionsByDateResponse {
-  date: string;
-  total: number;
-  successful: number;
-  failed: number;
-}
-
-interface ConversionsByTypeResponse {
   input_format: string;
   output_format: string;
   count: number;
@@ -78,14 +55,11 @@ export function useSystemMetrics() {
       // Console log para debug
       console.log('Buscando métricas do sistema...');
 
-      // Corrigindo a chamada da RPC para o formato correto e aplicando tipagem
-      const { data, error: rpcError } = await supabase.rpc<'get_system_metrics', SystemMetricsResponse>(
-        'get_system_metrics', 
-        { 
-          p_start_date: null,
-          p_end_date: null
-        }
-      );
+      // Simplified RPC call with explicit type casting
+      const { data, error: rpcError } = await supabase.rpc('get_system_metrics', { 
+        p_start_date: null,
+        p_end_date: null
+      });
 
       console.log('Resultado da função get_system_metrics:', data);
 
@@ -109,15 +83,18 @@ export function useSystemMetrics() {
         throw new Error('Nenhum dado retornado das métricas do sistema');
       }
 
+      // Cast data appropriately and create our metrics object
+      const rawData = data as any;
+      
       // Mapear os dados da resposta SQL para nosso formato da interface
       const mappedData: SystemMetrics = {
-        totalUsers: data.total_users || 0,
-        activeUsers: data.active_users || 0,
-        totalConversions: data.total_conversions || 0,
-        successfulConversions: 0, // Calcular abaixo
-        failedConversions: 0, // Calcular abaixo
-        successRate: data.success_rate || 0,
-        averageConversionTime: data.average_response_time || 0
+        totalUsers: rawData.total_users || 0,
+        activeUsers: rawData.active_users || 0,
+        totalConversions: rawData.total_conversions || 0,
+        successfulConversions: 0, // Calculate below
+        failedConversions: 0, // Calculate below
+        successRate: rawData.success_rate || 0,
+        averageConversionTime: rawData.average_response_time || 0
       };
 
       // Calcular valores derivados
@@ -142,9 +119,7 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Corrigindo a chamada da RPC para o formato correto com tipagem
-      const { data, error: rpcError } = await supabase.rpc<'get_conversions_by_date_range', ConversionsByDateResponse[]>(
-        'get_conversions_by_date_range', 
+      const { data, error: rpcError } = await supabase.rpc('get_conversions_by_date_range', 
         { p_start_date: startDate, p_end_date: endDate }
       );
 
@@ -156,8 +131,8 @@ export function useSystemMetrics() {
         throw new Error('No data returned from conversions by date');
       }
 
-      // Certifique-se de que data é um array
-      const typedData: ConversionsByDate[] = Array.isArray(data) ? data : [];
+      // Make sure data is an array and cast to our interface
+      const typedData = (Array.isArray(data) ? data : []) as ConversionsByDate[];
       setDailyStats(typedData);
       return typedData;
     } catch (err) {
@@ -175,10 +150,7 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Corrigindo a chamada da RPC para o formato correto com tipagem
-      const { data, error: rpcError } = await supabase.rpc<'get_conversions_by_type', ConversionsByTypeResponse[]>(
-        'get_conversions_by_type'
-      );
+      const { data, error: rpcError } = await supabase.rpc('get_conversions_by_type');
 
       if (rpcError) {
         throw new Error(rpcError.message);
@@ -188,8 +160,8 @@ export function useSystemMetrics() {
         throw new Error('No data returned from conversions by type');
       }
 
-      // Certifique-se de que data é um array
-      const typedData: ConversionsByType[] = Array.isArray(data) ? data : [];
+      // Make sure data is an array and cast to our interface
+      const typedData = (Array.isArray(data) ? data : []) as ConversionsByType[];
       setConversionsByType(typedData);
       return typedData;
     } catch (err) {

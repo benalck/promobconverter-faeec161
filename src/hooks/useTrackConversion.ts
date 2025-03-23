@@ -12,7 +12,8 @@ interface TrackConversionParams {
   outputFormat: string;
 }
 
-interface TrackConversionResponse {
+// Simple response type for the track_conversion function
+type TrackConversionResponse = {
   id: string;
 }
 
@@ -41,11 +42,8 @@ export function useTrackConversion() {
         p_output_format: outputFormat
       };
 
-      // Call the track_conversion function with proper typing
-      const { data, error } = await supabase.rpc<'track_conversion', TrackConversionResponse>(
-        'track_conversion', 
-        params
-      );
+      // Call the track_conversion function with simple string type annotation
+      const { data, error } = await supabase.rpc('track_conversion', params);
 
       if (error) {
         console.error('Erro ao registrar conversão:', error);
@@ -53,43 +51,30 @@ export function useTrackConversion() {
         console.log('Conversão registrada com sucesso:', data);
       }
 
-      return data;
+      return data as TrackConversionResponse;
     } catch (error) {
       console.error('Erro ao registrar conversão:', error);
     }
   }, [user]);
 
-  // New function to track tool usage (for calculators and other tools)
-  const trackToolUsage = useCallback(async ({
-    toolName,
-    success = true,
-    duration = 0,
-    errorMessage = null
-  }: {
-    toolName: string;
-    success?: boolean;
-    duration?: number;
-    errorMessage?: string;
-  }) => {
+  // Simplified function to track tool usage
+  const trackToolUsage = useCallback(async (toolName: string) => {
     if (!user) return;
 
     try {
-      // Define parameters for RPC (using the same conversion tracking function)
+      // Simplify parameters for better maintainability
       const params = {
         p_user_id: user.id,
-        p_success: success,
-        p_file_size: 0, // No file for tools
-        p_conversion_time: duration,
-        p_error_message: errorMessage,
-        p_input_format: `tool_${toolName}`,  // Mark as tool usage in the input format
-        p_output_format: 'calculation'       // Output is a calculation
+        p_success: true,
+        p_file_size: 0,
+        p_conversion_time: 0,
+        p_error_message: null,
+        p_input_format: `tool_${toolName}`,
+        p_output_format: 'calculation'
       };
 
-      // Call the track_conversion function with proper typing
-      const { data, error } = await supabase.rpc<'track_conversion', TrackConversionResponse>(
-        'track_conversion', 
-        params
-      );
+      // Call the track_conversion function
+      const { data, error } = await supabase.rpc('track_conversion', params);
 
       if (error) {
         console.error(`Erro ao registrar uso da ferramenta ${toolName}:`, error);
@@ -97,7 +82,7 @@ export function useTrackConversion() {
         console.log(`Uso da ferramenta ${toolName} registrado com sucesso:`, data);
       }
 
-      return data;
+      return data as TrackConversionResponse;
     } catch (error) {
       console.error(`Erro ao registrar uso da ferramenta ${toolName}:`, error);
     }
