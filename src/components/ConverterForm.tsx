@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import {
   Card,
@@ -428,28 +427,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 
                 {sheetTypes.length > 0 && (
                   <div className="mt-2 p-2 bg-white rounded border border-blue-200 mb-3">
-                    <p className="text-xs text-gray-600 mb-1 font-medium">Chapas Necessárias</p>
-                    <div className="max-h-32 overflow-y-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-gray-100">
-                            <th className="text-left p-1 font-medium text-gray-600">Material</th>
-                            <th className="text-left p-1 font-medium text-gray-600">Cor</th>
-                            <th className="text-left p-1 font-medium text-gray-600">Espessura</th>
-                            <th className="text-right p-1 font-medium text-gray-600">Qtd.</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sheetTypes.map((type, index) => (
-                            <tr key={index} className="border-b border-gray-50">
-                              <td className="p-1 text-gray-700">{type.material}</td>
-                              <td className="p-1 text-gray-700">{type.color}</td>
-                              <td className="p-1 text-gray-700">{type.thickness}</td>
-                              <td className="p-1 text-right text-blue-600 font-medium">{type.count}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <p className="text-xs text-gray-600 mb-1">Tipos de Chapas Necessárias</p>
+                    <div className="max-h-28 overflow-y-auto">
+                      {sheetTypes.map((type, index) => (
+                        <div key={index} className="text-xs p-1 border-b border-gray-100 flex justify-between">
+                          <span className="font-medium text-gray-700">
+                            {type.material} {type.thickness} {type.color}
+                          </span>
+                          <span className="text-blue-600">{type.count} peça{type.count !== 1 ? 's' : ''}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
