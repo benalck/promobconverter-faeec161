@@ -41,8 +41,11 @@ export function useTrackConversion() {
         p_output_format: outputFormat
       };
 
-      // Call the track_conversion function
-      const { data, error } = await supabase.rpc('track_conversion', params);
+      // Call the track_conversion function with proper typing
+      const { data, error } = await supabase.rpc<'track_conversion', TrackConversionResponse>(
+        'track_conversion', 
+        params
+      );
 
       if (error) {
         console.error('Erro ao registrar conversão:', error);
@@ -82,8 +85,11 @@ export function useTrackConversion() {
         p_output_format: 'calculation'       // Output is a calculation
       };
 
-      // Call the track_conversion function
-      const { data, error } = await supabase.rpc('track_conversion', params);
+      // Call the track_conversion function with proper typing
+      const { data, error } = await supabase.rpc<'track_conversion', TrackConversionResponse>(
+        'track_conversion', 
+        params
+      );
 
       if (error) {
         console.error(`Erro ao registrar uso da ferramenta ${toolName}:`, error);

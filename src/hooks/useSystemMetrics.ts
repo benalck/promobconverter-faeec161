@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,12 +28,27 @@ export interface ConversionsByType {
   success_rate: number;
 }
 
+// Define the types for the API responses
 interface SystemMetricsResponse {
   total_users: number;
   active_users: number;
   total_conversions: number;
   success_rate: number;
   average_response_time: number;
+}
+
+interface ConversionsByDateResponse {
+  date: string;
+  total: number;
+  successful: number;
+  failed: number;
+}
+
+interface ConversionsByTypeResponse {
+  input_format: string;
+  output_format: string;
+  count: number;
+  success_rate: number;
 }
 
 export function useSystemMetrics() {
@@ -62,11 +78,14 @@ export function useSystemMetrics() {
       // Console log para debug
       console.log('Buscando métricas do sistema...');
 
-      // Corrigindo a chamada da RPC para o formato correto
-      const { data, error: rpcError } = await supabase.rpc('get_system_metrics', { 
-        p_start_date: null,
-        p_end_date: null
-      });
+      // Corrigindo a chamada da RPC para o formato correto e aplicando tipagem
+      const { data, error: rpcError } = await supabase.rpc<'get_system_metrics', SystemMetricsResponse>(
+        'get_system_metrics', 
+        { 
+          p_start_date: null,
+          p_end_date: null
+        }
+      );
 
       console.log('Resultado da função get_system_metrics:', data);
 
@@ -123,8 +142,9 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Corrigindo a chamada da RPC para o formato correto
-      const { data, error: rpcError } = await supabase.rpc('get_conversions_by_date_range', 
+      // Corrigindo a chamada da RPC para o formato correto com tipagem
+      const { data, error: rpcError } = await supabase.rpc<'get_conversions_by_date_range', ConversionsByDateResponse[]>(
+        'get_conversions_by_date_range', 
         { p_start_date: startDate, p_end_date: endDate }
       );
 
@@ -136,8 +156,10 @@ export function useSystemMetrics() {
         throw new Error('No data returned from conversions by date');
       }
 
-      setDailyStats(data);
-      return data;
+      // Certifique-se de que data é um array
+      const typedData: ConversionsByDate[] = Array.isArray(data) ? data : [];
+      setDailyStats(typedData);
+      return typedData;
     } catch (err) {
       const error = err as Error;
       console.error('Error fetching conversions by date:', error);
@@ -153,8 +175,10 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      // Corrigindo a chamada da RPC para o formato correto
-      const { data, error: rpcError } = await supabase.rpc('get_conversions_by_type');
+      // Corrigindo a chamada da RPC para o formato correto com tipagem
+      const { data, error: rpcError } = await supabase.rpc<'get_conversions_by_type', ConversionsByTypeResponse[]>(
+        'get_conversions_by_type'
+      );
 
       if (rpcError) {
         throw new Error(rpcError.message);
@@ -164,8 +188,10 @@ export function useSystemMetrics() {
         throw new Error('No data returned from conversions by type');
       }
 
-      setConversionsByType(data);
-      return data;
+      // Certifique-se de que data é um array
+      const typedData: ConversionsByType[] = Array.isArray(data) ? data : [];
+      setConversionsByType(typedData);
+      return typedData;
     } catch (err) {
       const error = err as Error;
       console.error('Error fetching conversions by type:', error);
