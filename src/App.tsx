@@ -11,6 +11,8 @@ const Admin = lazy(() => import("@/pages/Admin"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
+const CutOptimizer = lazy(() => import("@/pages/CutOptimizer"));
+const EdgeCalculator = lazy(() => import("@/pages/EdgeCalculator"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -87,6 +89,8 @@ function App() {
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/register" element={<Register />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+              <Route path="/cut-optimizer" element={<ProtectedRoute><CutOptimizer /></ProtectedRoute>} />
+              <Route path="/edge-calculator" element={<ProtectedRoute><EdgeCalculator /></ProtectedRoute>} />
               
               {/* Rotas para verificação de email - consolidadas */}
               <Route path="/verify" element={<VerifyEmail />} />
