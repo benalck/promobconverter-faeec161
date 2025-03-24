@@ -117,9 +117,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       link.click();
       document.body.removeChild(link);
 
+      console.log("Extraindo peças do XML...");
       const extractedPieces = extractPiecesFromXML(xmlContent);
+      console.log("Peças extraídas:", extractedPieces);
+      
       setPieces(extractedPieces);
+      
+      console.log("Calculando resumo de materiais...");
       const summary = calculateMaterialSummary(extractedPieces);
+      console.log("Resumo de materiais calculado:", summary);
+      
       setMaterialSummary(summary);
       setShowOptimizationResults(true);
 

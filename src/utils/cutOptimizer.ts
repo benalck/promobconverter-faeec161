@@ -1,4 +1,3 @@
-
 import { PieceData, MaterialSummary } from "@/components/OptimizationResults";
 
 // Dimensões padrão de chapas inteiras (em mm)
@@ -359,3 +358,6 @@ function extractItemPropertiesFromXML(item: Element) {
     edgeLeft
   };
 }
+
+// Verificar se o arquivo está sendo incluído corretamente
+console.log("cutOptimizer.ts carregado");

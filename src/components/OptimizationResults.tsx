@@ -49,9 +49,13 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState("summary");
 
-  if (!show || materials.length === 0) {
+  // Garanta que o componente seja renderizado apenas quando show for true e houver materiais
+  if (!show || !materials || materials.length === 0) {
+    console.log("OptimizationResults não está sendo exibido:", { show, materialsLength: materials?.length });
     return null;
   }
+
+  console.log("Renderizando OptimizationResults com materiais:", materials);
 
   // Formato para números com 2 casas decimais
   const formatNumber = (num: number) => {
@@ -63,7 +67,7 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
   const totalEdgeBanding = materials.reduce((sum, mat) => sum + mat.totalEdgeBanding, 0);
 
   return (
-    <div className="space-y-6 mt-6">
+    <div className="space-y-6 mt-6 animate-fade-in">
       <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="summary">Resumo de Materiais</TabsTrigger>

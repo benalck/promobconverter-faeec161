@@ -1,11 +1,9 @@
-
 import React, { memo, useMemo } from "react";
 import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
 import { FileText, Download, Upload, Layers, Check, LayoutDashboard, MousePointerClick, FileSpreadsheet, Scissors, Package } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Componente Feature Card otimizado com React.memo para evitar re-renderizações
 const FeatureCard = memo(({
   icon: Icon,
   title,
@@ -32,7 +30,6 @@ const FeatureCard = memo(({
 
 FeatureCard.displayName = "FeatureCard";
 
-// Componente para a seção de recursos
 const FeatureSection = memo(({ title, subtitle, children }: {
   title: string;
   subtitle?: string;
@@ -56,7 +53,6 @@ FeatureSection.displayName = "FeatureSection";
 const Index = () => {
   const isMobile = useIsMobile();
   
-  // Memoização dos conteúdos estáticos para evitar re-renderização desnecessária
   const mainFeatures = useMemo(() => (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6 md:mt-8">
       <FeatureCard
@@ -129,7 +125,7 @@ const Index = () => {
     <AppLayout>
       <div className="flex flex-col items-center justify-center w-full">
         <div className="w-full max-w-3xl mx-auto">
-          <ConverterForm />
+          <ConverterForm className="w-full" />
           
           <div className="mt-8 md:mt-12 lg:mt-16 space-y-6 md:space-y-10">
             <FeatureSection 
