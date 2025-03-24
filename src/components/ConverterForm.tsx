@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import {
   Card,
@@ -7,28 +8,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowRight, CheckCircle } from "lucide-react";
+import { FileDown, ArrowRight, CheckCircle, FileText, FileCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "./FileUpload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { convertXMLToCSV } from "@/utils/xmlParser";
+import { convertTXTToHTML } from "@/utils/txtParser";
 import { generateHtmlPrefix, generateHtmlSuffix } from "@/utils/xmlConverter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { useTrackConversion } from "@/hooks/useTrackConversion";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AlertCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ConverterFormProps {
   className?: string;
 }
 
 const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
-  const [xmlFile, setXmlFile] = useState<File | null>(null);
-  const [outputFileName, setOutputFileName] = useState("plano_de_corte_promob");
+  const [file, setFile] = useState<File | null>(null);
+  const [fileType, setFileType] = useState<"xml" | "txt">("xml");
+  const [outputFileName, setOutputFileName] = useState("plano_de_corte");
   const [isConverting, setIsConverting] = useState(false);
   const [conversionSuccess, setConversionSuccess] = useState(false);
   const { toast } = useToast();
@@ -58,18 +61,29 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   }
 
   const handleFileSelect = useCallback((file: File) => {
-    setXmlFile(file);
+    setFile(file);
+    
+    // Determine file type
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (extension === 'txt') {
+      setFileType('txt');
+    } else {
+      setFileType('xml');
+    }
+    
+    // Set output filename without extension
     const fileName = file.name.replace(/\.[^/.]+$/, "");
     setOutputFileName(fileName);
+    
     // Reset conversion status when a new file is selected
     setConversionSuccess(false);
   }, []);
 
   const handleConvert = useCallback(async () => {
-    if (!xmlFile) {
+    if (!file) {
       toast({
         title: "Nenhum arquivo selecionado",
-        description: "Por favor, faça upload de um arquivo XML para converter.",
+        description: "Por favor, faça upload de um arquivo para converter.",
         variant: "destructive",
       });
       return;
@@ -92,17 +106,25 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     const startTime = Date.now();
     let success = false;
     let errorMsg = '';
-    let fileSize = xmlFile.size;
+    let fileSize = file.size;
+    let contentString = '';
 
     try {
-      // 1. Converter o arquivo
-      const xmlContent = await readFileAsText(xmlFile);
-      const csvString = convertXMLToCSV(xmlContent);
+      // 1. Ler o conteúdo do arquivo
+      const fileContent = await readFileAsText(file);
+      
+      // 2. Converter o conteúdo baseado no tipo de arquivo
+      if (fileType === 'xml') {
+        contentString = convertXMLToCSV(fileContent);
+      } else if (fileType === 'txt') {
+        contentString = convertTXTToHTML(fileContent);
+      }
+      
       const htmlPrefix = generateHtmlPrefix();
       const htmlSuffix = generateHtmlSuffix();
 
-      // 2. Criar e baixar o arquivo Excel
-      const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
+      // 3. Criar e baixar o arquivo Excel
+      const blob = new Blob([htmlPrefix + contentString + htmlSuffix], {
         type: "application/vnd.ms-excel;charset=utf-8;",
       });
 
@@ -130,7 +152,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       toast({
         title: "Erro na conversão",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao processar o arquivo XML.",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao processar o arquivo.",
         variant: "destructive",
       });
     } finally {
@@ -140,7 +162,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       // Registrar a conversão no banco de dados usando o hook
       await trackConversion({
-        inputFormat: 'XML',
+        inputFormat: fileType.toUpperCase(),
         outputFormat: 'Excel',
         fileSize,
         conversionTime,
@@ -150,7 +172,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       setIsConverting(false);
     }
-  }, [xmlFile, outputFileName, user, navigate, readFileAsText, toast, trackConversion]);
+  }, [file, fileType, outputFileName, user, navigate, readFileAsText, toast, trackConversion]);
 
   return (
     <>
@@ -163,97 +185,125 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             "text-blue-700",
             isMobile ? "text-lg" : "text-xl"
           )}>
-            Conversor Promob
+            Conversor de Corte
           </CardTitle>
           <CardDescription className="text-indigo-600 text-sm sm:text-base">
-            Transforme arquivos XML Promob em planos de corte Excel com formatação profissional em segundos
+            Transforme arquivos de corte em planos Excel com formatação profissional, usinagens e otimização
           </CardDescription>
         </CardHeader>
         <CardContent className={cn(
           isMobile ? "p-4 space-y-4" : "pt-6 px-6 space-y-5"
         )}>
-          <div className="space-y-4 sm:space-y-5">
-            <FileUpload
-              onFileSelect={handleFileSelect}
-              accept=".xml"
-              isDisabled={isConverting}
-              maxSize={200}
-            />
-
-            <div>
-              <Label htmlFor="output-name" className="text-sm font-medium text-gray-700">
-                Nome do arquivo de saída
-              </Label>
-              <Input
-                id="output-name"
-                value={outputFileName}
-                onChange={(e) => setOutputFileName(e.target.value)}
-                className="mt-1 focus:ring-blue-500 focus:border-blue-500"
-                disabled={isConverting}
-              />
-            </div>
-
-            {conversionSuccess && !isConverting && (
-              <div className="rounded-md bg-green-50 p-3 flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <p className="text-sm text-green-700">Conversão realizada com sucesso!</p>
+          <Tabs defaultValue="xml" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="xml" onClick={() => setFileType("xml")}>
+                <FileCode className="w-4 h-4 mr-2" />
+                Arquivo XML
+              </TabsTrigger>
+              <TabsTrigger value="txt" onClick={() => setFileType("txt")}>
+                <FileText className="w-4 h-4 mr-2" />
+                Arquivo TXT
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="xml" className="space-y-4">
+              <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
+                Suporta arquivos XML do Promob com detecção automática de usinagens.
               </div>
-            )}
+              <FileUpload
+                onFileSelect={handleFileSelect}
+                accept=".xml"
+                isDisabled={isConverting}
+                maxSize={200}
+              />
+            </TabsContent>
+            
+            <TabsContent value="txt" className="space-y-4">
+              <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
+                Suporta vários formatos TXT de corte (delimitados por | ou ; e formato chave/valor).
+              </div>
+              <FileUpload
+                onFileSelect={handleFileSelect}
+                accept=".txt"
+                isDisabled={isConverting}
+                maxSize={200}
+              />
+            </TabsContent>
+          </Tabs>
 
-            <Button
-              type="submit"
-              className={cn(
-                "w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition-all duration-300 group relative overflow-hidden",
-                isMobile ? "text-sm" : "",
-                conversionSuccess && !isConverting ? "from-green-600 to-green-500 hover:from-green-700 hover:to-green-600" : ""
-              )}
-              onClick={handleConvert}
-              disabled={isConverting || !xmlFile}
-            >
-              <span className="flex items-center justify-center">
-                {isConverting ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    <span>Processando...</span>
-                  </>
-                ) : (
-                  <>
-                    {conversionSuccess ? (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                        <span>Converter Novamente</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileDown className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                        <span>Converter Agora</span>
-                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
-                      </>
-                    )}
-                  </>
-                )}
-              </span>
-            </Button>
+          <div>
+            <Label htmlFor="output-name" className="text-sm font-medium text-gray-700">
+              Nome do arquivo de saída
+            </Label>
+            <Input
+              id="output-name"
+              value={outputFileName}
+              onChange={(e) => setOutputFileName(e.target.value)}
+              className="mt-1 focus:ring-blue-500 focus:border-blue-500"
+              disabled={isConverting}
+            />
           </div>
+
+          {conversionSuccess && !isConverting && (
+            <div className="rounded-md bg-green-50 p-3 flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+              <p className="text-sm text-green-700">Conversão realizada com sucesso!</p>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className={cn(
+              "w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition-all duration-300 group relative overflow-hidden",
+              isMobile ? "text-sm" : "",
+              conversionSuccess && !isConverting ? "from-green-600 to-green-500 hover:from-green-700 hover:to-green-600" : ""
+            )}
+            onClick={handleConvert}
+            disabled={isConverting || !file}
+          >
+            <span className="flex items-center justify-center">
+              {isConverting ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span>Processando...</span>
+                </>
+              ) : (
+                <>
+                  {conversionSuccess ? (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      <span>Converter Novamente</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      <span>Converter Agora</span>
+                      <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2 opacity-0 -translate-x-4 transition-all duration-500 group-hover:opacity-100 group-hover:translate-x-0" />
+                    </>
+                  )}
+                </>
+              )}
+            </span>
+          </Button>
         </CardContent>
       </Card>
     </>

@@ -1,7 +1,8 @@
+
 import React, { memo, useMemo } from "react";
 import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
-import { FileText, Download, Upload, List, Check, LayoutDashboard, MousePointerClick, FileSpreadsheet } from "lucide-react";
+import { FileText, Download, Upload, List, Check, LayoutDashboard, MousePointerClick, FileSpreadsheet, Wrench, FileCog, FileUp } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 // Componente Feature Card otimizado com React.memo para evitar re-renderizações
@@ -24,8 +25,8 @@ const FeatureCard = memo(({
     <div className={`w-${size === "large" ? "8 h-8 md:w-10 md:h-10" : "7 h-7 md:w-8 md:h-8"} flex items-center justify-center rounded-full ${iconBgColor} ${iconColor} mx-auto mb-2 ${size === "large" ? "md:mb-3" : ""}`}>
       <Icon className={`w-${size === "large" ? "4 h-4 md:w-5 md:h-5" : "3 h-3 md:w-4 md:h-4"}`} />
     </div>
-    <h3 className={`font-medium mb-1 ${size === "large" ? "md:mb-2 text-sm" : "text-xs sm:text-sm"}`}>{title}</h3>
-    <p className={`text-xs text-gray-600 ${size === "small" ? "line-clamp-2" : ""}`}>{description}</p>
+    <h3 className={`font-medium mb-1 ${size === "large" ? "md:mb-2 text-sm" : "text-xs sm:text-sm"} text-center`}>{title}</h3>
+    <p className={`text-xs text-gray-600 ${size === "small" ? "line-clamp-2" : ""} text-center`}>{description}</p>
   </div>
 ));
 
@@ -60,26 +61,26 @@ const Index = () => {
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6 md:mt-8">
       <FeatureCard
         icon={Upload}
-        title="Arraste e Solte"
-        description="Selecione ou arraste seu arquivo XML para conversão instantânea."
+        title="Múltiplos Formatos"
+        description="Suporte para arquivos XML do Promob e TXT de vários sistemas."
         iconBgColor="bg-blue-50"
         iconColor="text-blue-600"
+      />
+      
+      <FeatureCard
+        icon={Wrench}
+        title="Detecção de Usinagem"
+        description="Identifica e exibe operações de furação, rasgos e usinagens em geral."
+        iconBgColor="bg-purple-50"
+        iconColor="text-purple-600"
       />
       
       <FeatureCard
         icon={FileSpreadsheet}
-        title="Processamento Preciso"
-        description="Extração e organização automática de todos os elementos essenciais."
+        title="Otimização Visual"
+        description="Veja quantas chapas são necessárias e visualize o plano de corte."
         iconBgColor="bg-indigo-50"
         iconColor="text-indigo-600"
-      />
-      
-      <FeatureCard
-        icon={Download}
-        title="Download Imediato"
-        description="Obtenha seus planos de corte Excel prontos para uso em segundos."
-        iconBgColor="bg-blue-50"
-        iconColor="text-blue-600"
       />
     </div>
   ), []);
@@ -96,27 +97,27 @@ const Index = () => {
       />
       
       <FeatureCard
-        icon={Check}
-        title="Precisão"
-        description="Dados convertidos com fidelidade."
+        icon={FileText}
+        title="Arquivos TXT"
+        description="Compatível com formatos diversos."
         iconBgColor="bg-green-50"
         iconColor="text-green-600"
         size="small"
       />
       
       <FeatureCard
-        icon={FileText}
-        title="Versatilidade"
-        description="Compatível com formatos Promob."
+        icon={FileCog}
+        title="Cálculo Automático"
+        description="Total de chapas necessárias."
         iconBgColor="bg-blue-50"
         iconColor="text-blue-600"
         size="small"
       />
       
       <FeatureCard
-        icon={MousePointerClick}
-        title="Simplicidade"
-        description="Interface intuitiva e fácil."
+        icon={FileUp}
+        title="Exportação Fácil"
+        description="Compatível com Excel."
         iconBgColor="bg-indigo-50"
         iconColor="text-indigo-600"
         size="small"
@@ -132,13 +133,13 @@ const Index = () => {
           
           <div className="mt-8 md:mt-12 lg:mt-16 space-y-6 md:space-y-10">
             <FeatureSection 
-              title="Transforme Dados em Resultados"
-              subtitle="Nossa ferramenta converte XML Promob em planilhas Excel formatadas de forma rápida e eficiente."
+              title="Mais Completo que o CorteCLOUD"
+              subtitle="Nossa ferramenta oferece suporte a múltiplos formatos, detecção de usinagem e otimização visual de corte."
             >
               {mainFeatures}
             </FeatureSection>
             
-            <FeatureSection title="Recursos Poderosos">
+            <FeatureSection title="Recursos Avançados">
               {additionalFeatures}
             </FeatureSection>
           </div>
