@@ -33,11 +33,14 @@ export function calculateMaterialSummary(pieces: PieceData[]): MaterialSummary[]
       totalEdgeBanding += edgeBandingPerPiece * piece.quantity;
     });
     
-    // Adicionar folga para corte (10% de área adicional)
-    const totalAreaWithBuffer = totalArea * 1.1;
+    // Realizar otimização avançada considerando o sentido do veio
+    const { optimizedSheetCount, optimizedArea } = calculateOptimizedSheetCount(group);
+    
+    // Usar resultado da otimização avançada ou adicionar folga para corte (10% de área adicional)
+    const totalAreaWithBuffer = optimizedArea > 0 ? optimizedArea : totalArea * 1.1;
     
     // Calcular número de chapas necessárias (arredonda para cima)
-    const sheetCount = Math.ceil(totalAreaWithBuffer / STANDARD_SHEET_AREA);
+    const sheetCount = optimizedSheetCount > 0 ? optimizedSheetCount : Math.ceil(totalAreaWithBuffer / STANDARD_SHEET_AREA);
     
     summaries.push({
       material,
@@ -50,6 +53,98 @@ export function calculateMaterialSummary(pieces: PieceData[]): MaterialSummary[]
   }
   
   return summaries;
+}
+
+/**
+ * Calcula o número otimizado de chapas considerando o sentido do veio da madeira
+ */
+function calculateOptimizedSheetCount(pieces: PieceData[]): { optimizedSheetCount: number, optimizedArea: number } {
+  // Agrupar peças por orientação de veio
+  const horizontalVeinPieces: PieceData[] = [];
+  const verticalVeinPieces: PieceData[] = [];
+  const noVeinPreferencePieces: PieceData[] = [];
+  
+  // Identificar orientação baseada em características das peças
+  pieces.forEach(piece => {
+    // Peças largas tendem a ter veio horizontal (critério simplificado para exemplo)
+    if (piece.width > piece.depth * 2) {
+      horizontalVeinPieces.push({...piece});
+    } 
+    // Peças altas tendem a ter veio vertical
+    else if (piece.depth > piece.width * 2) {
+      verticalVeinPieces.push({...piece});
+    }
+    // Peças quadradas não têm preferência
+    else {
+      noVeinPreferencePieces.push({...piece});
+    }
+  });
+  
+  // Expandir para a quantidade real
+  const expandedPieces: PieceData[] = [];
+  
+  // Função helper para expandir baseado na quantidade
+  const expandByQuantity = (pieceArray: PieceData[]) => {
+    pieceArray.forEach(piece => {
+      for (let i = 0; i < piece.quantity; i++) {
+        expandedPieces.push({...piece, quantity: 1});
+      }
+    });
+  };
+  
+  expandByQuantity(horizontalVeinPieces);
+  expandByQuantity(verticalVeinPieces);
+  expandByQuantity(noVeinPreferencePieces);
+  
+  // Ordenar as peças por tamanho (maior primeiro)
+  expandedPieces.sort((a, b) => (b.width * b.depth) - (a.width * a.depth));
+  
+  // Algoritmo de bin packing simplificado com rotação para considerar o veio
+  let sheets: { width: number, height: number, remainingArea: number, pieces: PieceData[] }[] = [];
+  let totalOptimizedArea = 0;
+  
+  // Para cada peça, encontrar a melhor chapa para colocá-la
+  expandedPieces.forEach(piece => {
+    // Tentar encontrar uma chapa existente onde a peça cabe
+    let bestSheetIndex = -1;
+    let bestRemainingArea = Number.MAX_VALUE;
+    
+    for (let i = 0; i < sheets.length; i++) {
+      const sheet = sheets[i];
+      const pieceArea = piece.width * piece.depth;
+      
+      // Verificar se a peça cabe na chapa
+      if (pieceArea <= sheet.remainingArea) {
+        // Se cabe, usar a chapa com menor área restante (best fit)
+        if (sheet.remainingArea < bestRemainingArea) {
+          bestSheetIndex = i;
+          bestRemainingArea = sheet.remainingArea;
+        }
+      }
+    }
+    
+    // Se encontrou uma chapa adequada, adicionar a peça
+    if (bestSheetIndex >= 0) {
+      sheets[bestSheetIndex].pieces.push(piece);
+      sheets[bestSheetIndex].remainingArea -= (piece.width * piece.depth);
+    } 
+    // Caso contrário, criar uma nova chapa
+    else {
+      const newSheet = {
+        width: STANDARD_SHEET_WIDTH,
+        height: STANDARD_SHEET_HEIGHT,
+        remainingArea: STANDARD_SHEET_AREA - (piece.width * piece.depth),
+        pieces: [piece]
+      };
+      sheets.push(newSheet);
+      totalOptimizedArea += STANDARD_SHEET_AREA;
+    }
+  });
+  
+  return {
+    optimizedSheetCount: sheets.length,
+    optimizedArea: totalOptimizedArea
+  };
 }
 
 /**

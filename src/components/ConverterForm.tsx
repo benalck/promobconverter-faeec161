@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import {
   Card,
@@ -21,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { useTrackConversion } from "@/hooks/useTrackConversion";
 import { useIsMobile } from "@/hooks/use-mobile";
-import OptimizationResults, { MaterialSummary } from "./OptimizationResults";
+import OptimizationResults, { MaterialSummary, PieceData } from "./OptimizationResults";
 import { extractPiecesFromXML, calculateMaterialSummary } from "@/utils/cutOptimizer";
 
 interface ConverterFormProps {
@@ -35,6 +34,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [isConverting, setIsConverting] = useState(false);
   const [conversionSuccess, setConversionSuccess] = useState(false);
   const [materialSummary, setMaterialSummary] = useState<MaterialSummary[]>([]);
+  const [pieces, setPieces] = useState<PieceData[]>([]);
   const [showOptimizationResults, setShowOptimizationResults] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -42,7 +42,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const { trackConversion } = useTrackConversion();
   const isMobile = useIsMobile();
 
-  // Função auxiliar para ler arquivo como texto - usando useCallback para melhor performance
   const readFileAsText = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -66,7 +65,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     setXmlFile(file);
     const fileName = file.name.replace(/\.[^/.]+$/, "");
     setOutputFileName(fileName);
-    // Reset conversion status when a new file is selected
     setConversionSuccess(false);
     setShowOptimizationResults(false);
   }, []);
@@ -95,23 +93,19 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     setConversionSuccess(false);
     setShowOptimizationResults(false);
     
-    // Variáveis para registrar a conversão
     const startTime = Date.now();
     let success = false;
     let errorMsg = '';
     let fileSize = xmlFile.size;
 
     try {
-      // 1. Ler o conteúdo do arquivo
       const xmlContent = await readFileAsText(xmlFile);
       setXmlContent(xmlContent);
       
-      // 2. Converter o arquivo
       const csvString = convertXMLToCSV(xmlContent);
       const htmlPrefix = generateHtmlPrefix();
       const htmlSuffix = generateHtmlSuffix();
 
-      // 3. Criar e baixar o arquivo Excel
       const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
         type: "application/vnd.ms-excel;charset=utf-8;",
       });
@@ -123,17 +117,15 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       link.click();
       document.body.removeChild(link);
 
-      // 4. Processar os dados para otimização de corte
-      const pieces = extractPiecesFromXML(xmlContent);
-      const summary = calculateMaterialSummary(pieces);
+      const extractedPieces = extractPiecesFromXML(xmlContent);
+      setPieces(extractedPieces);
+      const summary = calculateMaterialSummary(extractedPieces);
       setMaterialSummary(summary);
       setShowOptimizationResults(true);
 
-      // Marcar como sucesso
       success = true;
       setConversionSuccess(true);
 
-      // Mostrar sucesso
       toast({
         title: "Conversão concluída",
         description: "Seu arquivo foi convertido com sucesso.",
@@ -150,11 +142,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         variant: "destructive",
       });
     } finally {
-      // Calcular tempo de conversão
       const endTime = Date.now();
       const conversionTime = endTime - startTime;
       
-      // Registrar a conversão no banco de dados usando o hook
       await trackConversion({
         inputFormat: 'XML',
         outputFormat: 'Excel',
@@ -273,10 +263,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         </CardContent>
       </Card>
 
-      {/* Componente de Resultados da Otimização */}
       <OptimizationResults 
         show={showOptimizationResults} 
-        materials={materialSummary} 
+        materials={materialSummary}
+        pieces={pieces}
       />
     </>
   );
