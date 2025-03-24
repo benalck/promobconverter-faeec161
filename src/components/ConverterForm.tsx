@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from "react";
 import {
   Card,
@@ -20,7 +21,8 @@ import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { useTrackConversion } from "@/hooks/useTrackConversion";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AlertCircle } from "lucide-react";
+import OptimizationResults, { MaterialSummary } from "./OptimizationResults";
+import { extractPiecesFromXML, calculateMaterialSummary } from "@/utils/cutOptimizer";
 
 interface ConverterFormProps {
   className?: string;
@@ -28,9 +30,12 @@ interface ConverterFormProps {
 
 const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [xmlFile, setXmlFile] = useState<File | null>(null);
+  const [xmlContent, setXmlContent] = useState<string>("");
   const [outputFileName, setOutputFileName] = useState("plano_de_corte_promob");
   const [isConverting, setIsConverting] = useState(false);
   const [conversionSuccess, setConversionSuccess] = useState(false);
+  const [materialSummary, setMaterialSummary] = useState<MaterialSummary[]>([]);
+  const [showOptimizationResults, setShowOptimizationResults] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -63,6 +68,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     setOutputFileName(fileName);
     // Reset conversion status when a new file is selected
     setConversionSuccess(false);
+    setShowOptimizationResults(false);
   }, []);
 
   const handleConvert = useCallback(async () => {
@@ -87,6 +93,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
     setIsConverting(true);
     setConversionSuccess(false);
+    setShowOptimizationResults(false);
     
     // Variáveis para registrar a conversão
     const startTime = Date.now();
@@ -95,13 +102,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     let fileSize = xmlFile.size;
 
     try {
-      // 1. Converter o arquivo
+      // 1. Ler o conteúdo do arquivo
       const xmlContent = await readFileAsText(xmlFile);
+      setXmlContent(xmlContent);
+      
+      // 2. Converter o arquivo
       const csvString = convertXMLToCSV(xmlContent);
       const htmlPrefix = generateHtmlPrefix();
       const htmlSuffix = generateHtmlSuffix();
 
-      // 2. Criar e baixar o arquivo Excel
+      // 3. Criar e baixar o arquivo Excel
       const blob = new Blob([htmlPrefix + csvString + htmlSuffix], {
         type: "application/vnd.ms-excel;charset=utf-8;",
       });
@@ -112,6 +122,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // 4. Processar os dados para otimização de corte
+      const pieces = extractPiecesFromXML(xmlContent);
+      const summary = calculateMaterialSummary(pieces);
+      setMaterialSummary(summary);
+      setShowOptimizationResults(true);
 
       // Marcar como sucesso
       success = true;
@@ -256,6 +272,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Componente de Resultados da Otimização */}
+      <OptimizationResults 
+        show={showOptimizationResults} 
+        materials={materialSummary} 
+      />
     </>
   );
 };

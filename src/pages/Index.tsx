@@ -1,7 +1,8 @@
+
 import React, { memo, useMemo } from "react";
 import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
-import { FileText, Download, Upload, List, Check, LayoutDashboard, MousePointerClick, FileSpreadsheet } from "lucide-react";
+import { FileText, Download, Upload, Layers, Check, LayoutDashboard, MousePointerClick, FileSpreadsheet, Scissors, Package } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 // Componente Feature Card otimizado com React.memo para evitar re-renderizações
@@ -87,29 +88,29 @@ const Index = () => {
   const additionalFeatures = useMemo(() => (
     <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-2 sm:gap-3 mt-4 md:mt-6`}>
       <FeatureCard
-        icon={LayoutDashboard}
-        title="Layout Profissional"
-        description="Planilhas formatadas com qualidade."
-        iconBgColor="bg-indigo-50"
-        iconColor="text-indigo-600"
+        icon={Package}
+        title="Otimização de Corte"
+        description="Cálculo automático de chapas necessárias."
+        iconBgColor="bg-blue-50"
+        iconColor="text-blue-600"
         size="small"
       />
       
       <FeatureCard
-        icon={Check}
-        title="Precisão"
-        description="Dados convertidos com fidelidade."
+        icon={Scissors}
+        title="Fitas de Borda"
+        description="Cálculo preciso de fitas necessárias."
         iconBgColor="bg-green-50"
         iconColor="text-green-600"
         size="small"
       />
       
       <FeatureCard
-        icon={FileText}
-        title="Versatilidade"
-        description="Compatível com formatos Promob."
-        iconBgColor="bg-blue-50"
-        iconColor="text-blue-600"
+        icon={Layers}
+        title="Resumo de Materiais"
+        description="Visualização completa dos recursos."
+        iconBgColor="bg-indigo-50"
+        iconColor="text-indigo-600"
         size="small"
       />
       
@@ -133,7 +134,7 @@ const Index = () => {
           <div className="mt-8 md:mt-12 lg:mt-16 space-y-6 md:space-y-10">
             <FeatureSection 
               title="Transforme Dados em Resultados"
-              subtitle="Nossa ferramenta converte XML Promob em planilhas Excel formatadas de forma rápida e eficiente."
+              subtitle="Nossa ferramenta converte XML Promob em planilhas Excel formatadas com otimização automática de corte."
             >
               {mainFeatures}
             </FeatureSection>
