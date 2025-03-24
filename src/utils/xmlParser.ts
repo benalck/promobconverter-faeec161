@@ -1,11 +1,8 @@
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
-import { extractMachineryOperations } from './machineryParser';
-import { calculateSheetStats, generateSheetStatsHTML, generateCutVisualization } from './cutVisualizer';
 
 /**
  * Converte conteúdo XML para formato CSV/HTML compatível com Excel
  * Implementação otimizada com melhor tratamento de erros e validações
- * Adicionado suporte para extração de usinagem e otimização de corte
  */
 export const convertXMLToCSV = (xmlContent: string): string => {
   try {
@@ -39,19 +36,6 @@ export const convertXMLToCSV = (xmlContent: string): string => {
 
     // Performance: processar elementos em lotes de 100 elementos por vez
     csvContent = processItemElementsOptimized(itemElements, csvContent);
-    
-    // Extrair informações para visualização e estatísticas
-    const pieces = extractPiecesFromXml(itemElements);
-    
-    // Adicionar estatísticas de chapas necessárias
-    csvContent += generateSheetStatsTable(pieces);
-    
-    // Adicionar visualização de cortes se houver peças
-    if (pieces.length > 0) {
-      const stats = calculateSheetStats(pieces);
-      csvContent += generateSheetStatsHTML(stats);
-      csvContent += generateCutVisualization(pieces);
-    }
     
     return csvContent;
   } catch (error) {
@@ -536,99 +520,3 @@ const getDefaultExampleRow = (): string => {
       <td class="material">15mm</td>
     </tr>`;
 };
-
-/**
- * Extrai peças do XML para uso na visualização e estatísticas
- */
-const extractPiecesFromXml = (itemElements: NodeListOf<Element>) => {
-  const pieces: any[] = [];
-  const processedItemIds = new Set();
-  
-  Array.from(itemElements).forEach(item => {
-    // Skip duplicates
-    const uniqueId = item.getAttribute("UNIQUEID");
-    if (!uniqueId || processedItemIds.has(uniqueId)) return;
-    processedItemIds.add(uniqueId);
-    
-    // Extract properties
-    const componentProps = extractItemPropertiesFromXML(item);
-    const width = parseInt(item.getAttribute("WIDTH") || "0", 10);
-    const height = parseInt(item.getAttribute("DEPTH") || "0", 10);
-    const repetition = parseInt(item.getAttribute("REPETITION") || "1", 10);
-    
-    // Machinery operations
-    const machineryOperations = extractMachineryOperations(item);
-    
-    // Add piece
-    pieces.push({
-      id: uniqueId,
-      width,
-      height,
-      quantity: repetition,
-      edges: {
-        top: componentProps.edgeTop === "X",
-        bottom: componentProps.edgeBottom === "X",
-        left: componentProps.edgeLeft === "X",
-        right: componentProps.edgeRight === "X"
-      },
-      material: componentProps.material,
-      color: componentProps.color,
-      thickness: componentProps.thickness,
-      machineryOperations
-    });
-  });
-  
-  return pieces;
-};
-
-/**
- * Generate sheet statistics table in HTML format
- */
-const generateSheetStatsTable = (pieces: any[]): string => {
-  if (!pieces || pieces.length === 0) return "";
-  
-  // Group pieces by machinery operations
-  const piecesWithMachinery = pieces.filter(p => p.machineryOperations && p.machineryOperations.length > 0);
-  
-  if (piecesWithMachinery.length === 0) return "";
-  
-  let machineryHtml = `
-    <tr><td colspan="16" style="height: 30px;"></td></tr>
-    <tr><td colspan="16" style="text-align: center; font-weight: bold; background-color: #e9e9e9;">INFORMAÇÕES DE USINAGEM</td></tr>
-  `;
-  
-  piecesWithMachinery.forEach(piece => {
-    machineryHtml += `
-      <tr>
-        <td colspan="4" style="text-align: left; font-weight: bold; background-color: #f5f5f5;">Peça ${piece.id}</td>
-        <td colspan="12" style="text-align: left;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr style="background-color: #eaeaea;">
-              <th style="border: 1px solid #ccc; padding: 3px;">Tipo</th>
-              <th style="border: 1px solid #ccc; padding: 3px;">Posição X</th>
-              <th style="border: 1px solid #ccc; padding: 3px;">Posição Y</th>
-              <th style="border: 1px solid #ccc; padding: 3px;">Descrição</th>
-            </tr>
-    `;
-    
-    piece.machineryOperations.forEach((op: any) => {
-      machineryHtml += `
-        <tr>
-          <td style="border: 1px solid #ccc; padding: 3px;">${op.type}</td>
-          <td style="border: 1px solid #ccc; padding: 3px;">${op.position.x}</td>
-          <td style="border: 1px solid #ccc; padding: 3px;">${op.position.y}</td>
-          <td style="border: 1px solid #ccc; padding: 3px;">${op.description}</td>
-        </tr>
-      `;
-    });
-    
-    machineryHtml += `
-          </table>
-        </td>
-      </tr>
-    `;
-  });
-  
-  return machineryHtml;
-};
-
