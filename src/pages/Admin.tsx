@@ -482,8 +482,6 @@ export default function Admin() {
                     dailyStats={dailyStats}
                     timeFilter={timeFilter}
                     setTimeFilter={setTimeFilter}
-                    isLoading={isLoadingSystem}
-                    hasError={!!systemError}
                   />
                 </TabsContent>
                 

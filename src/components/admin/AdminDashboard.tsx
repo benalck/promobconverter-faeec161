@@ -1,6 +1,7 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Activity, Clock, AlertCircle } from "lucide-react";
+import { Users, Activity, Clock } from "lucide-react";
 import { ConversionsByDate, SystemMetrics } from "@/hooks/useSystemMetrics";
 import ConversionMetricsChart from "./ConversionMetricsChart";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -10,27 +11,15 @@ interface AdminDashboardProps {
   dailyStats: ConversionsByDate[] | null;
   timeFilter: string;
   setTimeFilter: (value: string) => void;
-  isLoading?: boolean;
-  hasError?: boolean;
 }
 
 export function AdminDashboard({ 
   systemMetrics, 
   dailyStats, 
   timeFilter, 
-  setTimeFilter,
-  isLoading = false,
-  hasError = false
+  setTimeFilter 
 }: AdminDashboardProps) {
   const isMobile = useIsMobile();
-
-  // Função auxiliar para renderizar os valores com base no estado de loading/error
-  const renderMetricValue = (value: number | undefined | null, formatter?: (val: number) => string) => {
-    if (isLoading) return "...";
-    if (hasError) return "Erro";
-    if (value === undefined || value === null) return "-";
-    return formatter ? formatter(value) : value;
-  };
 
   return (
     <>
@@ -58,10 +47,10 @@ export function AdminDashboard({
           </CardHeader>
           <CardContent>
             <div className={isMobile ? "text-xl font-bold" : "text-2xl font-bold"}>
-              {renderMetricValue(systemMetrics?.activeUsers)}
+              {systemMetrics?.activeUsers || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              de {renderMetricValue(systemMetrics?.totalUsers)} usuários totais
+              de {systemMetrics?.totalUsers || 0} usuários totais
             </p>
           </CardContent>
         </Card>
@@ -75,10 +64,10 @@ export function AdminDashboard({
           </CardHeader>
           <CardContent>
             <div className={isMobile ? "text-xl font-bold" : "text-2xl font-bold"}>
-              {renderMetricValue(systemMetrics?.successRate, val => `${val.toFixed(1)}%`)}
+              {(systemMetrics?.successRate || 0).toFixed(1)}%
             </div>
             <p className="text-xs text-muted-foreground">
-              em {renderMetricValue(systemMetrics?.totalConversions)} conversões
+              em {systemMetrics?.totalConversions || 0} conversões
             </p>
           </CardContent>
         </Card>
@@ -92,10 +81,7 @@ export function AdminDashboard({
           </CardHeader>
           <CardContent>
             <div className={isMobile ? "text-xl font-bold" : "text-2xl font-bold"}>
-              {renderMetricValue(
-                systemMetrics?.averageConversionTime, 
-                val => `${(val / 1000).toFixed(2)}s`
-              )}
+              {((systemMetrics?.averageConversionTime || 0) / 1000).toFixed(2)}s
             </div>
             <p className="text-xs text-muted-foreground">
               por conversão
@@ -104,26 +90,8 @@ export function AdminDashboard({
         </Card>
       </div>
 
-      {hasError && (
-        <Card className="p-6 text-center mb-6">
-          <div className="flex items-center justify-center gap-2 text-destructive">
-            <AlertCircle className="h-5 w-5" />
-            <p>Erro ao carregar os dados de conversão. Tente novamente mais tarde.</p>
-          </div>
-        </Card>
-      )}
-
-      {isLoading && !hasError && (
-        <Card className="p-6 text-center mb-6">
-          <p className="text-muted-foreground">Carregando dados de conversão...</p>
-        </Card>
-      )}
-
-      {!isLoading && !hasError && dailyStats && dailyStats.length > 0 && (
-        <ConversionMetricsChart data={dailyStats} timeFilter={timeFilter} />
-      )}
-      
-      {!isLoading && !hasError && (!dailyStats || dailyStats.length === 0) && (
+      {dailyStats && dailyStats.length > 0 && <ConversionMetricsChart data={dailyStats} timeFilter={timeFilter} />}
+      {(!dailyStats || dailyStats.length === 0) && (
         <Card className="p-6 text-center">
           <p className="text-muted-foreground">Não há dados de conversão para exibir neste período.</p>
         </Card>

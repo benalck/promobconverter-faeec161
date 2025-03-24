@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Simple data interface for metrics
+// Interface for manter compatibilidade com os componentes existentes
 export interface SystemMetrics {
   totalUsers: number;
   activeUsers: number;
@@ -26,6 +26,14 @@ export interface ConversionsByType {
   output_format: string;
   count: number;
   success_rate: number;
+}
+
+interface SystemMetricsResponse {
+  total_users: number;
+  active_users: number;
+  total_conversions: number;
+  success_rate: number;
+  average_response_time: number;
 }
 
 export function useSystemMetrics() {
@@ -55,46 +63,49 @@ export function useSystemMetrics() {
       // Console log para debug
       console.log('Buscando métricas do sistema...');
 
-      // Simplified RPC call with explicit type casting
-      const { data, error: rpcError } = await supabase.rpc('get_system_metrics', { 
-        p_start_date: null,
-        p_end_date: null
-      });
+      // Use a type assertion for the RPC call
+      const result = await supabase.rpc<'get_system_metrics', SystemMetricsResponse>(
+        'get_system_metrics',
+        { 
+          p_start_date: null,
+          p_end_date: null
+        }
+      );
 
-      console.log('Resultado da função get_system_metrics:', data);
+      console.log('Resultado da função get_system_metrics:', result);
 
-      if (rpcError) {
-        console.error('Erro na função RPC:', rpcError);
+      if (result.error) {
+        console.error('Erro na função RPC:', result.error);
         
         // Verificar mensagens específicas do erro para dar feedback útil
-        if (rpcError.message.includes("Could not find the function") || 
-            rpcError.message.includes("function does not exist")) {
+        if (result.error.message.includes("Could not find the function") || 
+            result.error.message.includes("function does not exist")) {
           throw new Error('Função de métricas não encontrada no banco de dados. Verifique se as migrações foram aplicadas.');
         }
         
-        if (rpcError.message.includes("permission denied")) {
+        if (result.error.message.includes("permission denied")) {
           throw new Error('Permissão negada para acessar métricas. Verifique suas permissões.');
         }
 
-        throw new Error(rpcError.message);
+        throw new Error(result.error.message);
       }
+
+      const data = result.data;
+      console.log('Dados retornados:', data);
 
       if (!data) {
         throw new Error('Nenhum dado retornado das métricas do sistema');
       }
 
-      // Cast data appropriately and create our metrics object
-      const rawData = data as any;
-      
       // Mapear os dados da resposta SQL para nosso formato da interface
       const mappedData: SystemMetrics = {
-        totalUsers: rawData.total_users || 0,
-        activeUsers: rawData.active_users || 0,
-        totalConversions: rawData.total_conversions || 0,
-        successfulConversions: 0, // Calculate below
-        failedConversions: 0, // Calculate below
-        successRate: rawData.success_rate || 0,
-        averageConversionTime: rawData.average_response_time || 0
+        totalUsers: data.total_users || 0,
+        activeUsers: data.active_users || 0,
+        totalConversions: data.total_conversions || 0,
+        successfulConversions: 0, // Calcular abaixo
+        failedConversions: 0, // Calcular abaixo
+        successRate: data.success_rate || 0,
+        averageConversionTime: data.average_response_time || 0
       };
 
       // Calcular valores derivados
@@ -119,22 +130,22 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('get_conversions_by_date_range', 
+      // Use a type assertion for the RPC call
+      const { data, error } = await supabase.rpc<'get_conversions_by_date_range', ConversionsByDate[]>(
+        'get_conversions_by_date_range',
         { p_start_date: startDate, p_end_date: endDate }
       );
 
-      if (rpcError) {
-        throw new Error(rpcError.message);
+      if (error) {
+        throw new Error(error.message);
       }
 
       if (!data) {
         throw new Error('No data returned from conversions by date');
       }
 
-      // Make sure data is an array and cast to our interface
-      const typedData = (Array.isArray(data) ? data : []) as ConversionsByDate[];
-      setDailyStats(typedData);
-      return typedData;
+      setDailyStats(data);
+      return data;
     } catch (err) {
       const error = err as Error;
       console.error('Error fetching conversions by date:', error);
@@ -150,20 +161,21 @@ export function useSystemMetrics() {
     setError(null);
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('get_conversions_by_type');
+      // Use a type assertion for the RPC call
+      const { data, error } = await supabase.rpc<'get_conversions_by_type', ConversionsByType[]>(
+        'get_conversions_by_type'
+      );
 
-      if (rpcError) {
-        throw new Error(rpcError.message);
+      if (error) {
+        throw new Error(error.message);
       }
 
       if (!data) {
         throw new Error('No data returned from conversions by type');
       }
 
-      // Make sure data is an array and cast to our interface
-      const typedData = (Array.isArray(data) ? data : []) as ConversionsByType[];
-      setConversionsByType(typedData);
-      return typedData;
+      setConversionsByType(data);
+      return data;
     } catch (err) {
       const error = err as Error;
       console.error('Error fetching conversions by type:', error);
