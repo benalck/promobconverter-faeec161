@@ -24,55 +24,36 @@ export const useUserManagement = (
 
   const syncUsers = async () => {
     try {
-      const { data: supabaseUsers, error } = await supabase
+      // Fetch all user profiles from profiles table
+      const { data: profilesData, error } = await supabase
         .from('profiles')
         .select('*');
 
       if (error) throw error;
 
-      if (!supabaseUsers || supabaseUsers.length === 0) {
+      if (!profilesData || profilesData.length === 0) {
         setUsers([]);
         return;
       }
 
-      const formattedUsers: User[] = [];
-      
-      for (const profile of supabaseUsers) {
-        try {
-          let userEmail = null;
-          let userRole: 'admin' | 'user' = 'user';
-          let userPhone = '';
-          
-          try {
-            const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
-            userEmail = userData?.user?.email || null;
-            userPhone = userData?.user?.user_metadata?.phone || '';
-          } catch (error) {
-            console.log('Erro ao buscar metadados do usuário:', error);
-          }
-          
-          if (profile.role === 'admin') {
-            userRole = 'admin';
-          }
-          
-          formattedUsers.push({
-            id: profile.id,
-            name: profile.name,
-            email: userEmail || '',
-            phone: userPhone,
-            role: userRole,
-            createdAt: profile.created_at,
-            lastLogin: profile.last_login || undefined,
-            isBanned: profile.is_banned
-          });
-        } catch (error) {
-          console.error('Erro ao processar usuário:', error);
-        }
-      }
+      // Map the profile data to User objects
+      const formattedUsers: User[] = profilesData.map(profile => {
+        return {
+          id: profile.id,
+          name: profile.name || '',
+          email: profile.email || '',
+          phone: '',  // We don't have easy access to phone without admin API
+          role: profile.role as 'admin' | 'user',
+          createdAt: profile.created_at,
+          lastLogin: profile.last_login || undefined,
+          isBanned: profile.is_banned
+        };
+      });
 
       setUsers(formattedUsers);
+      console.log("Users synced successfully:", formattedUsers.length);
     } catch (error) {
-      console.error('Erro ao sincronizar usuários:', error);
+      console.error('Error syncing users:', error);
     }
   };
 
@@ -82,6 +63,7 @@ export const useUserManagement = (
     }
     
     try {
+      // Mark user as banned instead of deleting
       const { error } = await supabase
         .from('profiles')
         .update({ is_banned: true })
@@ -128,25 +110,17 @@ export const useUserManagement = (
         
         await syncUsers();
       }
-        
-      if (data.role) {
-        try {
-          console.log(`Tentando atualizar role para: ${data.role}`);
-          await supabase.auth.updateUser({
-            data: { role: data.role }
-          });
-        } catch (e) {
-          console.error('Erro ao atualizar role:', e);
-        }
-      }
       
-      if (user?.id === id && data.isBanned) {
-        await logout();
-      } else if (user?.id === id) {
-        setUser(prevUser => {
-          if (!prevUser) return null;
-          return { ...prevUser, ...data };
-        });
+      // If the current user is being updated, update local state
+      if (user?.id === id) {
+        if (data.isBanned) {
+          await logout();
+        } else {
+          setUser(prevUser => {
+            if (!prevUser) return null;
+            return { ...prevUser, ...data };
+          });
+        }
       }
       
       return;
@@ -168,6 +142,7 @@ export const useUserManagement = (
   };
 };
 
+// Simplified getUserProfile function that doesn't rely on admin privileges
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -180,16 +155,13 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     return null;
   }
 
-  const { data: userData } = await supabase.auth.admin.getUserById(userId);
-  const email = userData?.user?.email || '';
-
   return {
     id: profile.id,
-    name: profile.name,
-    email,
-    role: profile.role,
+    name: profile.name || '',
+    email: profile.email || '',
+    role: profile.role || 'user',
     created_at: profile.created_at,
-    phone: userData?.user?.user_metadata?.phone
+    phone: ''  // We don't have access to phone without admin API
   };
 }
 
@@ -200,6 +172,7 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
       {
         id: user.id,
         name,
+        email: user.email,
         role: 'user',
       }
     ])
@@ -237,17 +210,13 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
     return null;
   }
 
-  // Retrieve user email from auth
-  const { data: userData } = await supabase.auth.admin.getUserById(userId);
-  const userEmail = userData?.user?.email || '';
-
   return {
     id: profile.id,
     name: profile.name,
-    email: userEmail,
+    email: profile.email || '',
     role: profile.role,
     created_at: profile.created_at,
-    phone: userData?.user?.user_metadata?.phone
+    phone: ''
   };
 }
 

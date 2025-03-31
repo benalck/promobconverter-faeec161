@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
@@ -82,19 +81,19 @@ export const useAuthentication = (
     }
   };
 
-  // Nova implementação da função de registro com timeout
+  // Simplified registration function that ensures profiles are created
   const register = async (data: RegisterData): Promise<RegisterResponse> => {
     let timeoutId: NodeJS.Timeout | null = null;
     
     try {
-      // Criar uma Promise com timeout que rejeita após 20 segundos
+      // Create a Promise with timeout that rejects after 20 seconds
       const registerWithTimeout = async (): Promise<RegisterResponse> => {
         return new Promise((resolve, reject) => {
           timeoutId = setTimeout(() => {
             reject(new Error("Tempo limite excedido ao tentar registrar. Verifique sua conexão e tente novamente."));
-          }, 20000); // 20 segundos
+          }, 20000); // 20 seconds
           
-          // Continuação da função original de registro
+          // Continue with the original registration function
           performRegistration(data)
             .then(resolve)
             .catch(reject)
@@ -120,10 +119,10 @@ export const useAuthentication = (
     }
   };
   
-  // Função que realiza o registro separadamente para melhor organização
+  // Modified performRegistration to use the RPC function register_user_verified
   const performRegistration = async (data: RegisterData): Promise<RegisterResponse> => {
     try {
-      // Validações iniciais
+      // Initial validations
       if (!data.name || !data.email || !data.phone || !data.password) {
         return {
           success: false,
@@ -131,7 +130,7 @@ export const useAuthentication = (
         };
       }
 
-      // Validar formato do email
+      // Validate email format
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(data.email)) {
         return {
@@ -140,7 +139,7 @@ export const useAuthentication = (
         };
       }
 
-      // Validar formato do telefone
+      // Validate phone format
       const phoneRegex = /^\(\d{2}\) \d{5}-\d{4}$/;
       if (!phoneRegex.test(data.phone)) {
         return {
@@ -151,7 +150,7 @@ export const useAuthentication = (
 
       const { name, email, phone, password } = data;
       
-      // Verificar se o email já está em uso
+      // Check if email is already in use
       try {
         const { data: existingUser, error: userError } = await supabase
           .from('profiles')
@@ -181,15 +180,13 @@ export const useAuthentication = (
         };
       }
 
-      // Criar usuário no Supabase Auth
+      // Create user in Supabase Auth
       let authResponse;
       try {
         authResponse = await supabase.auth.signUp({
           email,
           password,
           options: {
-            // Não redirecionar para verificação - marcaremos como verificado automaticamente no trigger SQL
-            // NOTA: Confirmação de email completamente desabilitada
             data: {
               name,
               phone,
@@ -226,44 +223,18 @@ export const useAuthentication = (
         };
       }
 
-      // Verificar se é o primeiro usuário (será admin)
-      const { count } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-        
-      const isFirstUser = count === 0;
-      const userRole = isFirstUser ? 'admin' : 'user';
-
-      // Verificar se o perfil já existe antes de tentar criá-lo
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', authResponse.data.user.id)
-        .maybeSingle();
-        
-      // Se o perfil já existe, não tente criá-lo novamente
-      if (existingProfile) {
-        console.log('Perfil já existe, pulando criação:', existingProfile.id);
-        
-        try {
-          const newUser = await convertSupabaseUser(authResponse.data.user);
-          setUser(newUser);
-          await syncUsers();
-        } catch (finalizeError) {
-          console.error('Erro ao finalizar registro com perfil existente:', finalizeError);
-        }
-        
-        return {
-          success: true,
-          message: 'Login realizado com sucesso!'
-        };
-      }
-
-      // Criar perfil do usuário apenas se não existir
-      let profileCreated = false;
+      // Create profile using the RPC function
       try {
-        // Primeiro tenta usar a função RPC personalizada para registro verificado
-        const { data: rpcResult, error: rpcError } = await supabase.rpc<'register_user_verified', RegisterUserResponse>(
+        // First, count the users to determine if this is the first user (admin)
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+          
+        const isFirstUser = count === 0;
+        const userRole = isFirstUser ? 'admin' : 'user';
+        
+        // Call the register_user_verified RPC function
+        const { data: rpcResult, error: rpcError } = await supabase.rpc(
           'register_user_verified',
           {
             user_id: authResponse.data.user.id,
@@ -274,113 +245,36 @@ export const useAuthentication = (
         );
         
         if (rpcError) {
-          console.error('Erro ao chamar register_user_verified RPC:', rpcError);
-          // Tentar a função RPC antiga como fallback
-          const { data: oldRpcResult, error: oldRpcError } = await supabase.rpc<'register_user', RegisterUserResponse>(
-            'register_user',
-            {
-              user_id: authResponse.data.user.id,
-              user_name: name,
-              user_email: email,
-              user_role: userRole
-            }
-          );
+          console.error('Erro ao registrar usuário via RPC:', rpcError);
           
-          if (oldRpcError) {
-            console.error('Erro ao chamar register_user RPC:', oldRpcError);
-            // Fallback para inserção direta
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .insert([
-                {
-                  id: authResponse.data.user.id,
-                  name,
-                  email,
-                  role: userRole,
-                  created_at: new Date().toISOString(),
-                  last_login: new Date().toISOString(),
-                  is_banned: false,
-                  email_verified: true  // Garantir que o email é verificado
-                }
-              ]);
-              
-            if (profileError) {
-              console.error('Erro ao criar perfil (fallback):', profileError);
-              // Se o erro for de chave duplicada, consideramos como sucesso
-              if (profileError.message.includes('duplicate key') || profileError.message.includes('violates unique constraint')) {
-                console.log('Perfil já existe (inserção direta detectou), considerando sucesso');
-                profileCreated = true;
-              } else {
-                return {
-                  success: false,
-                  message: 'Erro ao criar perfil do usuário: ' + profileError.message
-                };
-              }
-            } else {
-              profileCreated = true;
-            }
-          } else {
-            console.log('RPC register_user resultado:', oldRpcResult);
-            profileCreated = oldRpcResult?.success || false;
+          // Fallback to direct insertion if the RPC fails
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authResponse.data.user.id,
+              name,
+              email,
+              role: userRole,
+              created_at: new Date().toISOString(),
+              last_login: new Date().toISOString(),
+              is_banned: false,
+              email_verified: true
+            });
             
-            if (!profileCreated) {
-              return {
-                success: false,
-                message: oldRpcResult?.message || 'Erro ao criar perfil do usuário'
-              };
-            }
-            
-            // Atualizar verificação de email manualmente
-            await supabase
-              .from('profiles')
-              .update({ email_verified: true })
-              .eq('id', authResponse.data.user.id);
-          }
-        } else {
-          console.log('RPC register_user_verified resultado:', rpcResult);
-          profileCreated = rpcResult?.success || false;
-          
-          if (!profileCreated) {
+          if (insertError) {
+            console.error('Falha no fallback de inserção direta:', insertError);
             return {
               success: false,
-              message: rpcResult?.message || 'Erro ao criar perfil do usuário'
+              message: 'Erro ao criar perfil do usuário: ' + insertError.message
             };
           }
         }
       } catch (profileErr) {
-        console.error('Exceção ao criar perfil:', profileErr);
-        // Se for um erro de chave duplicada, consideramos como sucesso
-        if (profileErr instanceof Error && 
-            (profileErr.message.includes('duplicate key') || 
-             profileErr.message.includes('violates unique constraint'))) {
-          console.log('Perfil já existe (exceção detectou), considerando sucesso');
-          profileCreated = true;
-        } else {
-          return {
-            success: false,
-            message: 'Erro ao criar perfil do usuário: ' + (profileErr instanceof Error ? profileErr.message : 'Erro desconhecido')
-          };
-        }
-      }
-      
-      if (!profileCreated) {
+        console.error('Erro ao criar perfil:', profileErr);
         return {
           success: false,
-          message: 'Falha ao criar perfil do usuário'
+          message: 'Erro ao criar perfil do usuário: ' + handleDefaultError(profileErr)
         };
-      }
-
-      // Atualizar metadados do usuário
-      try {
-        await supabase.auth.updateUser({
-          data: { 
-            role: userRole,
-            phone
-          }
-        });
-      } catch (updateError) {
-        console.error('Erro ao atualizar metadados do usuário:', updateError);
-        // Continuar mesmo se falhar a atualização dos metadados
       }
 
       try {
@@ -389,7 +283,6 @@ export const useAuthentication = (
         await syncUsers();
       } catch (finalizeError) {
         console.error('Erro ao finalizar registro:', finalizeError);
-        // Continuar mesmo se falhar a conversão do usuário
       }
 
       return {
