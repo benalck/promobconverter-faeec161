@@ -17,6 +17,7 @@ export const transformUser = (
     plan_expiry_date?: string | null;
     credits?: number;
     email_verified?: boolean;
+    phone?: string;
   } | null
 ): AppUser | null => {
   if (!dbUser) return null;
@@ -25,7 +26,7 @@ export const transformUser = (
     id: dbUser.id,
     email: dbUser.email,
     name: dbUser.name,
-    role: dbUser.role,
+    role: dbUser.role as "admin" | "user" | "ceo",
     createdAt: dbUser.created_at || new Date().toISOString(),
     lastLogin: dbUser.last_login || new Date().toISOString(),
     isBanned: dbUser.is_banned || false,
@@ -33,6 +34,7 @@ export const transformUser = (
     planExpiryDate: dbUser.plan_expiry_date || null,
     credits: dbUser.credits || 0,
     emailVerified: dbUser.email_verified || false,
+    phone: dbUser.phone
   };
 };
 
@@ -50,6 +52,7 @@ export const transformAppUserToDbUser = (appUser: AppUser) => {
     plan_expiry_date: appUser.planExpiryDate,
     credits: appUser.credits || 0,
     email_verified: appUser.emailVerified,
+    phone: appUser.phone
   };
 };
 

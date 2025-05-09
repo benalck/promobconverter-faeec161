@@ -1,5 +1,5 @@
 
 export * from './types';
-export { userManagement } from './userManagement';
+export { useAuthManagement } from './userManagement';
 export { useAuthentication } from './authHooks';
-export { fetchUserProfile } from './userUtils';
+export { getCurrentUser, transformUser } from './userUtils';

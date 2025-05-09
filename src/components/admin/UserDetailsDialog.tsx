@@ -64,7 +64,7 @@ export function UserDetailsDialog({
                       </div>
                       <div className="space-y-1">
                         <Label>Função</Label>
-                        <div className="text-sm">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</div>
+                        <div className="text-sm">{user.role === 'admin' ? 'Administrador' : user.role === 'ceo' ? 'CEO' : 'Usuário'}</div>
                       </div>
                       <div className="space-y-1">
                         <Label>Status</Label>

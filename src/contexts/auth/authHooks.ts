@@ -1,6 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
-import { convertSupabaseUser } from './userUtils';
+import { transformUser } from './userUtils';
 
 interface RegisterData {
   name: string;
@@ -51,19 +52,31 @@ export const useAuthentication = (
       if (error) throw error;
 
       if (data.user) {
-        const currentUser = await convertSupabaseUser(data.user);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (!profile) {
+          throw new Error('Perfil não encontrado');
+        }
         
-        if (currentUser.isBanned) {
+        const currentUser = transformUser(profile);
+        
+        if (currentUser?.isBanned) {
           throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
         }
 
         await supabase
           .from('profiles')
           .update({ last_login: new Date().toISOString() })
-          .eq('id', currentUser.id);
+          .eq('id', currentUser?.id);
           
-        setUser(currentUser);
-        await syncUsers();
+        if (currentUser) {
+          setUser(currentUser);
+          await syncUsers();
+        }
       }
     } catch (error) {
       console.error('Erro ao fazer login:', error);
@@ -278,9 +291,20 @@ export const useAuthentication = (
       }
 
       try {
-        const newUser = await convertSupabaseUser(authResponse.data.user);
-        setUser(newUser);
-        await syncUsers();
+        // Get the newly created profile
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authResponse.data.user.id)
+          .single();
+          
+        if (newProfile) {
+          const newUser = transformUser(newProfile);
+          if (newUser) {
+            setUser(newUser);
+            await syncUsers();
+          }
+        }
       } catch (finalizeError) {
         console.error('Erro ao finalizar registro:', finalizeError);
       }

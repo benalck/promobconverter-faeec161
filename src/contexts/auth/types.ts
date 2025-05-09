@@ -8,9 +8,8 @@ export interface User {
   phone?: string;
   createdAt: string;
   lastLogin?: string;
-  role: 'admin' | 'user' | 'ceo'; // Added 'ceo' role
+  role: 'admin' | 'user' | 'ceo';
   isBanned?: boolean;
-  // Add missing properties
   credits?: number;
   emailVerified?: boolean;
   activePlan?: string | null;
@@ -21,7 +20,7 @@ export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isCEO?: boolean; // Added CEO check
+  isCEO?: boolean;
   users: User[];
   isInitialized: boolean;
   login: (email: string, password: string) => Promise<{

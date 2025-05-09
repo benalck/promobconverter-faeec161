@@ -26,7 +26,7 @@ interface UserTableProps {
   onShowBanDialog: (userId: string) => void;
   onShowDeleteDialog: (userId: string) => void;
   onShowAddUserDialog: () => void;
-  onShowPromoteToCEODialog?: (userId: string) => void; // New prop for CEO promotion
+  onShowPromoteToCEODialog?: (userId: string) => void;
 }
 
 export function UserTable({
