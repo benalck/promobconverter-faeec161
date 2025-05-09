@@ -33,8 +33,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 // Admin client for operations that require service_role
 // Important: Only use this on the server side or in protected admin routes
-export const getAdminClient = () => {
+export const getAdminAuthClient = () => {
   // In production, the service role key would be loaded from environment variables
+  // This is just for development purposes
   const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_SERVICE_ROLE) {
     console.warn('No service role key available, falling back to standard client');
@@ -48,25 +49,4 @@ export const getAdminClient = () => {
       autoRefreshToken: false
     }
   });
-};
-
-// Get admin client for auth operations specifically
-// This is used only for user management operations that require admin privileges
-export const getAdminAuthClient = () => {
-  // In production, the service role key would be loaded from environment variables
-  const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SUPABASE_SERVICE_ROLE) {
-    console.warn('No service role key available for auth operations, falling back to standard client');
-    return supabase.auth;
-  }
-  
-  // Create a separate client with service_role permissions
-  const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
-  });
-  
-  return adminClient.auth;
 };

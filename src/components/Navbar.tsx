@@ -1,9 +1,7 @@
-
-import { useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,80 +10,101 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoonIcon, SunIcon } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
+import { ChevronDown, LogOut, Menu, User, Home } from "lucide-react";
 
 export default function Navbar() {
-  const { user, logout, isAdmin, isCEO } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    // Check if the user is not authenticated and redirect to the login page
-    if (!user) {
-      navigate("/login");
-    }
-  }, [user, navigate]);
+  const handleLogout = async () => {
+    await logout();
+  };
 
   return (
-    <div className="bg-background border-b sticky top-0 z-50">
-      <div className="flex h-16 items-center px-4">
-        <Link to="/" className="font-bold text-xl">
-          PromobConverter Pro
-        </Link>
-        <div className="ml-auto flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={toggleTheme}>
-            {theme === "light" ? <MoonIcon /> : <SunIcon />}
-          </Button>
-          {user ? (
+    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="max-w-6xl mx-auto px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Link to="/" className="flex items-center">
+              <h1 className="text-xl font-bold text-primary hover:text-primary/80 transition-colors">
+                PromobConverter Pro
+              </h1>
+            </Link>
+          </div>
+          
+          {/* Menu para desktop */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                <Home className="h-4 w-4 mr-1" />
+                <span>Início</span>
+              </Button>
+            </Link>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.name} alt={user?.name} />
-                    <AvatarFallback>
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                  <User className="h-4 w-4 mr-1" />
+                  <span>{user?.name}</span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Minha conta</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Link to="/profile">Perfil</Link>
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem>
-                    <Link to="/admin">Admin</Link>
+                {user?.role === 'admin' && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="w-full cursor-pointer">
+                      Painel Admin
+                    </Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    logout();
-                    navigate("/login");
-                  }}
-                >
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer">
+                  <LogOut className="h-4 w-4 mr-2" />
                   Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <Link to="/login">
-              <Button>Login</Button>
-            </Link>
-          )}
-          <div className="flex-shrink-0">
-            {isAdmin && (
-              <Badge variant="secondary" className="ml-2">
-                {isCEO ? 'CEO' : 'Admin'}
-              </Badge>
-            )}
+          </div>
+          
+          <div className="md:hidden">
+            <Button variant="ghost" size="sm" onClick={() => setMenuOpen(!menuOpen)}>
+              <Menu className="h-5 w-5" />
+            </Button>
           </div>
         </div>
+        
+        {/* Menu mobile expandido */}
+        {menuOpen && (
+          <div className="md:hidden py-3 pt-4 border-t mt-3 animate-fade-in">
+            <div className="flex flex-col space-y-3 items-center text-center">
+              <div className="px-2 py-1 text-sm font-medium">
+                <span>Olá, {user?.name}</span>
+              </div>
+              
+              <Link to="/" className="flex items-center justify-center w-full px-2 py-1 hover:bg-gray-100 rounded-md" onClick={() => setMenuOpen(false)}>
+                <Home className="h-4 w-4 mr-2" />
+                Início
+              </Link>
+              
+              {user?.role === 'admin' && (
+                <Link to="/admin" className="flex items-center justify-center w-full px-2 py-1 hover:bg-gray-100 rounded-md" onClick={() => setMenuOpen(false)}>
+                  Painel Admin
+                </Link>
+              )}
+              
+              <button 
+                onClick={handleLogout}
+                className="flex items-center justify-center w-full px-2 py-1 text-center text-red-600 hover:bg-red-50 rounded-md"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </nav>
   );
 }
