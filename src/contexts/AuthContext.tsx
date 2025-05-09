@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -199,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             planExpiryDate: dbUser.plan_expiry_date || null,
             credits: dbUser.credits || 0,
             emailVerified: dbUser.email_verified || false,
-            phone: dbUser.phone
+            phone: dbUser.phone || undefined
           };
         });
         
