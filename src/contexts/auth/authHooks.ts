@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { transformUser } from './userUtils';
@@ -62,6 +61,11 @@ export const useAuthentication = (
           throw new Error('Perfil não encontrado');
         }
         
+        // Ensure role is a valid type
+        if (profile.role !== 'admin' && profile.role !== 'user' && profile.role !== 'ceo') {
+          profile.role = 'user'; // Default to user if invalid role
+        }
+        
         const currentUser = transformUser(profile);
         
         if (currentUser?.isBanned) {
@@ -77,19 +81,23 @@ export const useAuthentication = (
           setUser(currentUser);
           await syncUsers();
         }
+        
+        return { success: true };
       }
+      
+      return { success: false, message: 'Erro ao fazer login' };
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       if (error instanceof Error) {
         if (error.message.includes('banida')) {
-          throw error;
+          throw new Error(error.message);
         } else if (error.message.includes('Invalid login credentials')) {
-          throw new Error('Email ou senha inválidos');
+          return { success: false, message: 'Email ou senha inválidos' };
         } else {
-          throw new Error('Falha ao fazer login');
+          return { success: false, message: 'Falha ao fazer login' };
         }
       } else {
-        throw new Error('Falha ao fazer login');
+        return { success: false, message: 'Falha ao fazer login' };
       }
     }
   };
@@ -132,7 +140,7 @@ export const useAuthentication = (
     }
   };
   
-  // Modified performRegistration to use the RPC function register_user_verified
+  // Modified performRegistration to ensure role type safety
   const performRegistration = async (data: RegisterData): Promise<RegisterResponse> => {
     try {
       // Initial validations
@@ -244,7 +252,7 @@ export const useAuthentication = (
           .select('*', { count: 'exact', head: true });
           
         const isFirstUser = count === 0;
-        const userRole = isFirstUser ? 'admin' : 'user';
+        const userRole = isFirstUser ? 'admin' : 'user' as 'admin' | 'user';
         
         // Call the register_user_verified RPC function
         const { data: rpcResult, error: rpcError } = await supabase.rpc(
@@ -299,6 +307,11 @@ export const useAuthentication = (
           .single();
           
         if (newProfile) {
+          // Ensure role is a valid type
+          if (newProfile.role !== 'admin' && newProfile.role !== 'user' && newProfile.role !== 'ceo') {
+            newProfile.role = 'user'; // Default to user if invalid role
+          }
+          
           const newUser = transformUser(newProfile);
           if (newUser) {
             setUser(newUser);
