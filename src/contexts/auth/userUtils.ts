@@ -9,7 +9,7 @@ export const transformUser = (
     id: string;
     email: string;
     name: string;
-    role: string;
+    role: "admin" | "user" | "ceo";
     created_at?: string;
     last_login?: string;
     is_banned?: boolean;
@@ -22,20 +22,11 @@ export const transformUser = (
 ): AppUser | null => {
   if (!dbUser) return null;
 
-  // Convert string role to proper enum type
-  let typedRole: "admin" | "user" | "ceo" = "user";
-  
-  if (dbUser.role === "admin") {
-    typedRole = "admin";
-  } else if (dbUser.role === "ceo") {
-    typedRole = "ceo";
-  }
-
   return {
     id: dbUser.id,
     email: dbUser.email,
     name: dbUser.name,
-    role: typedRole,
+    role: dbUser.role as "admin" | "user" | "ceo",
     createdAt: dbUser.created_at || new Date().toISOString(),
     lastLogin: dbUser.last_login || new Date().toISOString(),
     isBanned: dbUser.is_banned || false,
