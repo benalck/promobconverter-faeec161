@@ -11,6 +11,8 @@ export interface UserProfile {
   role: string;
   created_at: string;
   phone?: string;
+  last_login?: string;
+  is_banned?: boolean;
 }
 
 export const useUserManagement = (
@@ -24,14 +26,20 @@ export const useUserManagement = (
 
   const syncUsers = async () => {
     try {
+      console.log("Fetching all user profiles");
       // Fetch all user profiles from profiles table
       const { data: profilesData, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching profiles:", error);
+        throw error;
+      }
 
       if (!profilesData || profilesData.length === 0) {
+        console.log("No profiles found");
         setUsers([]);
         return;
       }
@@ -42,11 +50,11 @@ export const useUserManagement = (
           id: profile.id,
           name: profile.name || '',
           email: profile.email || '',
-          phone: '',  // We don't have easy access to phone without admin API
+          phone: profile.phone || '',  // Use profile data if available
           role: profile.role as 'admin' | 'user',
           createdAt: profile.created_at,
           lastLogin: profile.last_login || undefined,
-          isBanned: profile.is_banned
+          isBanned: profile.is_banned || false
         };
       });
 
@@ -54,6 +62,11 @@ export const useUserManagement = (
       console.log("Users synced successfully:", formattedUsers.length);
     } catch (error) {
       console.error('Error syncing users:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro na sincronização",
+        description: "Não foi possível carregar a lista de usuários."
+      });
     }
   };
 
@@ -63,25 +76,40 @@ export const useUserManagement = (
     }
     
     try {
+      console.log(`Attempting to ban user with ID: ${id}`);
       // Mark user as banned instead of deleting
       const { error } = await supabase
         .from('profiles')
         .update({ is_banned: true })
         .eq('id', id);
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error banning user:", error);
+        throw error;
+      }
       
       await syncUsers();
+      
+      toast({
+        title: "Usuário desativado",
+        description: "O usuário foi banido com sucesso."
+      });
       
       return;
     } catch (error) {
       console.error('Erro ao excluir usuário:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao excluir",
+        description: "Falha ao desativar o usuário. Verifique suas permissões."
+      });
       throw new Error('Falha ao excluir usuário');
     }
   };
 
   const updateUser = async (id: string, data: Partial<User>) => {
     try {
+      console.log(`Updating user with ID: ${id}`, data);
       const profileData: { 
         name?: string; 
         is_banned?: boolean;
@@ -106,14 +134,27 @@ export const useUserManagement = (
           .update(profileData)
           .eq('id', id);
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating user in profiles table:", error);
+          throw error;
+        }
         
         await syncUsers();
+        
+        toast({
+          title: "Usuário atualizado",
+          description: "As informações do usuário foram atualizadas com sucesso."
+        });
       }
       
       // If the current user is being updated, update local state
       if (user?.id === id) {
         if (data.isBanned) {
+          toast({
+            variant: "destructive",
+            title: "Sua conta foi banida",
+            description: "Entre em contato com o administrador."
+          });
           await logout();
         } else {
           setUser(prevUser => {
@@ -126,6 +167,11 @@ export const useUserManagement = (
       return;
     } catch (error) {
       console.error('Erro ao atualizar usuário:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro na atualização",
+        description: "Não foi possível atualizar o usuário."
+      });
       throw new Error('Falha ao atualizar usuário');
     }
   };
@@ -142,101 +188,184 @@ export const useUserManagement = (
   };
 };
 
-// Simplified getUserProfile function that doesn't rely on admin privileges
+// Get user profile from the profiles table
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  try {
+    console.log(`Fetching profile for user ID: ${userId}`);
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-  if (error) {
-    console.error('Error fetching user profile:', error);
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+
+    return {
+      id: profile.id,
+      name: profile.name || '',
+      email: profile.email || '',
+      role: profile.role || 'user',
+      created_at: profile.created_at,
+      phone: profile.phone || '',
+      last_login: profile.last_login,
+      is_banned: profile.is_banned
+    };
+  } catch (error) {
+    console.error('Error in getUserProfile:', error);
     return null;
   }
-
-  return {
-    id: profile.id,
-    name: profile.name || '',
-    email: profile.email || '',
-    role: profile.role || 'user',
-    created_at: profile.created_at,
-    phone: ''  // We don't have access to phone without admin API
-  };
 }
 
+// Create a new user profile
 export async function createUserProfile(user: User, name: string): Promise<UserProfile | null> {
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .insert([
-      {
-        id: user.id,
-        name,
-        email: user.email,
-        role: 'user',
-      }
-    ])
-    .select()
-    .single();
+  try {
+    console.log(`Creating profile for user: ${user.email} with name: ${name}`);
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .insert([
+        {
+          id: user.id,
+          name,
+          email: user.email,
+          role: 'user',
+          is_banned: false
+        }
+      ])
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error creating user profile:', error);
+    if (error) {
+      console.error('Error creating user profile:', error);
+      return null;
+    }
+
+    console.log("Profile created successfully:", profile);
+    return {
+      id: profile.id,
+      name: profile.name,
+      email: user.email,
+      role: profile.role,
+      created_at: profile.created_at,
+      phone: user.phone || '',
+      last_login: profile.last_login,
+      is_banned: profile.is_banned
+    };
+  } catch (error) {
+    console.error('Error in createUserProfile:', error);
     return null;
   }
-
-  return {
-    id: profile.id,
-    name: profile.name,
-    email: user.email,
-    role: profile.role,
-    created_at: profile.created_at,
-    phone: user.phone
-  };
 }
 
+// Update an existing user profile
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
-  // Filter out properties that don't exist in the profiles table
-  const { email, phone, ...validUpdates } = updates;
-  
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .update(validUpdates)
-    .eq('id', userId)
-    .select()
-    .single();
+  try {
+    // Filter out properties that don't exist in the profiles table
+    const { email, phone, ...validUpdates } = updates;
+    
+    console.log(`Updating profile for user ID: ${userId}`, validUpdates);
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update(validUpdates)
+      .eq('id', userId)
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error updating user profile:', error);
+    if (error) {
+      console.error('Error updating user profile:', error);
+      return null;
+    }
+
+    console.log("Profile updated successfully:", profile);
+    return {
+      id: profile.id,
+      name: profile.name,
+      email: profile.email || '',
+      role: profile.role,
+      created_at: profile.created_at,
+      phone: phone || profile.phone || '',
+      last_login: profile.last_login,
+      is_banned: profile.is_banned
+    };
+  } catch (error) {
+    console.error('Error in updateUserProfile:', error);
     return null;
   }
-
-  return {
-    id: profile.id,
-    name: profile.name,
-    email: profile.email || '',
-    role: profile.role,
-    created_at: profile.created_at,
-    phone: ''
-  };
 }
 
+// Mark a user profile as deleted (soft delete)
 export async function deleteUserProfile(userId: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('profiles')
-    .delete()
-    .eq('id', userId);
+  try {
+    console.log(`Marking user ${userId} as banned`);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_banned: true })
+      .eq('id', userId);
 
-  if (error) {
-    console.error('Error deleting user profile:', error);
+    if (error) {
+      console.error('Error soft-deleting user profile:', error);
+      return false;
+    }
+    
+    console.log(`User ${userId} marked as banned successfully`);
+    return true;
+  } catch (error) {
+    console.error('Error in deleteUserProfile:', error);
     return false;
   }
+}
 
-  return true;
+// Hard delete a user profile (use with caution)
+export async function hardDeleteUserProfile(userId: string): Promise<boolean> {
+  try {
+    console.log(`Hard deleting profile for user ID: ${userId}`);
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error deleting user profile:', error);
+      return false;
+    }
+    
+    console.log(`User ${userId} profile deleted successfully`);
+    return true;
+  } catch (error) {
+    console.error('Error in hardDeleteUserProfile:', error);
+    return false;
+  }
+}
+
+// Update user's last login timestamp
+export async function updateLastLogin(userId: string): Promise<boolean> {
+  try {
+    console.log(`Updating last login for user ID: ${userId}`);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) {
+      console.error('Error updating last login:', error);
+      return false;
+    }
+    
+    console.log(`Last login updated for user ${userId}`);
+    return true;
+  } catch (error) {
+    console.error('Error in updateLastLogin:', error);
+    return false;
+  }
 }
 
 export const userManagement = {
   getUserProfile,
   createUserProfile,
   updateUserProfile,
-  deleteUserProfile
+  deleteUserProfile,
+  hardDeleteUserProfile,
+  updateLastLogin
 };
