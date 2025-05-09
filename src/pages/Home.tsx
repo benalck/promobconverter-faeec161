@@ -21,8 +21,6 @@ const Home = () => {
           <nav className="hidden md:flex items-center space-x-6">
             <a href="#features" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-sm font-medium">Recursos</a>
             <a href="#testimonials" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-sm font-medium">Depoimentos</a>
-            <a href="#cases" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-sm font-medium">Casos de uso</a>
-            <a href="#pricing" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-sm font-medium">Preços</a>
           </nav>
           <div className="flex items-center space-x-3">
             <button
@@ -232,60 +230,8 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Use cases */}
-      <section id="cases" className="py-16 md:py-24 bg-white dark:bg-gray-900">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4 gradient-heading">Casos de uso</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Como o PromobConverter está transformando diferentes setores.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {[
-              {
-                title: "Marcenarias",
-                desc: "Otimize o tempo de preparação dos planos de corte e reduza desperdício de material com cálculos precisos.",
-                image: "https://images.unsplash.com/photo-1581166397057-235af2b3c6dd?auto=format&fit=crop&q=80&w=300&h=200"
-              },
-              {
-                title: "Escritórios de projeto",
-                desc: "Entregue documentação profissional aos clientes, com planilhas organizadas e fáceis de compreender.",
-                image: "https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?auto=format&fit=crop&q=80&w=300&h=200"
-              },
-              {
-                title: "Indústrias de móveis",
-                desc: "Integre o planejamento de corte com a produção, reduzindo erros e aumentando a produtividade.",
-                image: "https://images.unsplash.com/photo-1565793298595-7e59af0a6ca2?auto=format&fit=crop&q=80&w=300&h=200"
-              }
-            ].map((useCase, index) => (
-              <div key={index} className="overflow-hidden rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 transition-all hover:shadow-xl group">
-                <div className="h-40 overflow-hidden">
-                  <img 
-                    src={useCase.image}
-                    alt={useCase.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">{useCase.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300">{useCase.desc}</p>
-                  <div className="mt-6">
-                    <Button variant="outline" size="sm">
-                      Saiba mais
-                      <ArrowRight className="ml-1 w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Demo section */}
-      <section id="demo" className="py-16 md:py-24 bg-gray-50 dark:bg-gray-800">
+      <section id="demo" className="py-16 md:py-24 bg-white dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -375,107 +321,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="py-16 md:py-24 bg-white dark:bg-gray-900">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4 gradient-heading">Planos e preços</h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Escolha o plano que melhor atende às necessidades do seu negócio.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {[
-              {
-                name: "Básico",
-                price: "Gratuito",
-                description: "Para profissionais individuais",
-                features: [
-                  "5 conversões por mês",
-                  "Exportação para Excel",
-                  "Suporte por email"
-                ],
-                popular: false,
-                cta: "Começar agora"
-              },
-              {
-                name: "Profissional",
-                price: "R$ 49,90/mês",
-                description: "Para pequenos escritórios",
-                features: [
-                  "50 conversões por mês",
-                  "Exportação para Excel e PDF",
-                  "Resumo de materiais detalhado",
-                  "Suporte prioritário",
-                  "Histórico de projetos"
-                ],
-                popular: true,
-                cta: "Assinar agora"
-              },
-              {
-                name: "Empresa",
-                price: "R$ 129,90/mês",
-                description: "Para fábricas e grandes equipes",
-                features: [
-                  "Conversões ilimitadas",
-                  "Exportação multiformat",
-                  "API de integração",
-                  "Múltiplos usuários",
-                  "Suporte premium 24h",
-                  "Painel administrativo"
-                ],
-                popular: false,
-                cta: "Fale com vendas"
-              }
-            ].map((plan, index) => (
-              <div 
-                key={index} 
-                className={`
-                  rounded-lg p-6 transition-all 
-                  ${plan.popular 
-                    ? 'bg-gradient-to-b from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-700 transform -translate-y-4 shadow-xl'
-                    : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg'
-                  }
-                `}
-              >
-                {plan.popular && (
-                  <div className="text-center mb-4">
-                    <span className="inline-block bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                      Mais popular
-                    </span>
-                  </div>
-                )}
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{plan.name}</h3>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{plan.price}</div>
-                  <p className="text-gray-500 dark:text-gray-400">{plan.description}</p>
-                </div>
-                <div className="space-y-4 mb-8">
-                  {plan.features.map((feature, i) => (
-                    <div key={i} className="flex items-center">
-                      <Check className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />
-                      <span className="text-gray-600 dark:text-gray-300">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <Button 
-                    variant={plan.popular ? "gradient" : "outline"}
-                    className={`
-                      w-full
-                      ${plan.popular ? 'shadow-glow' : ''}
-                    `}
-                  >
-                    {plan.cta}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="py-16 md:py-24 bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
         <div className="container mx-auto px-4 text-center">
@@ -512,7 +357,6 @@ const Home = () => {
               <ul className="space-y-2 text-gray-400">
                 <li><a href="#features" className="hover:text-white transition-colors">Recursos</a></li>
                 <li><a href="#testimonials" className="hover:text-white transition-colors">Depoimentos</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Preços</a></li>
               </ul>
             </div>
             <div>
@@ -555,3 +399,4 @@ const Home = () => {
 };
 
 export default Home;
+

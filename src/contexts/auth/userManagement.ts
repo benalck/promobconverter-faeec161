@@ -1,374 +1,252 @@
+import { supabase } from "@/integrations/supabase/client";
+import { AuthContextType, User } from "../AuthContext";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { transformUser, transformAppUserToDbUser } from "./userUtils";
 
-import { supabase } from '@/integrations/supabase/client';
-import { User } from './types';
-import { convertSupabaseUser } from './userUtils';
-import { useToast } from '@/hooks/use-toast';
+export const useAuthManagement = (): AuthContextType => {
+  const [user, setUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCEO, setIsCEO] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const navigate = useNavigate();
 
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  created_at: string;
-  phone?: string;
-  last_login?: string;
-  is_banned?: boolean;
-}
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const { data } = await supabase.auth.getSession();
 
-export const useUserManagement = (
-  setUser: React.Dispatch<React.SetStateAction<User | null>>,
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>,
-  user: User | null,
-  users: User[],
-  logout: () => Promise<void>
-) => {
-  const { toast } = useToast();
+      if (data?.session?.user) {
+        const appUser = await transformUser(data.session.user);
+        setUser(appUser);
+        setIsAuthenticated(true);
+        setIsAdmin(appUser?.role === "admin");
+        setIsCEO(appUser?.role === "ceo");
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setIsCEO(false);
+      }
+      setIsInitialized(true);
+    };
 
-  const syncUsers = async () => {
+    initializeAuth();
+
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        if (session?.user) {
+          const appUser = await transformUser(session.user);
+          setUser(appUser);
+          setIsAuthenticated(true);
+          setIsAdmin(appUser?.role === "admin");
+          setIsCEO(appUser?.role === "ceo");
+        }
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setIsCEO(false);
+      }
+    });
+  }, [navigate]);
+
+  const login = async (email: string, password: string) => {
     try {
-      console.log("Fetching all user profiles");
-      // Fetch all user profiles from profiles table
-      const { data: profilesData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (error) {
-        console.error("Error fetching profiles:", error);
-        throw error;
+        console.error("Login error:", error);
+        return { success: false, message: error.message };
       }
 
-      if (!profilesData || profilesData.length === 0) {
-        console.log("No profiles found");
-        setUsers([]);
-        return;
+      // Fetch user data after successful login
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.user) {
+        const appUser = await transformUser(data.session.user);
+        setUser(appUser);
+        setIsAuthenticated(true);
+        setIsAdmin(appUser?.role === "admin");
+        setIsCEO(appUser?.role === "ceo");
       }
 
-      // Map the profile data to User objects
-      const formattedUsers: User[] = profilesData.map(profile => {
-        return {
-          id: profile.id,
-          name: profile.name || '',
-          email: profile.email || '',
-          phone: profile.phone || '',  // Use optional chaining to handle potential undefined
-          role: profile.role as 'admin' | 'user' | 'ceo', // Added 'ceo' role
-          createdAt: profile.created_at,
-          lastLogin: profile.last_login || undefined,
-          isBanned: profile.is_banned || false
-        };
-      });
-
-      setUsers(formattedUsers);
-      console.log("Users synced successfully:", formattedUsers.length);
-    } catch (error) {
-      console.error('Error syncing users:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro na sincronização",
-        description: "Não foi possível carregar a lista de usuários."
-      });
+      return { success: true };
+    } catch (err) {
+      console.error("Login failed", err);
+      return { success: false, message: 'Login falhou. Verifique suas credenciais.' };
     }
   };
 
-  const deleteUser = async (id: string) => {
-    if (user?.id === id) {
-      throw new Error('Não é possível excluir o usuário atual');
-    }
-    
+  const register = async (data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+  }) => {
     try {
-      console.log(`Attempting to ban user with ID: ${id}`);
-      // Mark user as banned instead of deleting
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_banned: true })
-        .eq('id', id);
-        
-      if (error) {
-        console.error("Error banning user:", error);
-        throw error;
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+            phone: data.phone,
+          },
+          emailRedirectTo: `${window.location.origin}/verify-email`,
+        },
+      });
+
+      if (authError) {
+        console.error("Registration error:", authError);
+        return { success: false, message: authError.message };
       }
-      
-      await syncUsers();
-      
-      toast({
-        title: "Usuário desativado",
-        description: "O usuário foi banido com sucesso."
-      });
-      
-      return;
-    } catch (error) {
-      console.error('Erro ao excluir usuário:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao excluir",
-        description: "Falha ao desativar o usuário. Verifique suas permissões."
-      });
-      throw new Error('Falha ao excluir usuário');
+
+      if (authData.user) {
+        const updates = {
+          id: authData.user.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          updated_at: new Date(),
+        };
+
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .upsert(updates, { returning: "minimal" });
+
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          return { success: false, message: profileError.message };
+        }
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error("Registration failed", err);
+      return { success: false, message: 'Erro ao registrar usuário.' };
+    }
+  };
+
+  const logout = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error.message);
+      }
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      setIsCEO(false);
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
+  }, [navigate]);
+
+  const getAllUsers = useCallback(async () => {
+    try {
+      const { data: dbUsers, error } = await supabase
+        .from("profiles")
+        .select("*");
+
+      if (error) {
+        console.error("Error fetching users:", error);
+        return [];
+      }
+
+      const transformedUsers = dbUsers.map((dbUser) => transformUser(dbUser));
+      setUsers(transformedUsers as User[]);
+      return transformedUsers as User[];
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      return [];
+    }
+  }, []);
+
+  const deleteUser = async (id: string) => {
+    try {
+      // Delete user from auth.users
+      const { error: authError } = await supabase.auth.admin.deleteUser(id);
+
+      if (authError) {
+        console.error("Error deleting user from auth:", authError);
+        throw authError; // Re-throw to prevent profile deletion
+      }
+
+      // If auth deletion is successful, proceed to delete the profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", id);
+
+      if (profileError) {
+        console.error("Error deleting user profile:", profileError);
+        throw profileError; // Re-throw to indicate failure
+      }
+
+      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== id));
+    } catch (error: any) {
+      console.error("Error deleting user:", error.message);
+      throw error; // Propagate the error to the caller
     }
   };
 
   const updateUser = async (id: string, data: Partial<User>) => {
     try {
-      console.log(`Updating user with ID: ${id}`, data);
-      const profileData: { 
-        name?: string; 
-        is_banned?: boolean;
-        role?: string;
-        phone?: string;
-      } = {};
-      
-      if (data.name !== undefined) profileData.name = data.name;
-      if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
-      if (data.phone !== undefined) profileData.phone = data.phone;
-      
-      if (data.role !== undefined) {
-        if (data.role === 'admin' || data.role === 'user' || data.role === 'ceo') {
-          profileData.role = data.role;
-        } else {
-          profileData.role = 'user';
-          console.warn('Invalid role provided, defaulting to "user"');
-        }
-      }
-      
-      if (Object.keys(profileData).length > 0) {
-        const { error } = await supabase
-          .from('profiles')
-          .update(profileData)
-          .eq('id', id);
-          
-        if (error) {
-          console.error("Error updating user in profiles table:", error);
-          throw error;
-        }
-        
-        await syncUsers();
-        
-        toast({
-          title: "Usuário atualizado",
-          description: "As informações do usuário foram atualizadas com sucesso."
-        });
-      }
-      
-      // If the current user is being updated, update local state
-      if (user?.id === id) {
-        if (data.isBanned) {
-          toast({
-            variant: "destructive",
-            title: "Sua conta foi banida",
-            description: "Entre em contato com o administrador."
-          });
-          await logout();
-        } else {
-          setUser(prevUser => {
-            if (!prevUser) return null;
-            return { ...prevUser, ...data };
-          });
-        }
-      }
-      
-      return;
-    } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro na atualização",
-        description: "Não foi possível atualizar o usuário."
+      const transformedData = transformAppUserToDbUser({
+        ...user,
+        ...data,
+        id: id,
+        email: user?.email || '',
+        createdAt: user?.createdAt || new Date().toISOString(),
+        role: data.role || user?.role || 'user'
       });
-      throw new Error('Falha ao atualizar usuário');
-    }
-  };
 
-  const getAllUsers = async () => {
-    return users;
+      const { error } = await supabase
+        .from("profiles")
+        .update(transformedData)
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error updating user:", error);
+        return;
+      }
+
+      // Optimistically update the local state
+      setUsers((prevUsers) =>
+        prevUsers.map((existingUser) =>
+          existingUser.id === id ? { ...existingUser, ...data } : existingUser
+        )
+      );
+
+      // If the updated user is the current user, update the current user state
+      if (user?.id === id) {
+        setUser({ ...user, ...data } as User);
+        setIsAdmin(data.role === "admin" || user?.role === "admin");
+        setIsCEO(data.role === "ceo" || user?.role === "ceo");
+      }
+    } catch (err) {
+      console.error("Error updating user:", err);
+    }
   };
 
   return {
-    syncUsers,
+    user,
+    users,
+    isAuthenticated,
+    isAdmin,
+    isCEO,
+    isInitialized,
+    login,
+    register,
+    logout,
     deleteUser,
     updateUser,
     getAllUsers,
+    setUser,
   };
-};
-
-// Get user profile from the profiles table
-export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  try {
-    console.log(`Fetching profile for user ID: ${userId}`);
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching user profile:', error);
-      return null;
-    }
-
-    return {
-      id: profile.id,
-      name: profile.name || '',
-      email: profile.email || '',
-      role: profile.role || 'user',
-      created_at: profile.created_at,
-      phone: profile.phone || '',
-      last_login: profile.last_login,
-      is_banned: profile.is_banned
-    };
-  } catch (error) {
-    console.error('Error in getUserProfile:', error);
-    return null;
-  }
-}
-
-// Create a new user profile
-export async function createUserProfile(user: User, name: string): Promise<UserProfile | null> {
-  try {
-    console.log(`Creating profile for user: ${user.email} with name: ${name}`);
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .insert([
-        {
-          id: user.id,
-          name,
-          email: user.email,
-          role: 'user',
-          is_banned: false,
-          phone: user.phone || '' // Add phone field
-        }
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating user profile:', error);
-      return null;
-    }
-
-    console.log("Profile created successfully:", profile);
-    return {
-      id: profile.id,
-      name: profile.name,
-      email: user.email,
-      role: profile.role,
-      created_at: profile.created_at,
-      phone: profile.phone || '',
-      last_login: profile.last_login,
-      is_banned: profile.is_banned
-    };
-  } catch (error) {
-    console.error('Error in createUserProfile:', error);
-    return null;
-  }
-}
-
-// Update an existing user profile
-export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
-  try {
-    // Filter out properties that don't exist in the profiles table
-    const { email, ...validUpdates } = updates;
-    
-    console.log(`Updating profile for user ID: ${userId}`, validUpdates);
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .update(validUpdates)
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating user profile:', error);
-      return null;
-    }
-
-    console.log("Profile updated successfully:", profile);
-    return {
-      id: profile.id,
-      name: profile.name,
-      email: profile.email || '',
-      role: profile.role,
-      created_at: profile.created_at,
-      phone: profile.phone || '',
-      last_login: profile.last_login,
-      is_banned: profile.is_banned
-    };
-  } catch (error) {
-    console.error('Error in updateUserProfile:', error);
-    return null;
-  }
-}
-
-// Mark a user profile as deleted (soft delete)
-export async function deleteUserProfile(userId: string): Promise<boolean> {
-  try {
-    console.log(`Marking user ${userId} as banned`);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_banned: true })
-      .eq('id', userId);
-
-    if (error) {
-      console.error('Error soft-deleting user profile:', error);
-      return false;
-    }
-    
-    console.log(`User ${userId} marked as banned successfully`);
-    return true;
-  } catch (error) {
-    console.error('Error in deleteUserProfile:', error);
-    return false;
-  }
-}
-
-// Hard delete a user profile (use with caution)
-export async function hardDeleteUserProfile(userId: string): Promise<boolean> {
-  try {
-    console.log(`Hard deleting profile for user ID: ${userId}`);
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
-
-    if (error) {
-      console.error('Error deleting user profile:', error);
-      return false;
-    }
-    
-    console.log(`User ${userId} profile deleted successfully`);
-    return true;
-  } catch (error) {
-    console.error('Error in hardDeleteUserProfile:', error);
-    return false;
-  }
-}
-
-// Update user's last login timestamp
-export async function updateLastLogin(userId: string): Promise<boolean> {
-  try {
-    console.log(`Updating last login for user ID: ${userId}`);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', userId);
-
-    if (error) {
-      console.error('Error updating last login:', error);
-      return false;
-    }
-    
-    console.log(`Last login updated for user ${userId}`);
-    return true;
-  } catch (error) {
-    console.error('Error in updateLastLogin:', error);
-    return false;
-  }
-}
-
-export const userManagement = {
-  getUserProfile,
-  createUserProfile,
-  updateUserProfile,
-  deleteUserProfile,
-  hardDeleteUserProfile,
-  updateLastLogin
 };

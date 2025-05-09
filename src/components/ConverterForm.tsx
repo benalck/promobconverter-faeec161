@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from "react";
 import {
   Card,
@@ -195,8 +194,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 onFileSelect={handleFileSelect}
                 accept=".xml"
                 isDisabled={isConverting}
-                maxSize={200}
-                description="Arraste seu arquivo XML aqui ou clique para selecionar"
+                maxSize={10000000} // 10MB max
               />
             </div>
 
