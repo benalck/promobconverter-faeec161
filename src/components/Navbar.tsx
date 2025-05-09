@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -11,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoonIcon, SunIcon } from "@radix-ui/react-icons";
+import { MoonIcon, SunIcon } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
@@ -78,7 +79,7 @@ export default function Navbar() {
           )}
           <div className="flex-shrink-0">
             {isAdmin && (
-              <Badge variant="purple" className="ml-2">
+              <Badge variant="secondary" className="ml-2">
                 {isCEO ? 'CEO' : 'Admin'}
               </Badge>
             )}

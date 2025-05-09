@@ -1,3 +1,4 @@
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import {
   UserCog, 
   UserPlus, 
   Crown, 
-  ListDetails, 
+  FileText, 
   Check
 } from "lucide-react";
 import { useState } from "react";
@@ -167,7 +168,7 @@ export function UserTable({
                     size="sm"
                     onClick={() => onShowUserDetails(user.id)}
                   >
-                    <ListDetails className="h-4 w-4 mr-1" />
+                    <FileText className="h-4 w-4 mr-1" />
                     <span className="sr-only md:not-sr-only md:ml-1">Detalhes</span>
                   </Button>
                   {user.role !== "ceo" && onShowPromoteToCEODialog && (

@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
-import { Plan, User } from "./types";
+import { User } from "./types";
 
 export interface UserProfile {
   id: string;
@@ -24,10 +24,12 @@ export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<U
       throw error;
     }
 
-    let userRole: 'admin' | 'user' = 'user';
+    let userRole: 'admin' | 'user' | 'ceo' = 'user';
     
     if (profile?.role === 'admin') {
       userRole = 'admin';
+    } else if (profile?.role === 'ceo') {
+      userRole = 'ceo';
     } else if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
       userRole = 'admin';
     }
@@ -36,15 +38,13 @@ export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<U
       id: supabaseUser.id,
       name: profile?.name || supabaseUser.user_metadata?.name || 'Usuário',
       email: supabaseUser.email || '',
-      // Use phone from user_metadata since it doesn't exist in profile
-      phone: supabaseUser.user_metadata?.phone || '',
+      phone: profile?.phone || supabaseUser.user_metadata?.phone || '',
       role: userRole,
       createdAt: supabaseUser.created_at || new Date().toISOString(),
       lastLogin: supabaseUser.last_sign_in_at || null,
       isBanned: profile?.is_banned || false,
-      emailVerified: profile?.email_verified || false,
       credits: profile?.credits || 0,
-      activePlan: null,
+      activePlan: profile?.active_plan || null,
       planExpiryDate: profile?.plan_expiry_date || null
     };
   } catch (error) {
@@ -58,7 +58,6 @@ export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<U
       createdAt: supabaseUser.created_at || new Date().toISOString(),
       lastLogin: supabaseUser.last_sign_in_at || null,
       isBanned: false,
-      emailVerified: false,
       credits: 0,
       activePlan: null,
       planExpiryDate: null

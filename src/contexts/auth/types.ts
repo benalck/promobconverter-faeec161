@@ -10,6 +10,11 @@ export interface User {
   lastLogin?: string;
   role: 'admin' | 'user' | 'ceo'; // Added 'ceo' role
   isBanned?: boolean;
+  // Add missing properties
+  credits?: number;
+  emailVerified?: boolean;
+  activePlan?: string | null;
+  planExpiryDate?: string | null;
 }
 
 export interface AuthContextType {

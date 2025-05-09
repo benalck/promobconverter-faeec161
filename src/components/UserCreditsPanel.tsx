@@ -47,9 +47,12 @@ const UserCreditsPanel: React.FC<UserCreditsPanelProps> = ({ className }) => {
       }
       
       // Atualizar localmente
-      setUser({
-        ...user,
-        credits: data.credits || 0
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        return {
+          ...prevUser,
+          credits: data.credits || 0
+        };
       });
       
       toast({

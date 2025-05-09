@@ -196,7 +196,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 accept=".xml"
                 isDisabled={isConverting}
                 maxSize={200}
-                icon={<Upload className="h-10 w-10 text-blue-500 dark:text-blue-400 mb-2" />}
                 description="Arraste seu arquivo XML aqui ou clique para selecionar"
               />
             </div>

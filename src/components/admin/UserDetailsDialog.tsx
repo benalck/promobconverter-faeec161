@@ -72,7 +72,7 @@ export function UserDetailsDialog({
                       </div>
                       <div className="space-y-1">
                         <Label>Créditos</Label>
-                        <div className="text-sm">{user.credits}</div>
+                        <div className="text-sm">{user.credits || 0}</div>
                       </div>
                       <div className="space-y-1">
                         <Label>Criado em</Label>
