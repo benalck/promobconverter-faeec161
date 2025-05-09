@@ -27,7 +27,8 @@ import {
   DeleteDialog,
   BanDialog,
   RoleDialog,
-  AddUserDialog
+  AddUserDialog,
+  PromoteToCEODialog
 } from "@/components/admin/UserDialogs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
@@ -81,6 +82,7 @@ export default function Admin() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showUserDetailsDialog, setShowUserDetailsDialog] = useState(false);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [showPromoteToCEODialog, setShowPromoteToCEODialog] = useState(false);
   
   // UI state
   const [timeFilter, setTimeFilter] = useState("today");
@@ -278,13 +280,15 @@ export default function Admin() {
     if (!user) return;
 
     try {
-      await updateUser(selectedUser, {
-        role: user.role === "admin" ? "user" : "admin",
-      });
+      let newRole = 'user';
+      if (user.role === 'user') newRole = 'admin';
+      // If user is admin or CEO, downgrade to user
+      
+      await updateUser(selectedUser, { role: newRole });
       toast({
         title: "Função alterada",
         description: `O usuário agora é ${
-          user.role === "admin" ? "usuário comum" : "administrador"
+          newRole === "admin" ? "administrador" : "usuário comum"
         }.`,
       });
     } catch (error) {
@@ -297,6 +301,27 @@ export default function Admin() {
     }
 
     setShowRoleDialog(false);
+  };
+
+  const handlePromoteToCEO = async () => {
+    if (!selectedUser) return;
+
+    try {
+      await updateUser(selectedUser, { role: 'ceo' });
+      toast({
+        title: "Promoção concluída",
+        description: "O usuário foi promovido a CEO com sucesso.",
+      });
+    } catch (error) {
+      console.error("Error promoting to CEO:", error);
+      toast({
+        title: "Erro na promoção",
+        description: "Ocorreu um erro ao promover o usuário a CEO.",
+        variant: "destructive",
+      });
+    }
+
+    setShowPromoteToCEODialog(false);
   };
 
   const handleAddUser = async () => {
@@ -509,6 +534,10 @@ export default function Admin() {
                     onShowAddUserDialog={() => {
                       setShowAddUserDialog(true);
                     }}
+                    onShowPromoteToCEODialog={(userId) => {
+                      setSelectedUser(userId);
+                      setShowPromoteToCEODialog(true);
+                    }}
                   />
                 </TabsContent>
                 
@@ -632,6 +661,14 @@ export default function Admin() {
           open={showRoleDialog} 
           onOpenChange={setShowRoleDialog}
           onConfirm={handleChangeRole}
+          selectedUser={selectedUser}
+          users={users}
+        />
+
+        <PromoteToCEODialog
+          open={showPromoteToCEODialog}
+          onOpenChange={setShowPromoteToCEODialog}
+          onConfirm={handlePromoteToCEO}
           selectedUser={selectedUser}
           users={users}
         />

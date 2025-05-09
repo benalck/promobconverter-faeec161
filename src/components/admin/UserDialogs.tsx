@@ -1,83 +1,74 @@
-
-import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { User } from "@/contexts/auth/types";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
 
-interface DeleteDialogProps {
+export function DeleteDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
-}
-
-export function DeleteDialog({ open, onOpenChange, onConfirm }: DeleteDialogProps) {
-  const isMobile = useIsMobile();
-  
+}) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Excluir Usuário</DialogTitle>
+          <DialogTitle>Excluir usuário</DialogTitle>
           <DialogDescription>
-            Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir este usuário? Esta ação não pode ser
+            desfeita.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
-            Excluir
-          </Button>
+          <Button onClick={onConfirm}>Excluir</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-interface BanDialogProps {
+export function BanDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  selectedUser,
+  users,
+}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   selectedUser: string | null;
-  users: User[];
-}
+  users: any[];
+}) {
+  const user = users.find((u) => u.id === selectedUser);
 
-export function BanDialog({ open, onOpenChange, onConfirm, selectedUser, users }: BanDialogProps) {
-  const user = users.find(u => u.id === selectedUser);
-  const isMobile = useIsMobile();
-  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {user?.isBanned ? "Desbanir Usuário" : "Banir Usuário"}
-          </DialogTitle>
+          <DialogTitle>Banir usuário</DialogTitle>
           <DialogDescription>
-            {user?.isBanned 
-              ? "Tem certeza que deseja desbanir este usuário?" 
+            {user?.isBanned
+              ? "Tem certeza que deseja desbanir este usuário?"
               : "Tem certeza que deseja banir este usuário?"}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button
-            variant={user?.isBanned ? "default" : "destructive"}
-            onClick={onConfirm}
-          >
+          <Button onClick={onConfirm}>
             {user?.isBanned ? "Desbanir" : "Banir"}
           </Button>
         </DialogFooter>
@@ -86,59 +77,93 @@ export function BanDialog({ open, onOpenChange, onConfirm, selectedUser, users }
   );
 }
 
-interface RoleDialogProps {
+export function RoleDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  selectedUser,
+  users,
+}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   selectedUser: string | null;
-  users: User[];
-}
+  users: any[];
+}) {
+  const user = users.find((u) => u.id === selectedUser);
 
-export function RoleDialog({ open, onOpenChange, onConfirm, selectedUser, users }: RoleDialogProps) {
-  const user = users.find(u => u.id === selectedUser);
-  const isMobile = useIsMobile();
-  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Alterar Função</DialogTitle>
+          <DialogTitle>Alterar função</DialogTitle>
           <DialogDescription>
-            {user?.role === "admin" 
-              ? "Remover privilégios de administrador deste usuário?" 
-              : "Tornar este usuário um administrador?"}
+            {user?.role === "admin"
+              ? "Deseja alterar este usuário para função básica?"
+              : user?.role === "ceo"
+              ? "Deseja alterar este CEO para função básica?"
+              : "Deseja promover este usuário para administrador?"}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={onConfirm}>Confirmar</Button>
+          <Button onClick={onConfirm}>
+            {user?.role === "admin" || user?.role === "ceo"
+              ? "Remover privilégios"
+              : "Promover para admin"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-interface AddUserDialogProps {
+export function PromoteToCEODialog({
+  open,
+  onOpenChange,
+  onConfirm,
+  selectedUser,
+  users,
+}: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
-  newUserName: string;
-  setNewUserName: (value: string) => void;
-  newUserEmail: string;
-  setNewUserEmail: (value: string) => void;
-  newUserPassword: string;
-  setNewUserPassword: (value: string) => void;
-  newUserPhone: string;
-  setNewUserPhone: (value: string) => void;
-  isNewUserAdmin: boolean;
-  setIsNewUserAdmin: (value: boolean) => void;
+  selectedUser: string | null;
+  users: any[];
+}) {
+  const user = users.find((u) => u.id === selectedUser);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Promover para CEO</DialogTitle>
+          <DialogDescription>
+            {user?.role === "ceo"
+              ? "Este usuário já é CEO."
+              : `Deseja promover ${user?.name || 'este usuário'} para CEO da empresa? Este é o nível mais alto de acesso no sistema.`}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          {user?.role !== "ceo" && (
+            <Button variant="gradient" onClick={onConfirm}>
+              Promover para CEO
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-export function AddUserDialog({ 
-  open, 
-  onOpenChange, 
+export function AddUserDialog({
+  open,
+  onOpenChange,
   onConfirm,
   newUserName,
   setNewUserName,
@@ -149,78 +174,71 @@ export function AddUserDialog({
   newUserPhone,
   setNewUserPhone,
   isNewUserAdmin,
-  setIsNewUserAdmin
-}: AddUserDialogProps) {
-  const isMobile = useIsMobile();
-  
+  setIsNewUserAdmin,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  newUserName: string;
+  setNewUserName: React.Dispatch<React.SetStateAction<string>>;
+  newUserEmail: string;
+  setNewUserEmail: React.Dispatch<React.SetStateAction<string>>;
+  newUserPassword: string;
+  setNewUserPassword: React.Dispatch<React.SetStateAction<string>>;
+  newUserPhone: string;
+  setNewUserPhone: React.Dispatch<React.SetStateAction<string>>;
+  isNewUserAdmin: boolean;
+  setIsNewUserAdmin: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+          <DialogTitle>Adicionar novo usuário</DialogTitle>
           <DialogDescription>
-            Preencha os dados do novo usuário.
+            Preencha os campos abaixo para adicionar um novo usuário ao sistema.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="form-group">
-            <Label htmlFor="name" className="text-right">
-              Nome
-            </Label>
-            <Input
-              id="name"
-              value={newUserName}
-              onChange={(e) => setNewUserName(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div className="form-group">
-            <Label htmlFor="email" className="text-right">
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={newUserEmail}
-              onChange={(e) => setNewUserEmail(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div className="form-group">
-            <Label htmlFor="password" className="text-right">
-              Senha
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              value={newUserPassword}
-              onChange={(e) => setNewUserPassword(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div className="form-group">
-            <Label htmlFor="phone" className="text-right">
-              Telefone
-            </Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={newUserPhone}
-              onChange={(e) => setNewUserPhone(e.target.value)}
-              placeholder="(00) 00000-0000"
-              className="mt-1"
-            />
-          </div>
-          <div className="form-group flex items-center space-x-2">
-            <Switch
+        <div>
+          <label htmlFor="name">Nome</label>
+          <input
+            type="text"
+            id="name"
+            value={newUserName}
+            onChange={(e) => setNewUserName(e.target.value)}
+          />
+          <label htmlFor="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            value={newUserEmail}
+            onChange={(e) => setNewUserEmail(e.target.value)}
+          />
+          <label htmlFor="password">Senha</label>
+          <input
+            type="password"
+            id="password"
+            value={newUserPassword}
+            onChange={(e) => setNewUserPassword(e.target.value)}
+          />
+          <label htmlFor="phone">Telefone</label>
+          <input
+            type="tel"
+            id="phone"
+            value={newUserPhone}
+            onChange={(e) => setNewUserPhone(e.target.value)}
+          />
+          <div>
+            <label htmlFor="admin">Administrador</label>
+            <input
+              type="checkbox"
               id="admin"
               checked={isNewUserAdmin}
-              onCheckedChange={setIsNewUserAdmin}
+              onChange={(e) => setIsNewUserAdmin(e.target.checked)}
             />
-            <Label htmlFor="admin">Usuário Administrador</Label>
           </div>
         </div>
-        <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>

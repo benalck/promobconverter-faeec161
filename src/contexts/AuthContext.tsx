@@ -89,7 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isAuthenticated: !!user,
-        isAdmin: !!user && user.role === 'admin',
+        isAdmin: !!user && (user.role === 'admin' || user.role === 'ceo'),
+        isCEO: !!user && user.role === 'ceo',
         users,
         isInitialized,
         login,

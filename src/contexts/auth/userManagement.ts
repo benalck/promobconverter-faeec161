@@ -50,8 +50,8 @@ export const useUserManagement = (
           id: profile.id,
           name: profile.name || '',
           email: profile.email || '',
-          phone: profile.phone || '',  // Use profile data if available
-          role: profile.role as 'admin' | 'user',
+          phone: profile.phone || '',  // Use optional chaining to handle potential undefined
+          role: profile.role as 'admin' | 'user' | 'ceo', // Added 'ceo' role
           createdAt: profile.created_at,
           lastLogin: profile.last_login || undefined,
           isBanned: profile.is_banned || false
@@ -114,13 +114,15 @@ export const useUserManagement = (
         name?: string; 
         is_banned?: boolean;
         role?: string;
+        phone?: string;
       } = {};
       
       if (data.name !== undefined) profileData.name = data.name;
       if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
+      if (data.phone !== undefined) profileData.phone = data.phone;
       
       if (data.role !== undefined) {
-        if (data.role === 'admin' || data.role === 'user') {
+        if (data.role === 'admin' || data.role === 'user' || data.role === 'ceo') {
           profileData.role = data.role;
         } else {
           profileData.role = 'user';
@@ -231,7 +233,8 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
           name,
           email: user.email,
           role: 'user',
-          is_banned: false
+          is_banned: false,
+          phone: user.phone || '' // Add phone field
         }
       ])
       .select()
@@ -249,7 +252,7 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
       email: user.email,
       role: profile.role,
       created_at: profile.created_at,
-      phone: user.phone || '',
+      phone: profile.phone || '',
       last_login: profile.last_login,
       is_banned: profile.is_banned
     };
@@ -263,7 +266,7 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
   try {
     // Filter out properties that don't exist in the profiles table
-    const { email, phone, ...validUpdates } = updates;
+    const { email, ...validUpdates } = updates;
     
     console.log(`Updating profile for user ID: ${userId}`, validUpdates);
     const { data: profile, error } = await supabase
@@ -285,7 +288,7 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
       email: profile.email || '',
       role: profile.role,
       created_at: profile.created_at,
-      phone: phone || profile.phone || '',
+      phone: profile.phone || '',
       last_login: profile.last_login,
       is_banned: profile.is_banned
     };
