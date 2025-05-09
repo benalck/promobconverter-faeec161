@@ -180,9 +180,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return [];
       }
 
-      const transformedUsers = data.map((dbUser) => transformUser(dbUser)) as User[];
-      setUsers(transformedUsers);
-      return transformedUsers;
+      if (data) {
+        const transformedUsers: User[] = data.map(dbUser => {
+          // Ensure role is one of valid types
+          let typedRole: "admin" | "user" | "ceo" = "user";
+          if (dbUser.role === "admin") typedRole = "admin";
+          if (dbUser.role === "ceo") typedRole = "ceo";
+          
+          return {
+            id: dbUser.id,
+            email: dbUser.email || "",
+            name: dbUser.name || "",
+            role: typedRole,
+            createdAt: dbUser.created_at || "",
+            lastLogin: dbUser.last_login || "",
+            isBanned: dbUser.is_banned || false,
+            activePlan: dbUser.active_plan || null,
+            planExpiryDate: dbUser.plan_expiry_date || null,
+            credits: dbUser.credits || 0,
+            emailVerified: dbUser.email_verified || false,
+            phone: dbUser.phone
+          };
+        });
+        
+        setUsers(transformedUsers);
+        return transformedUsers;
+      }
+      
+      return [];
     } catch (error) {
       console.error("Error fetching users:", error);
       return [];

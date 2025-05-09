@@ -59,7 +59,25 @@ export default function ConversionHistory({ userId }: ConversionHistoryProps) {
       
       if (error) throw error;
       
-      setConversions(data || []);
+      if (data) {
+        // Map supabase data to our Conversion interface
+        const mappedConversions: Conversion[] = data.map(item => ({
+          id: item.id,
+          user_id: item.user_id,
+          filename: item.name || item.original_filename || "Untitled",
+          created_at: item.created_at,
+          file_size: item.file_size || 0,
+          status: item.success ? 'success' : 'error',
+          input_format: item.input_format || "",
+          output_format: item.output_format || "",
+          error_message: item.error_message || undefined,
+          download_url: item.file_content ? `/api/download/${item.id}` : undefined
+        }));
+        
+        setConversions(mappedConversions);
+      } else {
+        setConversions([]);
+      }
     } catch (error) {
       console.error('Error fetching conversion history:', error);
       setConversions([]);
@@ -164,7 +182,7 @@ export default function ConversionHistory({ userId }: ConversionHistoryProps) {
                     <PaginationItem>
                       <PaginationPrevious 
                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                       />
                     </PaginationItem>
                     
@@ -182,7 +200,7 @@ export default function ConversionHistory({ userId }: ConversionHistoryProps) {
                     <PaginationItem>
                       <PaginationNext 
                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                       />
                     </PaginationItem>
                   </PaginationContent>
