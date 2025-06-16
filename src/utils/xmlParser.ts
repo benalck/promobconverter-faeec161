@@ -1,4 +1,3 @@
-
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -129,34 +128,35 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
         return;
       }
       
-      // Lógica melhorada para identificar módulos principais
-      const isMainModule = component === "N" || 
-                          uniqueParentId === "-1" || 
-                          uniqueParentId === "-2" || 
-                          group === "Tamponamentos" || 
-                          group === "Tampos";
-      
-      if (isMainModule) {
+      // Lógica corrigida para identificar peças independentes vs módulos principais
+      // UNIQUEPARENTID="-2" indica peças independentes, não módulos principais
+      if (component === "Y" && uniqueParentId === "-2") {
+        console.log(`${uniqueId} identificado como peça independente (COMPONENT=Y, PARENT=-2)`);
+        independentPieces.push(item);
+      }
+      // Módulos principais: COMPONENT="N" ou UNIQUEPARENTID="-1" ou grupos específicos
+      else if (component === "N" || 
+               uniqueParentId === "-1" || 
+               group === "Tamponamentos" || 
+               group === "Tampos") {
         console.log(`${uniqueId} identificado como módulo principal`);
         moduleMap.set(uniqueId, {
           mainModule: item,
           components: []
         });
       }
-      // Se é um componente (COMPONENT="Y")
-      else if (component === "Y") {
-        // Verificar se tem parent válido que não seja -1 ou -2
-        if (uniqueParentId && uniqueParentId !== "-1" && uniqueParentId !== "-2") {
-          console.log(`${uniqueId} é componente do parent ${uniqueParentId}`);
-          if (!componentsByParent.has(uniqueParentId)) {
-            componentsByParent.set(uniqueParentId, []);
-          }
-          componentsByParent.get(uniqueParentId).push(item);
-        } else {
-          // Peça independente (component="Y" mas sem parent válido ou parent -1/-2)
-          console.log(`${uniqueId} identificado como peça independente`);
-          independentPieces.push(item);
+      // Se é um componente (COMPONENT="Y") com parent válido
+      else if (component === "Y" && uniqueParentId && uniqueParentId !== "-1" && uniqueParentId !== "-2") {
+        console.log(`${uniqueId} é componente do parent ${uniqueParentId}`);
+        if (!componentsByParent.has(uniqueParentId)) {
+          componentsByParent.set(uniqueParentId, []);
         }
+        componentsByParent.get(uniqueParentId).push(item);
+      }
+      // Qualquer outro caso não categorizável
+      else {
+        console.log(`${uniqueId} não categorizado claramente - tratando como peça independente`);
+        independentPieces.push(item);
       }
     });
     
