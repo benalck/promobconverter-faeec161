@@ -1,5 +1,14 @@
 
-/* /index.html 200 
-/register/access /index.html 200
-/auth/confirm /index.html 200
-/verify /index.html 200
+# Redirecionamentos principais para SPA
+/* /index.html 200
+
+# Redirecionamentos específicos para rotas de verificação
+/register/access/* /index.html 200
+/auth/confirm/* /index.html 200
+/verify/* /index.html 200
+/verify-email/* /index.html 200
+/verify-redirect/* /index.html 200
+/access/* /index.html 200
+
+# Fallback para qualquer rota não encontrada
+/404 /index.html 200

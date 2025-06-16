@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useState, useEffect, Suspense, lazy } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -65,8 +66,19 @@ function App() {
     // Precarregar os recursos mais importantes
     const preloadMainResources = async () => {
       try {
+        // Verificar se estamos em um ambiente válido
+        if (typeof window === 'undefined') {
+          console.log('Ambiente servidor - pulando pré-carregamento');
+          setIsLoading(false);
+          return;
+        }
+
+        // Log da URL atual para debug
+        console.log('URL atual:', window.location.href);
+        console.log('Pathname:', window.location.pathname);
+        
         // Simular pré-carregamento de recursos essenciais
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => setTimeout(resolve, 500));
         setIsLoading(false);
       } catch (error) {
         console.error("Erro no pré-carregamento:", error);
@@ -76,6 +88,11 @@ function App() {
 
     preloadMainResources();
   }, []);
+
+  // Verificação adicional para garantir que o DOM está carregado
+  if (typeof window === 'undefined') {
+    return <PageLoadingFallback />;
+  }
 
   return (
     <>
