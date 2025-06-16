@@ -1,3 +1,4 @@
+
 import { escapeHtml, shouldIncludeItemInOutput } from "./xmlConverter";
 
 /**
@@ -73,11 +74,11 @@ const generateTableHeader = (): string => {
 };
 
 /**
- * Versão otimizada do processamento de elementos com cache e processamento assíncrono
+ * Versão otimizada do processamento de elementos com melhor identificação de peças independentes
  */
 const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
-  const processedItemIds = new Set(); // Cache para evitar duplicatas
+  const processedItemIds = new Set();
   
   // Validação de elementos
   if (!itemElements || itemElements.length === 0) {
@@ -93,63 +94,84 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
     const independentPieces = [];
     const componentsByParent = new Map();
     
+    console.log(`Processando ${itemArray.length} itens encontrados no XML...`);
+    
     // Processar todos os itens e categorizá-los
-    itemArray.forEach(item => {
+    itemArray.forEach((item, index) => {
       const uniqueId = item.getAttribute("UNIQUEID");
       const component = item.getAttribute("COMPONENT") || "N";
       const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
       const group = item.getAttribute("GROUP") || "";
       const description = item.getAttribute("DESCRIPTION") || "";
       
+      console.log(`Item ${index + 1}: ${uniqueId} - ${description} - Component: ${component} - Parent: ${uniqueParentId} - Group: ${group}`);
+      
       // Validar atributos obrigatórios
       if (!uniqueId) {
         console.warn("Item encontrado sem UNIQUEID - será ignorado");
-        return false;
+        return;
       }
       
       // Evitar duplicatas
       if (processedItemIds.has(uniqueId)) {
-        return false;
+        console.log(`Item ${uniqueId} já processado - ignorando duplicata`);
+        return;
       }
       
       processedItemIds.add(uniqueId);
       
-      // Verificar se é um módulo principal
-      if (component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || 
-          group === "Tamponamentos" || group === "Tampos") {
+      // Verificar se deve ser excluído baseado na descrição
+      if (description.toLowerCase().includes("armário") || 
+          description.toLowerCase().includes("caixa") ||
+          description.toLowerCase().includes("gaveteiro") ||
+          description.toLowerCase().includes("dispenseiro")) {
+        console.log(`Item ${uniqueId} excluído por descrição: ${description}`);
+        return;
+      }
+      
+      // Lógica melhorada para identificar módulos principais
+      const isMainModule = component === "N" || 
+                          uniqueParentId === "-1" || 
+                          uniqueParentId === "-2" || 
+                          group === "Tamponamentos" || 
+                          group === "Tampos";
+      
+      if (isMainModule) {
+        console.log(`${uniqueId} identificado como módulo principal`);
         moduleMap.set(uniqueId, {
           mainModule: item,
           components: []
         });
       }
-      // Verificar se é um componente
+      // Se é um componente (COMPONENT="Y")
       else if (component === "Y") {
-        // Se tem parent válido, será associado ao módulo
+        // Verificar se tem parent válido que não seja -1 ou -2
         if (uniqueParentId && uniqueParentId !== "-1" && uniqueParentId !== "-2") {
+          console.log(`${uniqueId} é componente do parent ${uniqueParentId}`);
           if (!componentsByParent.has(uniqueParentId)) {
             componentsByParent.set(uniqueParentId, []);
           }
           componentsByParent.get(uniqueParentId).push(item);
-        } 
-        // Caso contrário, é uma peça independente
-        else {
-          // Verificar se não deve ser excluída
-          if (!description.toLowerCase().includes("armário") && 
-              !description.toLowerCase().includes("caixa") &&
-              !description.toLowerCase().includes("gaveteiro") &&
-              !description.toLowerCase().includes("dispenseiro")) {
-            independentPieces.push(item);
-          }
+        } else {
+          // Peça independente (component="Y" mas sem parent válido ou parent -1/-2)
+          console.log(`${uniqueId} identificado como peça independente`);
+          independentPieces.push(item);
         }
       }
     });
+    
+    console.log(`Módulos principais encontrados: ${moduleMap.size}`);
+    console.log(`Peças independentes encontradas: ${independentPieces.length}`);
+    console.log(`Grupos de componentes: ${componentsByParent.size}`);
     
     // Associar componentes aos seus módulos
     componentsByParent.forEach((components, parentId) => {
       if (moduleMap.has(parentId)) {
         moduleMap.get(parentId).components = components;
+        console.log(`Associados ${components.length} componentes ao módulo ${parentId}`);
       } else {
         // Se o parent não existe como módulo, tratar os componentes como peças independentes
+        console.log(`Parent ${parentId} não encontrado como módulo, tratando componentes como independentes`);
         components.forEach(comp => {
           const desc = comp.getAttribute("DESCRIPTION") || "";
           if (!desc.toLowerCase().includes("armário") && 
@@ -280,9 +302,9 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       });
     });
     
-    // Processar peças independentes (como a "Divisória 15" do seu exemplo)
+    // Processar peças independentes
     console.log(`Processando ${independentPieces.length} peças independentes...`);
-    independentPieces.forEach(piece => {
+    independentPieces.forEach((piece, index) => {
       const pieceProps = extractItemPropertiesFromXML(piece);
       const pieceWidth = piece.getAttribute("WIDTH") || "";
       const pieceDepth = piece.getAttribute("DEPTH") || "";
@@ -291,6 +313,8 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       const pieceObs = piece.getAttribute("OBSERVATIONS") || "";
       const pieceUniqueId = piece.getAttribute("UNIQUEID") || "";
       const pieceFamily = piece.getAttribute("FAMILY") || "Ambiente";
+      
+      console.log(`Processando peça independente ${index + 1}: ${pieceUniqueId} - ${pieceDesc}`);
       
       // Substituir "Especial" por "Sarafo Frontal Passante"
       const processedPieceDesc = pieceDesc.includes("Especial") ? "Sarafo Frontal Passante" : pieceDesc;
@@ -324,6 +348,7 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       rowCount++;
     });
     
+    console.log(`Total de linhas processadas: ${rowCount - 1}`);
     return csvContent;
   } catch (error) {
     console.error("Erro durante o processamento dos elementos:", error);
