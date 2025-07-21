@@ -68,25 +68,38 @@ export default function ResetPassword() {
       });
 
       if (error) {
+        console.error("Erro do Supabase:", error);
         throw error;
       }
       
       toast({
-        title: "Senha atualizada",
-        description: "Sua senha foi redefinida com sucesso! Você será redirecionado para o login.",
-        variant: "success",
+        title: "Senha atualizada com sucesso!",
+        description: "Sua senha foi redefinida. Você será redirecionado para o login.",
+        variant: "default",
       });
+
+      // Sign out após mudança de senha para forçar novo login
+      await supabase.auth.signOut();
 
       // Redirecionar para login após sucesso
       setTimeout(() => {
         navigate("/register?isLoginMode=true");
       }, 2000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao redefinir senha:", error);
+      
+      let errorMessage = "Não foi possível redefinir sua senha.";
+      
+      if (error?.message?.includes("session_not_found")) {
+        errorMessage = "Sessão expirada. Solicite um novo link de recuperação.";
+      } else if (error?.message?.includes("Invalid password")) {
+        errorMessage = "Senha inválida. Verifique os critérios de segurança.";
+      }
+      
       toast({
         title: "Erro ao redefinir senha",
-        description: error instanceof Error ? error.message : "Não foi possível redefinir sua senha. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
