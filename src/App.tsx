@@ -12,6 +12,7 @@ const Admin = lazy(() => import("@/pages/Admin"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -118,6 +119,9 @@ function App() {
               <Route path="/verify-redirect/*" element={<VerifyEmail />} />
               <Route path="/#access_token=*" element={<VerifyEmail />} />
               <Route path="/*access_token=*" element={<VerifyEmail />} />
+              
+              {/* Rota para redefinir senha */}
+              <Route path="/reset-password" element={<ResetPassword />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

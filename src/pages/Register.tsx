@@ -22,6 +22,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [searchParams] = useSearchParams();
   const [hasEmailError, setHasEmailError] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { register, login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -260,6 +261,46 @@ export default function Register() {
     setShowPassword(!showPassword);
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({
+        title: "Email necessário",
+        description: "Por favor, informe seu email para receber o link de recuperação.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Email enviado",
+        description: "Um link para redefinir sua senha foi enviado para seu email.",
+        variant: "success",
+      });
+      setShowForgotPassword(false);
+    } catch (error) {
+      console.error("Erro ao enviar email de recuperação:", error);
+      toast({
+        title: "Erro ao enviar email",
+        description: "Não foi possível enviar o email de recuperação. Verifique se o email está correto.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleResendConfirmation = async () => {
     if (!email) {
       toast({
@@ -461,6 +502,51 @@ export default function Register() {
                       disabled={isLoading}
                       className="pl-10"
                     />
+                  </div>
+                </div>
+              )}
+              
+              {isLoginMode && (
+                <div className="flex justify-end mb-4">
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="text-sm text-primary hover:underline p-0 h-auto"
+                    onClick={() => setShowForgotPassword(true)}
+                    disabled={isLoading}
+                  >
+                    Esqueci minha senha
+                  </Button>
+                </div>
+              )}
+
+              {showForgotPassword && isLoginMode && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <h3 className="text-sm font-medium text-blue-900 mb-2">
+                    Recuperar senha
+                  </h3>
+                  <p className="text-sm text-blue-800 mb-3">
+                    Informe seu email para receber o link de recuperação da senha.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={isLoading || !email}
+                      className="flex-1"
+                      size="sm"
+                    >
+                      {isLoading ? "Enviando..." : "Enviar link"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowForgotPassword(false)}
+                      disabled={isLoading}
+                      size="sm"
+                    >
+                      Cancelar
+                    </Button>
                   </div>
                 </div>
               )}

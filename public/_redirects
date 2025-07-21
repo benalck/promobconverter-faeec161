@@ -9,6 +9,7 @@
 /verify-email/* /index.html 200
 /verify-redirect/* /index.html 200
 /access/* /index.html 200
+/reset-password/* /index.html 200
 
 # Fallback para qualquer rota não encontrada
 /404 /index.html 200
