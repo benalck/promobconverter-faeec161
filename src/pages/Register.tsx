@@ -271,12 +271,25 @@ export default function Register() {
       return;
     }
 
+    const emailError = validateEmail(email);
+    if (emailError) {
+      toast({
+        title: "Email inválido",
+        description: emailError,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       
+      // Get the current domain
+      const currentDomain = window.location.origin;
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${currentDomain}/reset-password`
       });
 
       if (error) {
@@ -285,15 +298,15 @@ export default function Register() {
       
       toast({
         title: "Email enviado",
-        description: "Um link para redefinir sua senha foi enviado para seu email.",
-        variant: "success",
+        description: "Um link para redefinir sua senha foi enviado para seu email. Verifique sua caixa de entrada e spam.",
+        variant: "default",
       });
       setShowForgotPassword(false);
     } catch (error) {
       console.error("Erro ao enviar email de recuperação:", error);
       toast({
         title: "Erro ao enviar email",
-        description: "Não foi possível enviar o email de recuperação. Verifique se o email está correto.",
+        description: error instanceof Error ? error.message : "Não foi possível enviar o email de recuperação. Verifique se o email está correto.",
         variant: "destructive",
       });
     } finally {
