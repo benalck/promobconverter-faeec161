@@ -14,20 +14,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true
-  },
-  global: {
-    // Define timeouts to prevent indefinitely pending operations
-    fetch: (url, options) => {
-      const timeoutController = new AbortController();
-      const timeoutId = setTimeout(() => timeoutController.abort(), 30000); // 30 seconds
-      
-      return fetch(url, {
-        ...options,
-        signal: timeoutController.signal
-      }).finally(() => {
-        clearTimeout(timeoutId);
-      });
-    }
   }
 });
 
