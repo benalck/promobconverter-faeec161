@@ -108,21 +108,16 @@ export default function ResetPassword() {
   };
 
   useEffect(() => {
-    // Verificar se há parâmetros de erro na URL ou access_token
+    // Verificar se há parâmetros de erro na URL
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
     const type = searchParams.get('type');
     
-    // Se há access_token e type=recovery, a sessão foi estabelecida automaticamente pelo Supabase
-    if (accessToken && refreshToken && type === 'recovery') {
-      console.log("Tokens de recuperação encontrados na URL, usuário autenticado para reset");
-      // Aqui o usuário já está autenticado e pode redefinir a senha
-      // Não fazer nada, deixar o formulário aparecer normalmente
-      return;
-    }
+    console.log("URL params:", { error, errorDescription, accessToken: !!accessToken, refreshToken: !!refreshToken, type });
     
+    // Se há erro na URL, mostrar erro e redirecionar
     if (error) {
       console.error("Erro na URL:", error, errorDescription);
       toast({
@@ -131,21 +126,48 @@ export default function ResetPassword() {
         variant: "destructive",
       });
       
-      // Redirecionar para tela de login após mostrar erro
       setTimeout(() => {
         navigate("/register?isLoginMode=true");
       }, 3000);
       return;
     }
 
-    // Se não há tokens de recuperação nem erro, verificar se o usuário tem uma sessão válida
+    // Se há tokens de recuperação na URL, configurar a sessão do Supabase
+    if (accessToken && refreshToken && type === 'recovery') {
+      console.log("Configurando sessão de recuperação com tokens da URL");
+      
+      // Configurar a sessão do Supabase manualmente
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      }).then(({ data, error: sessionError }) => {
+        if (sessionError) {
+          console.error("Erro ao configurar sessão:", sessionError);
+          toast({
+            title: "Erro na sessão",
+            description: "Não foi possível validar o link de recuperação. Tente novamente.",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            navigate("/register?isLoginMode=true");
+          }, 3000);
+        } else {
+          console.log("Sessão de recuperação configurada com sucesso");
+        }
+      });
+      return;
+    }
+
+    // Se não há tokens nem erro, verificar se já existe uma sessão válida
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.log("Nenhuma sessão ativa encontrada");
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log("Sessão atual:", { hasSession: !!session, sessionError });
+      
+      if (!session && !accessToken) {
+        console.log("Nenhuma sessão ou tokens encontrados");
         toast({
-          title: "Sessão expirada",
-          description: "O link de recuperação expirou. Solicite um novo link.",
+          title: "Link expirado",
+          description: "O link de recuperação expirou ou é inválido. Solicite um novo link.",
           variant: "destructive",
         });
         
@@ -155,7 +177,10 @@ export default function ResetPassword() {
       }
     };
 
-    checkSession();
+    // Se não há tokens na URL, verificar sessão existente
+    if (!accessToken) {
+      checkSession();
+    }
   }, [searchParams, toast, navigate]);
 
   return (
