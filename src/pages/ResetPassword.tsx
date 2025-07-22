@@ -108,11 +108,19 @@ export default function ResetPassword() {
   };
 
   useEffect(() => {
-    // Verificar se há parâmetros de erro na URL
+    // Verificar se há parâmetros de erro na URL ou access_token
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
+    const accessToken = searchParams.get('access_token');
+    const refreshToken = searchParams.get('refresh_token');
+    
+    // Se há access_token, a sessão foi estabelecida automaticamente pelo Supabase
+    if (accessToken && refreshToken) {
+      console.log("Tokens encontrados na URL, sessão deve estar ativa");
+    }
     
     if (error) {
+      console.error("Erro na URL:", error, errorDescription);
       toast({
         title: "Link inválido",
         description: errorDescription || "O link de recuperação é inválido ou expirou. Solicite um novo link.",
