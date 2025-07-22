@@ -113,10 +113,14 @@ export default function ResetPassword() {
     const errorDescription = searchParams.get('error_description');
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
+    const type = searchParams.get('type');
     
-    // Se há access_token, a sessão foi estabelecida automaticamente pelo Supabase
-    if (accessToken && refreshToken) {
-      console.log("Tokens encontrados na URL, sessão deve estar ativa");
+    // Se há access_token e type=recovery, a sessão foi estabelecida automaticamente pelo Supabase
+    if (accessToken && refreshToken && type === 'recovery') {
+      console.log("Tokens de recuperação encontrados na URL, usuário autenticado para reset");
+      // Aqui o usuário já está autenticado e pode redefinir a senha
+      // Não fazer nada, deixar o formulário aparecer normalmente
+      return;
     }
     
     if (error) {
@@ -131,7 +135,27 @@ export default function ResetPassword() {
       setTimeout(() => {
         navigate("/register?isLoginMode=true");
       }, 3000);
+      return;
     }
+
+    // Se não há tokens de recuperação nem erro, verificar se o usuário tem uma sessão válida
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log("Nenhuma sessão ativa encontrada");
+        toast({
+          title: "Sessão expirada",
+          description: "O link de recuperação expirou. Solicite um novo link.",
+          variant: "destructive",
+        });
+        
+        setTimeout(() => {
+          navigate("/register?isLoginMode=true");
+        }, 3000);
+      }
+    };
+
+    checkSession();
   }, [searchParams, toast, navigate]);
 
   return (
