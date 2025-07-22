@@ -120,8 +120,9 @@ function App() {
               <Route path="/#access_token=*" element={<VerifyEmail />} />
               <Route path="/*access_token=*" element={<VerifyEmail />} />
               
-              {/* Rota para redefinir senha */}
+              {/* Rotas para redefinir senha */}
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-password/*" element={<ResetPassword />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
