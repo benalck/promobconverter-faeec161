@@ -108,26 +108,65 @@ export default function ResetPassword() {
   };
 
   useEffect(() => {
-    // Verificar se há parâmetros de erro na URL
-    const error = searchParams.get('error');
-    const errorDescription = searchParams.get('error_description');
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    const type = searchParams.get('type');
+    // Função para extrair parâmetros tanto de query params quanto de hash fragments
+    const getUrlParams = () => {
+      const params = new URLSearchParams();
+      
+      // Primeiro, adicionar query parameters
+      searchParams.forEach((value, key) => {
+        params.set(key, value);
+      });
+      
+      // Depois, adicionar hash fragment parameters (que o Supabase usa)
+      const hash = window.location.hash.substring(1); // Remove o '#'
+      if (hash) {
+        const hashParams = new URLSearchParams(hash);
+        hashParams.forEach((value, key) => {
+          params.set(key, value);
+        });
+      }
+      
+      return params;
+    };
+
+    const params = getUrlParams();
+    const error = params.get('error');
+    const errorDescription = params.get('error_description');
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
     
-    console.log("URL params:", { error, errorDescription, accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+    console.log("URL params (query + hash):", { 
+      error, 
+      errorDescription, 
+      accessToken: !!accessToken, 
+      refreshToken: !!refreshToken, 
+      type,
+      fullHash: window.location.hash,
+      fullSearch: window.location.search
+    });
     
     // Se há erro na URL, mostrar erro e redirecionar
     if (error) {
       console.error("Erro na URL:", error, errorDescription);
+      let friendlyMessage = "O link de recuperação é inválido ou expirou. Solicite um novo link.";
+      
+      // Mensagens mais amigáveis baseadas no tipo de erro
+      if (error === 'access_denied' && errorDescription?.includes('invalid')) {
+        friendlyMessage = "O link de recuperação é inválido ou já foi usado. Solicite um novo link.";
+      } else if (error === 'access_denied' && errorDescription?.includes('expired')) {
+        friendlyMessage = "O link de recuperação expirou. Por favor, solicite um novo link.";
+      }
+      
       toast({
         title: "Link inválido",
-        description: errorDescription || "O link de recuperação é inválido ou expirou. Solicite um novo link.",
+        description: friendlyMessage,
         variant: "destructive",
       });
       
+      // Redirecionar para forgot-password para o usuário solicitar novo link
       setTimeout(() => {
-        navigate("/register?isLoginMode=true");
+        navigate("/forgot-password");
       }, 3000);
       return;
     }
@@ -145,14 +184,19 @@ export default function ResetPassword() {
           console.error("Erro ao configurar sessão:", sessionError);
           toast({
             title: "Erro na sessão",
-            description: "Não foi possível validar o link de recuperação. Tente novamente.",
+            description: "Não foi possível validar o link de recuperação. Solicite um novo link.",
             variant: "destructive",
           });
           setTimeout(() => {
-            navigate("/register?isLoginMode=true");
+            navigate("/forgot-password");
           }, 3000);
         } else {
           console.log("Sessão de recuperação configurada com sucesso");
+          toast({
+            title: "Link validado",
+            description: "Agora você pode definir sua nova senha.",
+            variant: "default",
+          });
         }
       });
       return;
@@ -166,13 +210,13 @@ export default function ResetPassword() {
       if (!session && !accessToken) {
         console.log("Nenhuma sessão ou tokens encontrados");
         toast({
-          title: "Link expirado",
-          description: "O link de recuperação expirou ou é inválido. Solicite um novo link.",
+          title: "Link necessário",
+          description: "Acesse esta página através do link enviado no e-mail de recuperação.",
           variant: "destructive",
         });
         
         setTimeout(() => {
-          navigate("/register?isLoginMode=true");
+          navigate("/forgot-password");
         }, 3000);
       }
     };
