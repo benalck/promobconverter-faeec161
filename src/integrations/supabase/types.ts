@@ -409,6 +409,10 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       register_user: {
         Args: {
           user_email: string

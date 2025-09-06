@@ -16,15 +16,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { getAdminConfig, updateAdminConfig } from "@/utils/adminConfig";
+import { checkAdminAuth, logoutAdmin } from "@/utils/adminConfig";
 
 interface User {
   id: string;
@@ -49,21 +46,22 @@ export default function DehashAdmin() {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showBanDialog, setShowBanDialog] = useState(false);
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const adminToken = localStorage.getItem("adminToken");
-    if (!adminToken) {
-      navigate("/dehash-login");
-      return;
-    }
+    const checkAuth = async () => {
+      const isAdmin = await checkAdminAuth();
+      if (!isAdmin) {
+        navigate("/dehash-login");
+        return;
+      }
+    };
 
+    checkAuth();
+
+    // Carregar dados mockados para demonstração
     const storedUsers = localStorage.getItem("users");
     if (storedUsers) {
       setUsers(JSON.parse(storedUsers));
@@ -152,42 +150,13 @@ export default function DehashAdmin() {
     }
   };
 
-  const handleUpdateAdminCredentials = () => {
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Senhas diferentes",
-        description: "As senhas não coincidem.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleLogout = async () => {
     try {
-      updateAdminConfig({
-        username: newUsername || getAdminConfig().username,
-        password: newPassword || getAdminConfig().password,
-      });
-
-      toast({
-        title: "Credenciais atualizadas",
-        description: "As credenciais de administrador foram atualizadas com sucesso.",
-      });
-      setShowSettingsDialog(false);
-      setNewUsername("");
-      setNewPassword("");
-      setConfirmPassword("");
+      await logoutAdmin();
+      navigate("/dehash-login");
     } catch (error) {
-      toast({
-        title: "Erro ao atualizar",
-        description: "Não foi possível atualizar as credenciais.",
-        variant: "destructive",
-      });
+      navigate("/dehash-login");
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    navigate("/dehash-login");
   };
 
   const formatDate = (dateString: string) => {
@@ -203,14 +172,6 @@ export default function DehashAdmin() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">Painel Administrativo Principal</h1>
             <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSettingsDialog(true)}
-                className="border-gray-600 text-gray-300 hover:bg-gray-700"
-              >
-                Configurações
-              </Button>
               <Button
                 variant="destructive"
                 size="sm"
@@ -441,66 +402,6 @@ export default function DehashAdmin() {
               Promover
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-        <DialogContent className="bg-gray-800 text-white border-gray-700">
-          <DialogHeader>
-            <DialogTitle>Configurações do Admin</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Atualize suas credenciais de acesso ao painel administrativo.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="newUsername">Novo usuário</Label>
-              <Input
-                id="newUsername"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="Deixe em branco para manter o atual"
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">Nova senha</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Deixe em branco para manter a atual"
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirme a nova senha"
-                className="bg-gray-700 border-gray-600 text-white"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowSettingsDialog(false)}
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="default"
-              onClick={handleUpdateAdminCredentials}
-            >
-              Salvar
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
