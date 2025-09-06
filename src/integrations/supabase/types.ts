@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -354,9 +354,9 @@ export type Database = {
       }
       create_user_profile: {
         Args: {
+          user_email: string
           user_id: string
           user_name: string
-          user_email: string
           user_role?: string
         }
         Returns: boolean
@@ -364,87 +364,87 @@ export type Database = {
       diagnose_registration_issues: {
         Args: Record<PropertyKey, never>
         Returns: {
-          issue_type: string
           count: number
+          issue_type: string
         }[]
       }
       fix_missing_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
-          user_id: string
           email: string
           status: string
+          user_id: string
         }[]
       }
       get_conversions_by_date_range: {
-        Args: { p_start_date: string; p_end_date: string }
+        Args: { p_end_date: string; p_start_date: string }
         Returns: {
           date: string
-          total: number
-          successful: number
           failed: number
+          successful: number
+          total: number
         }[]
       }
       get_conversions_by_type: {
         Args: Record<PropertyKey, never>
         Returns: {
+          count: number
           input_format: string
           output_format: string
-          count: number
         }[]
       }
       get_metrics_system: {
-        Args: { p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
       get_metrics_user: {
-        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
       get_system_metrics: {
-        Args: { p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
       get_user_metrics: {
-        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
       register_user: {
         Args: {
+          user_email: string
           user_id: string
           user_name: string
-          user_email: string
           user_role?: string
         }
         Returns: Json
       }
       register_user_verified: {
         Args: {
+          user_email: string
           user_id: string
           user_name: string
-          user_email: string
           user_role?: string
         }
         Returns: Json
       }
       system_metrics_calc: {
-        Args: { p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
       track_conversion: {
         Args: {
-          p_user_id: string
-          p_success: boolean
-          p_file_size: number
           p_conversion_time: number
           p_error_message?: string
+          p_file_size: number
           p_input_format?: string
           p_output_format?: string
+          p_success: boolean
+          p_user_id: string
         }
         Returns: string
       }
       user_metrics_calc: {
-        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
     }
