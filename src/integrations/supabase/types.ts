@@ -66,15 +66,7 @@ export type Database = {
           timestamp?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "conversions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       credit_purchases: {
         Row: {
@@ -110,13 +102,6 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "credit_purchases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_without_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -226,13 +211,6 @@ export type Database = {
             referencedRelation: "plans"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       tasks: {
@@ -269,15 +247,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       verification_codes: {
         Row: {
@@ -301,15 +271,7 @@ export type Database = {
           id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "verification_codes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -330,15 +292,6 @@ export type Database = {
           total_conversions: number | null
           total_file_size: number | null
           user_id: string | null
-        }
-        Relationships: []
-      }
-      users_without_profiles: {
-        Row: {
-          created_at: string | null
-          email: string | null
-          id: string | null
-          last_sign_in_at: string | null
         }
         Relationships: []
       }
@@ -408,6 +361,13 @@ export type Database = {
       get_user_metrics: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
+      }
+      get_users_without_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          message: string
+          user_count: number
+        }[]
       }
       is_admin_user: {
         Args: Record<PropertyKey, never>
