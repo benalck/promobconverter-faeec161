@@ -10,22 +10,9 @@ const app = express();
 // Middleware para logging
 app.use(morgan('dev'));
 
-// Middleware para CORS - configuração segura
-const allowedOrigins = [
-  'https://promobconverter.cloud',
-  'https://8015ddc8-0e8e-44b1-a29e-59dd03232845.lovableproject.com',
-  'http://localhost:5173',
-  'http://localhost:3000'
-];
-
+// Middleware para CORS - configuração mais permissiva para desenvolvimento
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Não permitido pelo CORS'));
-    }
-  },
+  origin: '*', // Permitir qualquer origem
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'stripe-signature', 'Authorization'],
   credentials: true

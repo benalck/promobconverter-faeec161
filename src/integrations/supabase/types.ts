@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
+  // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -66,7 +66,15 @@ export type Database = {
           timestamp?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_without_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_purchases: {
         Row: {
@@ -102,6 +110,13 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_purchases_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_without_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -211,6 +226,13 @@ export type Database = {
             referencedRelation: "plans"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users_without_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       tasks: {
@@ -247,7 +269,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_without_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       verification_codes: {
         Row: {
@@ -271,11 +301,47 @@ export type Database = {
           id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "verification_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_without_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      system_metrics: {
+        Row: {
+          active_users: number | null
+          average_response_time: number | null
+          success_rate: number | null
+          total_conversions: number | null
+          total_users: number | null
+        }
+        Relationships: []
+      }
+      user_metrics: {
+        Row: {
+          average_response_time: number | null
+          success_rate: number | null
+          total_conversions: number | null
+          total_file_size: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      users_without_profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string | null
+          last_sign_in_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_monthly_credits: {
@@ -288,9 +354,9 @@ export type Database = {
       }
       create_user_profile: {
         Args: {
-          user_email: string
           user_id: string
           user_name: string
+          user_email: string
           user_role?: string
         }
         Returns: boolean
@@ -298,118 +364,87 @@ export type Database = {
       diagnose_registration_issues: {
         Args: Record<PropertyKey, never>
         Returns: {
-          count: number
           issue_type: string
+          count: number
         }[]
       }
       fix_missing_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
+          user_id: string
           email: string
           status: string
-          user_id: string
         }[]
       }
       get_conversions_by_date_range: {
-        Args: { p_end_date: string; p_start_date: string }
+        Args: { p_start_date: string; p_end_date: string }
         Returns: {
           date: string
-          failed: number
-          successful: number
           total: number
+          successful: number
+          failed: number
         }[]
       }
       get_conversions_by_type: {
         Args: Record<PropertyKey, never>
         Returns: {
-          count: number
           input_format: string
           output_format: string
+          count: number
         }[]
       }
       get_metrics_system: {
-        Args: { p_end_date?: string; p_start_date?: string }
+        Args: { p_start_date?: string; p_end_date?: string }
         Returns: Json
       }
       get_metrics_user: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
+        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
         Returns: Json
       }
       get_system_metrics: {
-        Args: { p_end_date?: string; p_start_date?: string }
+        Args: { p_start_date?: string; p_end_date?: string }
         Returns: Json
-      }
-      get_system_metrics_secure: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          active_users: number
-          average_response_time: number
-          success_rate: number
-          total_conversions: number
-          total_users: number
-        }[]
       }
       get_user_metrics: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
+        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
         Returns: Json
-      }
-      get_user_metrics_secure: {
-        Args: { target_user_id?: string }
-        Returns: {
-          average_response_time: number
-          success_rate: number
-          total_conversions: number
-          total_file_size: number
-          user_id: string
-        }[]
-      }
-      get_users_without_profiles: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          message: string
-          user_count: number
-        }[]
-      }
-      is_admin_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
       }
       register_user: {
         Args: {
-          user_email: string
           user_id: string
           user_name: string
+          user_email: string
           user_role?: string
         }
         Returns: Json
       }
       register_user_verified: {
         Args: {
-          user_email: string
           user_id: string
           user_name: string
+          user_email: string
           user_role?: string
         }
         Returns: Json
       }
       system_metrics_calc: {
-        Args: { p_end_date?: string; p_start_date?: string }
+        Args: { p_start_date?: string; p_end_date?: string }
         Returns: Json
       }
       track_conversion: {
         Args: {
+          p_user_id: string
+          p_success: boolean
+          p_file_size: number
           p_conversion_time: number
           p_error_message?: string
-          p_file_size: number
           p_input_format?: string
           p_output_format?: string
-          p_success: boolean
-          p_user_id: string
         }
         Returns: string
       }
       user_metrics_calc: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
+        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
         Returns: Json
       }
     }

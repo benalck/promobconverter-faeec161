@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { authenticateAdmin } from "@/utils/adminConfig";
+import { getAdminConfig } from "@/utils/adminConfig";
 
 export default function DehashLogin() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -19,21 +19,22 @@ export default function DehashLogin() {
     setIsLoading(true);
 
     try {
-      const result = await authenticateAdmin(email, password);
-      
-      if (result.success) {
+      const adminConfig = getAdminConfig();
+      if (username === adminConfig.username && password === adminConfig.password) {
+        // Salvar token de admin
+        localStorage.setItem("adminToken", "true");
         toast({
           title: "Login realizado com sucesso!",
           description: "Bem-vindo ao painel administrativo.",
         });
         navigate("/dehash-admin");
       } else {
-        throw new Error(result.error || "Erro de autenticação");
+        throw new Error("Credenciais inválidas");
       }
     } catch (error) {
       toast({
         title: "Erro ao fazer login",
-        description: error instanceof Error ? error.message : "Credenciais de administrador inválidas.",
+        description: "Credenciais de administrador inválidas.",
         variant: "destructive",
       });
     } finally {
@@ -49,23 +50,21 @@ export default function DehashLogin() {
             Acesso Administrativo
           </CardTitle>
           <CardDescription className="text-gray-400">
-            Entre com suas credenciais de administrador
+            Área restrita para administradores do sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-200">
-                Email
+              <Label htmlFor="username" className="text-gray-200">
+                Usuário
               </Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="bg-gray-700 border-gray-600 text-white"
                 disabled={isLoading}
-                required
               />
             </div>
             <div className="space-y-2">
@@ -79,7 +78,6 @@ export default function DehashLogin() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-gray-700 border-gray-600 text-white"
                 disabled={isLoading}
-                required
               />
             </div>
             <Button
@@ -94,4 +92,4 @@ export default function DehashLogin() {
       </Card>
     </div>
   );
-}
+} 
