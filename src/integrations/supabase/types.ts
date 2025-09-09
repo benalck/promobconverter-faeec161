@@ -275,26 +275,7 @@ export type Database = {
       }
     }
     Views: {
-      system_metrics: {
-        Row: {
-          active_users: number | null
-          average_response_time: number | null
-          success_rate: number | null
-          total_conversions: number | null
-          total_users: number | null
-        }
-        Relationships: []
-      }
-      user_metrics: {
-        Row: {
-          average_response_time: number | null
-          success_rate: number | null
-          total_conversions: number | null
-          total_file_size: number | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       add_monthly_credits: {
@@ -358,9 +339,29 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
+      get_system_metrics_secure: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active_users: number
+          average_response_time: number
+          success_rate: number
+          total_conversions: number
+          total_users: number
+        }[]
+      }
       get_user_metrics: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
+      }
+      get_user_metrics_secure: {
+        Args: { target_user_id?: string }
+        Returns: {
+          average_response_time: number
+          success_rate: number
+          total_conversions: number
+          total_file_size: number
+          user_id: string
+        }[]
       }
       get_users_without_profiles: {
         Args: Record<PropertyKey, never>
