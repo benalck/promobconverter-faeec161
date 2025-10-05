@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import ErrorBoundary from "./ErrorBoundary";
+import { ThemeProvider } from "./components/ThemeProvider";
 import "./index.css";
 
 /**
@@ -161,11 +162,13 @@ try {
   
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingFallback />}>
-          <App />
-        </Suspense>
-      </ErrorBoundary>
+      <ThemeProvider defaultTheme="dark" storageKey="promob-ui-theme">
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingFallback />}>
+            <App />
+          </Suspense>
+        </ErrorBoundary>
+      </ThemeProvider>
     </React.StrictMode>
   );
   
