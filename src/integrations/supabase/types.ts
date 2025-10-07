@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -66,15 +66,7 @@ export type Database = {
           timestamp?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "conversions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       credit_purchases: {
         Row: {
@@ -112,13 +104,6 @@ export type Database = {
             referencedRelation: "plans"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "credit_purchases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       debug_logs: {
@@ -144,6 +129,361 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      edgebands: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          material: string | null
+          name: string
+          price_per_meter: number
+          supplier_id: string | null
+          thickness_mm: number
+          updated_at: string | null
+          width_mm: number
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          material?: string | null
+          name: string
+          price_per_meter: number
+          supplier_id?: string | null
+          thickness_mm: number
+          updated_at?: string | null
+          width_mm: number
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          material?: string | null
+          name?: string
+          price_per_meter?: number
+          supplier_id?: string | null
+          thickness_mm?: number
+          updated_at?: string | null
+          width_mm?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edgebands_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimate_edgebands: {
+        Row: {
+          created_at: string | null
+          edgeband_id: string | null
+          edgeband_name: string
+          estimate_id: string
+          id: string
+          length_meters: number
+          price_per_meter: number
+          thickness_mm: number | null
+          total_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          edgeband_id?: string | null
+          edgeband_name: string
+          estimate_id: string
+          id?: string
+          length_meters: number
+          price_per_meter: number
+          thickness_mm?: number | null
+          total_price: number
+        }
+        Update: {
+          created_at?: string | null
+          edgeband_id?: string | null
+          edgeband_name?: string
+          estimate_id?: string
+          id?: string
+          length_meters?: number
+          price_per_meter?: number
+          thickness_mm?: number | null
+          total_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_edgebands_edgeband_id_fkey"
+            columns: ["edgeband_id"]
+            isOneToOne: false
+            referencedRelation: "edgebands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_edgebands_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimate_materials: {
+        Row: {
+          area_sqm: number
+          created_at: string | null
+          estimate_id: string
+          id: string
+          material_id: string | null
+          material_name: string
+          material_type: string | null
+          quantity: number
+          thickness_mm: number | null
+          total_price: number
+          unit_price: number
+          waste_percent: number | null
+        }
+        Insert: {
+          area_sqm: number
+          created_at?: string | null
+          estimate_id: string
+          id?: string
+          material_id?: string | null
+          material_name: string
+          material_type?: string | null
+          quantity: number
+          thickness_mm?: number | null
+          total_price: number
+          unit_price: number
+          waste_percent?: number | null
+        }
+        Update: {
+          area_sqm?: number
+          created_at?: string | null
+          estimate_id?: string
+          id?: string
+          material_id?: string | null
+          material_name?: string
+          material_type?: string | null
+          quantity?: number
+          thickness_mm?: number | null
+          total_price?: number
+          unit_price?: number
+          waste_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_materials_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimate_services: {
+        Row: {
+          created_at: string | null
+          estimate_id: string
+          id: string
+          price_per_unit: number
+          quantity: number
+          service_id: string | null
+          service_name: string
+          service_type: string | null
+          total_price: number
+          unit: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          estimate_id: string
+          id?: string
+          price_per_unit: number
+          quantity: number
+          service_id?: string | null
+          service_name: string
+          service_type?: string | null
+          total_price: number
+          unit?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          estimate_id?: string
+          id?: string
+          price_per_unit?: number
+          quantity?: number
+          service_id?: string | null
+          service_name?: string
+          service_type?: string | null
+          total_price?: number
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_services_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimate_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimates: {
+        Row: {
+          approved_at: string | null
+          calculation_data: Json | null
+          client_email: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string | null
+          discount_percent: number | null
+          edgeband_cost: number | null
+          id: string
+          material_cost: number | null
+          name: string
+          notes: string | null
+          pieces_data: Json | null
+          profit_margin_percent: number | null
+          sent_at: string | null
+          service_cost: number | null
+          status: string | null
+          subtotal: number | null
+          tax_percent: number | null
+          total: number | null
+          updated_at: string | null
+          user_id: string
+          valid_until: string | null
+          version: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          calculation_data?: Json | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string | null
+          discount_percent?: number | null
+          edgeband_cost?: number | null
+          id?: string
+          material_cost?: number | null
+          name: string
+          notes?: string | null
+          pieces_data?: Json | null
+          profit_margin_percent?: number | null
+          sent_at?: string | null
+          service_cost?: number | null
+          status?: string | null
+          subtotal?: number | null
+          tax_percent?: number | null
+          total?: number | null
+          updated_at?: string | null
+          user_id: string
+          valid_until?: string | null
+          version?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          calculation_data?: Json | null
+          client_email?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string | null
+          discount_percent?: number | null
+          edgeband_cost?: number | null
+          id?: string
+          material_cost?: number | null
+          name?: string
+          notes?: string | null
+          pieces_data?: Json | null
+          profit_margin_percent?: number | null
+          sent_at?: string | null
+          service_cost?: number | null
+          status?: string | null
+          subtotal?: number | null
+          tax_percent?: number | null
+          total?: number | null
+          updated_at?: string | null
+          user_id?: string
+          valid_until?: string | null
+          version?: number | null
+        }
+        Relationships: []
+      }
+      materials: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          finish: string | null
+          height_mm: number
+          id: string
+          is_active: boolean | null
+          name: string
+          price_per_sqm: number
+          supplier_id: string | null
+          thickness_mm: number
+          type: string
+          updated_at: string | null
+          width_mm: number
+          yield_factor: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          finish?: string | null
+          height_mm?: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_per_sqm: number
+          supplier_id?: string | null
+          thickness_mm: number
+          type: string
+          updated_at?: string | null
+          width_mm?: number
+          yield_factor?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          finish?: string | null
+          height_mm?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_per_sqm?: number
+          supplier_id?: string | null
+          thickness_mm?: number
+          type?: string
+          updated_at?: string | null
+          width_mm?: number
+          yield_factor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plans: {
         Row: {
@@ -175,6 +515,39 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           price?: number
+        }
+        Relationships: []
+      }
+      price_histories: {
+        Row: {
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          new_price: number
+          old_price: number | null
+          reason: string | null
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_price: number
+          old_price?: number | null
+          reason?: string | null
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_price?: number
+          old_price?: number | null
+          reason?: string | null
+          record_id?: string
+          table_name?: string
         }
         Relationships: []
       }
@@ -226,14 +599,79 @@ export type Database = {
             referencedRelation: "plans"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "profiles_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
         ]
+      }
+      services: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_per_unit: number
+          type: string
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_per_unit: number
+          type: string
+          unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_per_unit?: number
+          type?: string
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       tasks: {
         Row: {
@@ -269,15 +707,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       verification_codes: {
         Row: {
@@ -301,47 +731,11 @@ export type Database = {
           id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "verification_codes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users_without_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
-      system_metrics: {
-        Row: {
-          active_users: number | null
-          average_response_time: number | null
-          success_rate: number | null
-          total_conversions: number | null
-          total_users: number | null
-        }
-        Relationships: []
-      }
-      user_metrics: {
-        Row: {
-          average_response_time: number | null
-          success_rate: number | null
-          total_conversions: number | null
-          total_file_size: number | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
-      users_without_profiles: {
-        Row: {
-          created_at: string | null
-          email: string | null
-          id: string | null
-          last_sign_in_at: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       add_monthly_credits: {
@@ -354,9 +748,9 @@ export type Database = {
       }
       create_user_profile: {
         Args: {
+          user_email: string
           user_id: string
           user_name: string
-          user_email: string
           user_role?: string
         }
         Returns: boolean
@@ -364,87 +758,118 @@ export type Database = {
       diagnose_registration_issues: {
         Args: Record<PropertyKey, never>
         Returns: {
-          issue_type: string
           count: number
+          issue_type: string
         }[]
       }
       fix_missing_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
-          user_id: string
           email: string
           status: string
+          user_id: string
         }[]
       }
       get_conversions_by_date_range: {
-        Args: { p_start_date: string; p_end_date: string }
+        Args: { p_end_date: string; p_start_date: string }
         Returns: {
           date: string
-          total: number
-          successful: number
           failed: number
+          successful: number
+          total: number
         }[]
       }
       get_conversions_by_type: {
         Args: Record<PropertyKey, never>
         Returns: {
+          count: number
           input_format: string
           output_format: string
-          count: number
         }[]
       }
       get_metrics_system: {
-        Args: { p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
       get_metrics_user: {
-        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
       get_system_metrics: {
-        Args: { p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
+      get_system_metrics_secure: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active_users: number
+          average_response_time: number
+          success_rate: number
+          total_conversions: number
+          total_users: number
+        }[]
+      }
       get_user_metrics: {
-        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
+      }
+      get_user_metrics_secure: {
+        Args: { target_user_id?: string }
+        Returns: {
+          average_response_time: number
+          success_rate: number
+          total_conversions: number
+          total_file_size: number
+          user_id: string
+        }[]
+      }
+      get_users_without_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          message: string
+          user_count: number
+        }[]
+      }
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       register_user: {
         Args: {
+          user_email: string
           user_id: string
           user_name: string
-          user_email: string
           user_role?: string
         }
         Returns: Json
       }
       register_user_verified: {
         Args: {
+          user_email: string
           user_id: string
           user_name: string
-          user_email: string
           user_role?: string
         }
         Returns: Json
       }
       system_metrics_calc: {
-        Args: { p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
       track_conversion: {
         Args: {
-          p_user_id: string
-          p_success: boolean
-          p_file_size: number
           p_conversion_time: number
           p_error_message?: string
+          p_file_size: number
           p_input_format?: string
           p_output_format?: string
+          p_success: boolean
+          p_user_id: string
         }
         Returns: string
       }
       user_metrics_calc: {
-        Args: { p_user_id: string; p_start_date?: string; p_end_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
     }

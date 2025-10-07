@@ -77,7 +77,7 @@ export function QuickActions() {
       title: "Gerar Orçamento",
       description: "Calcule custos automaticamente",
       icon: Calculator,
-      onClick: () => navigate("/"),
+      onClick: () => navigate("/estimates"),
       variant: "secondary" as const,
       delay: 0.2
     },

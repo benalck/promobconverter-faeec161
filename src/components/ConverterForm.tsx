@@ -22,6 +22,7 @@ import { useTrackConversion } from "@/hooks/useTrackConversion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import OptimizationResults, { MaterialSummary, PieceData } from "./OptimizationResults";
 import { extractPiecesFromXML, calculateMaterialSummary } from "@/utils/cutOptimizer";
+import { CreateEstimateDialog } from "./estimate/CreateEstimateDialog";
 
 interface ConverterFormProps {
   className?: string;
@@ -279,6 +280,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         materials={materialSummary}
         pieces={pieces}
       />
+
+      {showOptimizationResults && pieces.length > 0 && (
+        <div className="mt-6 animate-fade-in">
+          <CreateEstimateDialog pieces={pieces} />
+        </div>
+      )}
     </>
   );
 };
