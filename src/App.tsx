@@ -14,6 +14,7 @@ const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
+const CuttingPlan = lazy(() => import("@/pages/CuttingPlan"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -106,6 +107,7 @@ function App() {
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/register" element={<Register />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+              <Route path="/cutting-plan" element={<ProtectedRoute><CuttingPlan /></ProtectedRoute>} />
               
               {/* Rotas para verificação de email - consolidadas */}
               <Route path="/verify" element={<VerifyEmail />} />
