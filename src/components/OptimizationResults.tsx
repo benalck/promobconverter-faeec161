@@ -1,5 +1,5 @@
 
-import React, { useState, Suspense } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -9,11 +9,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Layers, Package, Scissors, Loader2 } from "lucide-react";
+import { Layers, Package, Scissors } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CutPlan2DVisualization from "./CutPlan2DVisualization";
 import CostReport from "./CostReport";
-import { Plan3DViewer } from "./visualizer/Plan3DViewer";
 
 export interface PieceData {
   width: number;
@@ -70,9 +69,8 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
   return (
     <div className="space-y-6 mt-6 animate-fade-in">
       <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="summary">Resumo de Materiais</TabsTrigger>
-          <TabsTrigger value="3d">Visualização 3D</TabsTrigger>
           <TabsTrigger value="cutplan">Plano de Corte</TabsTrigger>
           <TabsTrigger value="costs">Custos</TabsTrigger>
         </TabsList>
@@ -140,21 +138,6 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
           </Card>
         </TabsContent>
         
-        <TabsContent value="3d">
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center h-[600px] bg-industrial-darker rounded-2xl border border-border">
-                <div className="text-center space-y-4">
-                  <Loader2 className="w-12 h-12 animate-spin text-industrial-accent mx-auto" />
-                  <p className="text-muted-foreground">Carregando visualização 3D...</p>
-                </div>
-              </div>
-            }
-          >
-            <Plan3DViewer pieces={pieces} />
-          </Suspense>
-        </TabsContent>
-
         <TabsContent value="cutplan">
           <CutPlan2DVisualization pieces={pieces} show={true} />
         </TabsContent>

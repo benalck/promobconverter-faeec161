@@ -5,43 +5,36 @@
 
 @layer base {
   :root {
-    /* Industrial Light Theme */
-    --background: 220 15% 97%;
-    --foreground: 220 20% 10%;
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 200 85% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 210 100% 50%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 15% 90%;
-    --secondary-foreground: 220 20% 10%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 160 60% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
-    --ring: 200 85% 45%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
 
     --radius: 0.75rem;
 
-    /* Industrial colors */
-    --steel: 220 15% 30%;
-    --copper: 25 90% 50%;
-    --neon-green: 160 80% 50%;
-    --anthracite: 220 20% 15%;
-    
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -50,66 +43,45 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-
-    /* Shadows & Effects */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    --glow-primary: 0 0 20px hsl(200 85% 45% / 0.3);
-    --glow-accent: 0 0 20px hsl(160 60% 50% / 0.3);
   }
 
   .dark {
-    /* Industrial Dark Theme - Premium */
-    --background: 220 25% 8%;
-    --foreground: 220 10% 95%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-    --card: 220 20% 12%;
-    --card-foreground: 220 10% 95%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 220 20% 12%;
-    --popover-foreground: 220 10% 95%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 200 85% 50%;
-    --primary-foreground: 220 25% 8%;
+    --primary: 210 100% 50%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 20% 18%;
-    --secondary-foreground: 220 10% 95%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 220 20% 15%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 160 70% 45%;
-    --accent-foreground: 220 25% 8%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 220 20% 20%;
-    --input: 220 20% 18%;
-    --ring: 200 85% 50%;
-
-    /* Industrial dark colors */
-    --steel: 220 15% 70%;
-    --copper: 25 90% 60%;
-    --neon-green: 160 80% 50%;
-    --anthracite: 220 20% 95%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
     
-    --sidebar-background: 220 25% 10%;
-    --sidebar-foreground: 220 10% 90%;
-    --sidebar-primary: 200 85% 50%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 15%;
-    --sidebar-accent-foreground: 220 10% 95%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 200 85% 50%;
-
-    /* Enhanced shadows for dark mode */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4);
-    --glow-primary: 0 0 30px hsl(200 85% 50% / 0.5);
-    --glow-accent: 0 0 30px hsl(160 70% 45% / 0.5);
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -138,49 +110,16 @@
     display: none;
   }
 
-  /* Glass morphism */
   .glass {
-    @apply backdrop-blur-xl bg-background/60 border border-border/50;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+    @apply backdrop-blur-lg bg-white/80 border border-white/20 shadow-glass;
   }
   
   .glass-dark {
-    @apply backdrop-blur-xl bg-card/40 border border-border/30;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    @apply backdrop-blur-lg bg-black/30 border border-white/10 shadow-glass;
   }
   
-  /* Industrial card */
-  .industrial-card {
-    @apply bg-card border border-border rounded-xl;
-    box-shadow: var(--shadow-lg);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .industrial-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.15);
-  }
-  
-  /* Glow effects */
-  .glow-primary {
-    box-shadow: var(--glow-primary);
-  }
-  
-  .glow-accent {
-    box-shadow: var(--glow-accent);
-  }
-  
-  /* Gradient backgrounds */
-  .gradient-industrial {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
-  }
-  
-  .gradient-mesh {
-    background: 
-      radial-gradient(at 0% 0%, hsl(var(--primary) / 0.1) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsl(var(--accent) / 0.1) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, hsl(var(--primary) / 0.1) 0px, transparent 50%),
-      radial-gradient(at 0% 100%, hsl(var(--accent) / 0.1) 0px, transparent 50%);
+  .neo {
+    @apply bg-white border border-gray-100 shadow-neo;
   }
 }
 

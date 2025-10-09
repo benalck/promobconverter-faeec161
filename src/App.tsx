@@ -7,15 +7,13 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import "./App.css";
 
 // Lazy loading dos componentes
-const Register = lazy(() => import("./pages/Register"));
-const Admin = lazy(() => import("./pages/Admin"));
-const Index = lazy(() => import("./pages/Index"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Estimates = lazy(() => import("./pages/Estimates"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const Register = lazy(() => import("@/pages/Register"));
+const Admin = lazy(() => import("@/pages/Admin"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const Index = lazy(() => import("@/pages/Index"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -106,8 +104,6 @@ function App() {
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/estimates" element={<ProtectedRoute><Estimates /></ProtectedRoute>} />
               <Route path="/register" element={<Register />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
               
