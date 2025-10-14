@@ -102,8 +102,9 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
       const group = item.getAttribute("GROUP") || "";
       const description = item.getAttribute("DESCRIPTION") || "";
+      const family = item.getAttribute("FAMILY") || "";
       
-      console.log(`Item ${index + 1}: ${uniqueId} - ${description} - Component: ${component} - Parent: ${uniqueParentId} - Group: ${group}`);
+      console.log(`Item ${index + 1}: ${uniqueId} - ${description} - Component: ${component} - Parent: ${uniqueParentId} - Group: ${group} - Family: ${family}`);
       
       // Validar atributos obrigatórios
       if (!uniqueId) {
@@ -119,45 +120,43 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       
       processedItemIds.add(uniqueId);
       
-      // Verificar se deve ser excluído baseado na descrição
-      if (description.toLowerCase().includes("armário") || 
-          description.toLowerCase().includes("caixa") ||
-          description.toLowerCase().includes("gaveteiro") ||
-          description.toLowerCase().includes("dispenseiro")) {
-        console.log(`Item ${uniqueId} excluído por descrição: ${description}`);
-        return;
-      }
+      // Verificar se é um módulo principal (armário, gaveteiro, etc) - ESTES DEVEM SER EXCLUÍDOS
+      const isModuleContainer = description.toLowerCase().includes("armário") || 
+                                 description.toLowerCase().includes("caixa") ||
+                                 description.toLowerCase().includes("gaveteiro") ||
+                                 description.toLowerCase().includes("dispenseiro") ||
+                                 family.toLowerCase().includes("armário") ||
+                                 family.toLowerCase().includes("gaveteiro");
       
-      // Lógica corrigida para identificar peças independentes vs módulos principais
-      // UNIQUEPARENTID="-2" indica peças independentes, não módulos principais
-      if (component === "Y" && uniqueParentId === "-2") {
-        console.log(`${uniqueId} identificado como peça independente (COMPONENT=Y, PARENT=-2)`);
-        independentPieces.push(item);
-      }
-      // Módulos principais: COMPONENT="N" ou UNIQUEPARENTID="-1" ou grupos específicos
-      else if (component === "N" || 
-               uniqueParentId === "-1" || 
-               group === "Tamponamentos" || 
-               group === "Tampos") {
-        console.log(`${uniqueId} identificado como módulo principal`);
+      if (isModuleContainer && component === "N") {
+        console.log(`${uniqueId} é um módulo container - será usado para agrupar componentes`);
         moduleMap.set(uniqueId, {
           mainModule: item,
           components: []
         });
+        return;
       }
-      // Se é um componente (COMPONENT="Y") com parent válido
-      else if (component === "Y" && uniqueParentId && uniqueParentId !== "-1" && uniqueParentId !== "-2") {
-        console.log(`${uniqueId} é componente do parent ${uniqueParentId}`);
+      
+      // Se for um componente de outro item (parte de um módulo)
+      if (component === "Y" && uniqueParentId && uniqueParentId !== "-1" && uniqueParentId !== "-2" && uniqueParentId !== "") {
+        console.log(`${uniqueId} é componente do módulo ${uniqueParentId}`);
         if (!componentsByParent.has(uniqueParentId)) {
           componentsByParent.set(uniqueParentId, []);
         }
         componentsByParent.get(uniqueParentId).push(item);
+        return;
       }
-      // Qualquer outro caso não categorizável
-      else {
-        console.log(`${uniqueId} não categorizado claramente - tratando como peça independente`);
+      
+      // Tamponamentos e Tampos são sempre tratados como peças avulsas
+      if (group === "Tamponamentos" || group === "Tampos") {
+        console.log(`${uniqueId} é um ${group} - será tratado como peça avulsa`);
         independentPieces.push(item);
+        return;
       }
+      
+      // Qualquer peça que não seja componente de outro item é considerada avulsa
+      console.log(`${uniqueId} é uma peça avulsa`);
+      independentPieces.push(item);
     });
     
     console.log(`Módulos principais encontrados: ${moduleMap.size}`);
@@ -170,17 +169,47 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
         moduleMap.get(parentId).components = components;
         console.log(`Associados ${components.length} componentes ao módulo ${parentId}`);
       } else {
-        // Se o parent não existe como módulo, tratar os componentes como peças independentes
-        console.log(`Parent ${parentId} não encontrado como módulo, tratando componentes como independentes`);
-        components.forEach(comp => {
-          const desc = comp.getAttribute("DESCRIPTION") || "";
-          if (!desc.toLowerCase().includes("armário") && 
-              !desc.toLowerCase().includes("caixa") &&
-              !desc.toLowerCase().includes("gaveteiro") &&
-              !desc.toLowerCase().includes("dispenseiro")) {
-            independentPieces.push(comp);
+        // Se o parent não existe como módulo, verificar se algum dos independentes tem esse ID
+        // Isso pode acontecer quando o módulo pai foi marcado como independente
+        console.log(`Parent ${parentId} não encontrado no moduleMap, verificando se existe como independente...`);
+        
+        // Procurar o parent nos itens processados
+        const parentItem = itemArray.find(item => item.getAttribute("UNIQUEID") === parentId);
+        
+        if (parentItem) {
+          const parentComponent = parentItem.getAttribute("COMPONENT") || "N";
+          const parentDesc = parentItem.getAttribute("DESCRIPTION") || "";
+          const parentFamily = parentItem.getAttribute("FAMILY") || "";
+          
+          // Se o parent é um módulo válido (armário, etc), criar o módulo agora
+          const isModuleContainer = parentDesc.toLowerCase().includes("armário") || 
+                                     parentDesc.toLowerCase().includes("caixa") ||
+                                     parentDesc.toLowerCase().includes("gaveteiro") ||
+                                     parentDesc.toLowerCase().includes("dispenseiro") ||
+                                     parentFamily.toLowerCase().includes("armário") ||
+                                     parentFamily.toLowerCase().includes("gaveteiro");
+          
+          if (isModuleContainer || parentComponent === "N") {
+            console.log(`Criando módulo ${parentId} retroativamente: ${parentDesc}`);
+            moduleMap.set(parentId, {
+              mainModule: parentItem,
+              components: components
+            });
+            // Remover dos independentes se estava lá
+            const indexInIndependent = independentPieces.findIndex(p => p.getAttribute("UNIQUEID") === parentId);
+            if (indexInIndependent >= 0) {
+              independentPieces.splice(indexInIndependent, 1);
+            }
+          } else {
+            // Se não for um módulo válido, tratar componentes como independentes
+            console.log(`Parent ${parentId} não é um módulo válido, componentes serão independentes`);
+            independentPieces.push(...components);
           }
-        });
+        } else {
+          // Parent não encontrado, tratar componentes como independentes
+          console.log(`Parent ${parentId} não encontrado em lugar nenhum, componentes serão independentes`);
+          independentPieces.push(...components);
+        }
       }
     });
     
@@ -199,68 +228,25 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       const repetition = mainModule.getAttribute("REPETITION") || "1";
       const observations = mainModule.getAttribute("OBSERVATIONS") || "";
       
+      console.log(`Processando módulo ${uniqueId}: ${description} com ${components.length} componentes`);
+      
       // Se encontrarmos "Especial" na descrição, substituímos por "Sarafo Frontal Passante"
       const processedDescription = description.includes("Especial") ? "Sarafo Frontal Passante" : description;
       
-      // Se for um tamponamento ou tampo, processar diretamente
-      if (group === "Tamponamentos" || group === "Tampos") {
-        const componentProps = extractItemPropertiesFromXML(mainModule);
-        
-        // Formatar a descrição da peça no formato [uniqueId] - [description] [thickness]
-        const pieceDescription = formatPieceDescription(uniqueId, processedDescription, componentProps.thickness);
-        
-        // Formatar a coluna módulo para "Tampo Linear" no formato especial
-        let moduleCell;
-        if (processedDescription.includes("Tampo Linear")) {
-          moduleCell = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
-        } else {
-          moduleCell = processedDescription;
-        }
-        
-        // Formatar a coluna CHAPA para incluir material e cor (sem a espessura)
-        const espessuraSemMm = componentProps.thickness.replace(/mm/i, "");
-        const chapaFormatada = `${componentProps.material} ${espessuraSemMm}mm ${componentProps.color}`;
-        
-        csvContent += `<tr>
-          <td>${rowCount}</td>
-          <td class="module-cell">${moduleCell}</td>
-          <td></td>
-          <td>${family}</td>
-          <td class="piece-desc">${pieceDescription}</td>
-          <td class="piece-desc">${escapeHtml(observations)}</td>
-          <td class="comp">${width}</td>
-          <td class="larg">${depth}</td>
-          <td>${repetition}</td>
-          <td class="borda-inf">${componentProps.edgeBottom}</td>
-          <td class="borda-sup">${componentProps.edgeTop}</td>
-          <td class="borda-dir">${componentProps.edgeRight}</td>
-          <td class="borda-esq">${componentProps.edgeLeft}</td>
-          <td class="edge-color">${componentProps.edgeColor}</td>
-          <td class="material">${chapaFormatada}</td>
-          <td class="material">${componentProps.thickness}</td>
-        </tr>`;
-        
-        rowCount++;
+      // Se não tiver componentes, pular este módulo (não mostrar módulos vazios)
+      if (components.length === 0) {
+        console.log(`Módulo ${uniqueId} não tem componentes válidos - será ignorado`);
         return;
       }
       
-      // Formatar a coluna módulo
+      // Formatar a coluna módulo com informações do módulo pai
       const moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
       
-      // Filtrar componentes válidos
-      const validComponents = components.filter(comp => {
-        const desc = comp.getAttribute("DESCRIPTION") || "";
-        return !desc.toLowerCase().includes("armário") && 
-              !desc.toLowerCase().includes("caixa") &&
-              !desc.toLowerCase().includes("gaveteiro") &&
-              !desc.toLowerCase().includes("dispenseiro");
-      });
-      
-      const totalRows = validComponents.length;
+      const totalRows = components.length;
       let isFirstRow = true;
       
-      // Processar os componentes
-      validComponents.forEach(component => {
+      // Processar os componentes do módulo
+      components.forEach(component => {
         const componentProps = extractItemPropertiesFromXML(component);
         const componentWidth = component.getAttribute("WIDTH") || "";
         const componentDepth = component.getAttribute("DEPTH") || "";
