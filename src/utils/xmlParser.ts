@@ -77,7 +77,6 @@ const generateTableHeader = (): string => {
  */
 const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvContent: string): string => {
   let rowCount = 1;
-  const moduleMap = new Map();
   const processedItemIds = new Set(); // Cache para evitar duplicatas
   
   // Validação de elementos
@@ -89,12 +88,18 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
     // Otimização: Converter NodeList para Array para melhor performance
     const itemArray = Array.from(itemElements);
     
-    // Identificar módulos principais com filtro otimizado
-    const mainModules = itemArray.filter(item => {
+    // Primeira passagem: Identificar módulos principais e peças independentes
+    const moduleMap = new Map();
+    const independentPieces = [];
+    const componentsByParent = new Map();
+    
+    // Processar todos os itens e categorizá-los
+    itemArray.forEach(item => {
+      const uniqueId = item.getAttribute("UNIQUEID");
       const component = item.getAttribute("COMPONENT") || "N";
       const uniqueParentId = item.getAttribute("UNIQUEPARENTID") || "";
       const group = item.getAttribute("GROUP") || "";
-      const uniqueId = item.getAttribute("UNIQUEID");
+      const description = item.getAttribute("DESCRIPTION") || "";
       
       // Validar atributos obrigatórios
       if (!uniqueId) {
@@ -109,36 +114,55 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       
       processedItemIds.add(uniqueId);
       
-      return component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || 
-            group === "Tamponamentos" || group === "Tampos";
-    });
-    
-    // Pré-processamento: agrupar componentes por módulo para evitar múltiplas iterações
-    const componentsByParent = new Map();
-    itemArray.forEach(item => {
-      if (item.getAttribute("COMPONENT") === "Y") {
-        const parentId = item.getAttribute("UNIQUEPARENTID") || "";
-        if (!componentsByParent.has(parentId)) {
-          componentsByParent.set(parentId, []);
+      // Verificar se é um módulo principal
+      if (component === "N" || uniqueParentId === "-1" || uniqueParentId === "-2" || 
+          group === "Tamponamentos" || group === "Tampos") {
+        moduleMap.set(uniqueId, {
+          mainModule: item,
+          components: []
+        });
+      }
+      // Verificar se é um componente
+      else if (component === "Y") {
+        // Se tem parent válido, será associado ao módulo
+        if (uniqueParentId && uniqueParentId !== "-1" && uniqueParentId !== "-2") {
+          if (!componentsByParent.has(uniqueParentId)) {
+            componentsByParent.set(uniqueParentId, []);
+          }
+          componentsByParent.get(uniqueParentId).push(item);
+        } 
+        // Caso contrário, é uma peça independente
+        else {
+          // Verificar se não deve ser excluída
+          if (!description.toLowerCase().includes("armário") && 
+              !description.toLowerCase().includes("caixa") &&
+              !description.toLowerCase().includes("gaveteiro") &&
+              !description.toLowerCase().includes("dispenseiro")) {
+            independentPieces.push(item);
+          }
         }
-        componentsByParent.get(parentId).push(item);
       }
     });
     
-    // Processar módulos
-    mainModules.forEach(mainModule => {
-      const uniqueId = mainModule.getAttribute("UNIQUEID") || "";
-      const group = mainModule.getAttribute("GROUP") || "";
-      if (!uniqueId) return;
-      
-      // Adicionar módulo ao mapa com seus componentes correspondentes
-      moduleMap.set(uniqueId, {
-        mainModule,
-        components: componentsByParent.get(uniqueId) || []
-      });
+    // Associar componentes aos seus módulos
+    componentsByParent.forEach((components, parentId) => {
+      if (moduleMap.has(parentId)) {
+        moduleMap.get(parentId).components = components;
+      } else {
+        // Se o parent não existe como módulo, tratar os componentes como peças independentes
+        components.forEach(comp => {
+          const desc = comp.getAttribute("DESCRIPTION") || "";
+          if (!desc.toLowerCase().includes("armário") && 
+              !desc.toLowerCase().includes("caixa") &&
+              !desc.toLowerCase().includes("gaveteiro") &&
+              !desc.toLowerCase().includes("dispenseiro")) {
+            independentPieces.push(comp);
+          }
+        });
+      }
     });
     
-    // Processar e gerar HTML para cada módulo
+    // Processar módulos com seus componentes
     moduleMap.forEach((moduleInfo, uniqueId) => {
       const { mainModule, components } = moduleInfo;
       
@@ -201,7 +225,7 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       // Formatar a coluna módulo
       const moduleDescription = `(${uniqueId}) - ${processedDescription} - L.${width}mm x A.${height}mm x P.${depth}mm`;
       
-      // Otimização: filtrar componentes válidos em uma única passagem
+      // Filtrar componentes válidos
       const validComponents = components.filter(comp => {
         const desc = comp.getAttribute("DESCRIPTION") || "";
         return !desc.toLowerCase().includes("armário") && 
@@ -254,6 +278,50 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
         rowCount++;
         isFirstRow = false;
       });
+    });
+    
+    // Processar peças independentes (como a "Divisória 15" do seu exemplo)
+    console.log(`Processando ${independentPieces.length} peças independentes...`);
+    independentPieces.forEach(piece => {
+      const pieceProps = extractItemPropertiesFromXML(piece);
+      const pieceWidth = piece.getAttribute("WIDTH") || "";
+      const pieceDepth = piece.getAttribute("DEPTH") || "";
+      const pieceDesc = piece.getAttribute("DESCRIPTION") || "";
+      const pieceRepetition = piece.getAttribute("REPETITION") || "1";
+      const pieceObs = piece.getAttribute("OBSERVATIONS") || "";
+      const pieceUniqueId = piece.getAttribute("UNIQUEID") || "";
+      const pieceFamily = piece.getAttribute("FAMILY") || "Ambiente";
+      
+      // Substituir "Especial" por "Sarafo Frontal Passante"
+      const processedPieceDesc = pieceDesc.includes("Especial") ? "Sarafo Frontal Passante" : pieceDesc;
+      
+      // Formatar a descrição da peça
+      const pieceDescription = formatPieceDescription(pieceUniqueId, processedPieceDesc, pieceProps.thickness);
+      
+      // Formatar a coluna CHAPA
+      const espessuraSemMm = pieceProps.thickness.replace(/mm/i, "");
+      const chapaFormatada = `${pieceProps.material} ${espessuraSemMm}mm ${pieceProps.color}`;
+      
+      csvContent += `<tr>
+        <td>${rowCount}</td>
+        <td class="module-cell">Peça Avulsa</td>
+        <td></td>
+        <td>${pieceFamily}</td>
+        <td class="piece-desc">${pieceDescription}</td>
+        <td class="piece-desc">${escapeHtml(pieceObs)}</td>
+        <td class="comp">${pieceWidth}</td>
+        <td class="larg">${pieceDepth}</td>
+        <td>${pieceRepetition}</td>
+        <td class="borda-inf">${pieceProps.edgeBottom}</td>
+        <td class="borda-sup">${pieceProps.edgeTop}</td>
+        <td class="borda-dir">${pieceProps.edgeRight}</td>
+        <td class="borda-esq">${pieceProps.edgeLeft}</td>
+        <td class="edge-color">${pieceProps.edgeColor}</td>
+        <td class="material">${chapaFormatada}</td>
+        <td class="material">${pieceProps.thickness}</td>
+      </tr>`;
+      
+      rowCount++;
     });
     
     return csvContent;

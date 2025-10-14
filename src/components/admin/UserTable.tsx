@@ -1,32 +1,27 @@
 
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  CheckCircle, 
-  Trash2, 
-  Ban, 
-  Shield, 
-  User, 
-  UserCog, 
-  UserPlus, 
-  Crown, 
-  FileText, 
-  Check
-} from "lucide-react";
-import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search, Download, PlusCircle, Eye, Shield, ShieldOff, Ban, Check, Trash } from "lucide-react";
+import { User } from "@/contexts/auth/types";
+import { UserMetricsCollection } from "@/hooks/useUserMetrics";
+import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface UserTableProps {
-  users: any[];
-  userMetrics: any;
+  users: User[];
+  userMetrics: UserMetricsCollection;
   formatDate: (date: string) => string;
   onShowUserDetails: (userId: string) => void;
   onShowRoleDialog: (userId: string) => void;
   onShowBanDialog: (userId: string) => void;
   onShowDeleteDialog: (userId: string) => void;
   onShowAddUserDialog: () => void;
-  onShowPromoteToCEODialog?: (userId: string) => void;
 }
 
 export function UserTable({
@@ -37,197 +32,265 @@ export function UserTable({
   onShowRoleDialog,
   onShowBanDialog,
   onShowDeleteDialog,
-  onShowAddUserDialog,
-  onShowPromoteToCEODialog,
+  onShowAddUserDialog
 }: UserTableProps) {
-  const [search, setSearch] = useState("");
+  const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<Record<string, boolean>>({});
+  const [selectAllUsers, setSelectAllUsers] = useState(false);
 
-  const filteredUsers = users.filter((user) => {
-    const searchTerm = search.toLowerCase();
-    return (
-      user.name.toLowerCase().includes(searchTerm) ||
-      user.email.toLowerCase().includes(searchTerm)
-    );
-  });
+  const filteredUsers = users.filter((user) =>
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const getRoleBadgeClass = (role: string) => {
-    if (role === "admin") return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
-    if (role === "ceo") return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300";
-    return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+  const handleToggleSelectAll = () => {
+    const newValue = !selectAllUsers;
+    setSelectAllUsers(newValue);
+    
+    const newSelectedUsers: Record<string, boolean> = {};
+    filteredUsers.forEach(user => {
+      newSelectedUsers[user.id] = newValue;
+    });
+    setSelectedUsers(newSelectedUsers);
   };
 
-  const getRoleDisplay = (role: string) => {
-    if (role === "admin") return (
-      <>
-        <Shield className="h-3 w-3 mr-1" />
-        Admin
-      </>
-    );
-    if (role === "ceo") return (
-      <>
-        <Crown className="h-3 w-3 mr-1" />
-        CEO
-      </>
-    );
-    return (
-      <>
-        <User className="h-3 w-3 mr-1" />
-        Usuário
-      </>
-    );
+  const handleToggleSelectUser = (userId: string) => {
+    setSelectedUsers(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
   };
+
+  const exportSelectedUsers = () => {
+    const selectedUserIds = Object.entries(selectedUsers)
+      .filter(([, isSelected]) => isSelected)
+      .map(([id]) => id);
+    
+    if (selectedUserIds.length === 0) {
+      toast({
+        title: "Nenhum usuário selecionado",
+        description: "Por favor, selecione pelo menos um usuário para exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const selectedUserData = users
+      .filter(user => selectedUserIds.includes(user.id))
+      .map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
+        isBanned: user.isBanned
+      }));
+    
+    const dataStr = JSON.stringify(selectedUserData, null, 2);
+    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
+    
+    const exportFileDefaultName = `users-export-${new Date().toISOString().slice(0, 10)}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    toast({
+      title: "Usuários exportados",
+      description: `${selectedUserIds.length} usuários foram exportados com sucesso.`,
+    });
+  };
+
+  // Colunas a serem mostradas com base no tamanho da tela
+  const getColumns = () => {
+    if (isMobile) {
+      return ['select', 'name', 'role', 'status', 'actions'];
+    }
+    return ['select', 'name', 'email', 'role', 'status', 'conversions', 'successRate', 'lastConversion', 'actions'];
+  };
+
+  const visibleColumns = getColumns();
 
   return (
-    <>
-      <div className="flex justify-between items-center mb-4">
-        <Input
-          type="search"
-          placeholder="Buscar usuário..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-md"
-        />
-        <Button onClick={onShowAddUserDialog}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Adicionar Usuário
-        </Button>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Tipo</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Criado em</TableHead>
-            <TableHead>Último acesso</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredUsers.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-                  {user.role === 'ceo' ? (
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                      <Crown className="h-4 w-4" />
-                    </div>
-                  ) : user.role === 'admin' ? (
-                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                      <Shield className="h-4 w-4" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                      <User className="h-4 w-4" />
-                    </div>
+    <Card>
+      <CardHeader>
+        <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'justify-between items-center'}`}>
+          <CardTitle>Usuários do Sistema</CardTitle>
+          <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'space-x-2'}`}>
+            <Button 
+              onClick={exportSelectedUsers} 
+              variant="outline"
+              size={isMobile ? "sm" : "default"}
+              className={isMobile ? "w-full" : ""}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </Button>
+            <Button 
+              onClick={onShowAddUserDialog}
+              size={isMobile ? "sm" : "default"}
+              className={isMobile ? "w-full" : ""}
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Novo Usuário
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2 mt-4">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar usuários..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className={isMobile ? "h-[400px]" : "max-h-[600px]"}>
+          <div className="w-full overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {visibleColumns.includes('select') && (
+                    <TableHead className="w-12">
+                      <Checkbox 
+                        checked={selectAllUsers} 
+                        onCheckedChange={handleToggleSelectAll}
+                        aria-label="Selecionar todos os usuários"
+                      />
+                    </TableHead>
                   )}
-                  {user.name}
-                </div>
-              </TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeClass(user.role)}`}
-                >
-                  {getRoleDisplay(user.role)}
-                </span>
-              </TableCell>
-              <TableCell>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    user.isBanned
-                      ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                      : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                  }`}
-                >
-                  {user.isBanned ? (
-                    <>
-                      <Ban className="h-3 w-3 mr-1" />
-                      Banido
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Ativo
-                    </>
-                  )}
-                </span>
-              </TableCell>
-              <TableCell>
-                {user.createdAt ? formatDate(user.createdAt) : "Não disponível"}
-              </TableCell>
-              <TableCell>
-                {user.lastLogin ? formatDate(user.lastLogin) : "Nunca"}
-              </TableCell>
-              <TableCell>
-                <div className="flex space-x-2 justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onShowUserDetails(user.id)}
-                  >
-                    <FileText className="h-4 w-4 mr-1" />
-                    <span className="sr-only md:not-sr-only md:ml-1">Detalhes</span>
-                  </Button>
-                  {user.role !== "ceo" && onShowPromoteToCEODialog && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onShowPromoteToCEODialog(user.id)}
-                      className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
-                    >
-                      <Crown className="h-4 w-4 mr-1" />
-                      <span className="sr-only md:not-sr-only md:ml-1">CEO</span>
-                    </Button>
-                  )}
-                  {user.role !== "ceo" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onShowRoleDialog(user.id)}
-                    >
-                      <UserCog className="h-4 w-4 mr-1" />
-                      <span className="sr-only md:not-sr-only md:ml-1">
-                        {user.role === "admin" ? "Rebaixar" : "Promover"}
-                      </span>
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onShowBanDialog(user.id)}
-                    className={
-                      user.isBanned
-                        ? "text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                        : "text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700"
-                    }
-                  >
-                    {user.isBanned ? (
-                      <Check className="h-4 w-4 mr-1" />
-                    ) : (
-                      <Ban className="h-4 w-4 mr-1" />
-                    )}
-                    <span className="sr-only md:not-sr-only md:ml-1">
-                      {user.isBanned ? "Ativar" : "Banir"}
-                    </span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onShowDeleteDialog(user.id)}
-                    className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    <span className="sr-only md:not-sr-only md:ml-1">Excluir</span>
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </>
+                  {visibleColumns.includes('name') && <TableHead>Nome</TableHead>}
+                  {visibleColumns.includes('email') && <TableHead>Email</TableHead>}
+                  {visibleColumns.includes('role') && <TableHead>Função</TableHead>}
+                  {visibleColumns.includes('status') && <TableHead>Status</TableHead>}
+                  {visibleColumns.includes('conversions') && <TableHead>Conversões</TableHead>}
+                  {visibleColumns.includes('successRate') && <TableHead>Taxa de Sucesso</TableHead>}
+                  {visibleColumns.includes('lastConversion') && <TableHead>Última Conversão</TableHead>}
+                  {visibleColumns.includes('actions') && <TableHead>Ações</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={visibleColumns.length} className="h-24 text-center">
+                      Nenhum usuário encontrado.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredUsers.map((user) => {
+                    const metrics = userMetrics[user.id] || {
+                      totalConversions: 0,
+                      successfulConversions: 0,
+                      failedConversions: 0,
+                      averageConversionTime: 0,
+                      lastConversion: '-'
+                    };
+                    
+                    return (
+                      <TableRow key={user.id}>
+                        {visibleColumns.includes('select') && (
+                          <TableCell>
+                            <Checkbox 
+                              checked={!!selectedUsers[user.id]} 
+                              onCheckedChange={() => handleToggleSelectUser(user.id)}
+                              aria-label={`Selecionar usuário ${user.name}`}
+                            />
+                          </TableCell>
+                        )}
+                        {visibleColumns.includes('name') && (
+                          <TableCell>{user.name}</TableCell>
+                        )}
+                        {visibleColumns.includes('email') && (
+                          <TableCell>{user.email}</TableCell>
+                        )}
+                        {visibleColumns.includes('role') && (
+                          <TableCell>
+                            <Badge variant={user.role === "admin" ? "default" : "outline"}>
+                              {user.role === "admin" ? "Admin" : "Usuário"}
+                            </Badge>
+                          </TableCell>
+                        )}
+                        {visibleColumns.includes('status') && (
+                          <TableCell>
+                            <Badge variant={user.isBanned ? "destructive" : "success"}>
+                              {user.isBanned ? "Banido" : "Ativo"}
+                            </Badge>
+                          </TableCell>
+                        )}
+                        {visibleColumns.includes('conversions') && (
+                          <TableCell>{metrics.totalConversions}</TableCell>
+                        )}
+                        {visibleColumns.includes('successRate') && (
+                          <TableCell>
+                            {metrics.totalConversions > 0
+                              ? ((metrics.successfulConversions / metrics.totalConversions) * 100).toFixed(1)
+                              : 0}%
+                          </TableCell>
+                        )}
+                        {visibleColumns.includes('lastConversion') && (
+                          <TableCell>
+                            {metrics.lastConversion !== '-'
+                              ? formatDate(metrics.lastConversion)
+                              : 'Nunca converteu'}
+                          </TableCell>
+                        )}
+                        {visibleColumns.includes('actions') && (
+                          <TableCell>
+                            <div className={`flex ${isMobile ? 'flex-col space-y-1' : 'space-x-1'}`}>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => onShowUserDetails(user.id)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => onShowRoleDialog(user.id)}
+                              >
+                                {user.role === "admin" ? (
+                                  <Shield className="h-4 w-4" />
+                                ) : (
+                                  <ShieldOff className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => onShowBanDialog(user.id)}
+                              >
+                                {user.isBanned ? (
+                                  <Check className="h-4 w-4" />
+                                ) : (
+                                  <Ban className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => onShowDeleteDialog(user.id)}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }

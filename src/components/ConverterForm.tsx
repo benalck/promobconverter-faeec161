@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, ArrowRight, CheckCircle, Upload, File } from "lucide-react";
+import { FileDown, ArrowRight, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import FileUpload from "./FileUpload";
 import { Input } from "@/components/ui/input";
@@ -85,7 +85,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         description: "Você precisa estar logado para converter arquivos.",
         variant: "destructive",
       });
-      navigate("/login");
+      navigate("/register");
       return;
     }
 
@@ -167,21 +167,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
   return (
     <>
-      <Card className={cn("w-full border border-gray-200 dark:border-gray-800 shadow-lg transition-all hover:shadow-xl", className)}>
+      <Card className={cn("w-full border border-gray-200 shadow-lg", className)}>
         <CardHeader className={cn(
-          "rounded-t-lg border-b border-gray-100 dark:border-gray-800",
-          isMobile ? "px-4 py-4" : "bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 px-6 py-6"
+          "rounded-t-lg border-b border-gray-100",
+          isMobile ? "px-4 py-4" : "bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-6"
         )}>
           <CardTitle className={cn(
-            "text-blue-700 dark:text-blue-400",
+            "text-blue-700",
             isMobile ? "text-lg" : "text-xl"
           )}>
-            <div className="flex items-center gap-2">
-              <FileDown className="h-5 w-5" />
-              Conversor Promob
-            </div>
+            Conversor Promob
           </CardTitle>
-          <CardDescription className="text-indigo-600 dark:text-indigo-400 text-sm sm:text-base">
+          <CardDescription className="text-indigo-600 text-sm sm:text-base">
             Transforme arquivos XML Promob em planos de corte Excel com formatação profissional em segundos
           </CardDescription>
         </CardHeader>
@@ -189,51 +186,39 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           isMobile ? "p-4 space-y-4" : "pt-6 px-6 space-y-5"
         )}>
           <div className="space-y-4 sm:space-y-5">
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50 transition-all hover:bg-gray-100 dark:hover:bg-gray-800">
-              <FileUpload
-                onFileSelect={handleFileSelect}
-                accept=".xml"
-                isDisabled={isConverting}
-                maxSize={10000000} // 10MB max
-              />
-            </div>
-
-            {xmlFile && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 flex items-start gap-3 animate-fade-in">
-                <File className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{xmlFile.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{(xmlFile.size / 1024).toFixed(1)} KB</p>
-                </div>
-              </div>
-            )}
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              accept=".xml"
+              isDisabled={isConverting}
+              maxSize={200}
+            />
 
             <div>
-              <Label htmlFor="output-name" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Label htmlFor="output-name" className="text-sm font-medium text-gray-700">
                 Nome do arquivo de saída
               </Label>
               <Input
                 id="output-name"
                 value={outputFileName}
                 onChange={(e) => setOutputFileName(e.target.value)}
-                className="mt-1 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900"
+                className="mt-1 focus:ring-blue-500 focus:border-blue-500"
                 disabled={isConverting}
               />
             </div>
 
             {conversionSuccess && !isConverting && (
-              <div className="rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 flex items-center animate-fade-in">
-                <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
-                <p className="text-sm text-green-700 dark:text-green-300">Conversão realizada com sucesso!</p>
+              <div className="rounded-md bg-green-50 p-3 flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <p className="text-sm text-green-700">Conversão realizada com sucesso!</p>
               </div>
             )}
 
             <Button
               type="submit"
               className={cn(
-                "w-full gradient-cta text-white font-medium py-2.5 px-4 rounded-md shadow-md transition-all duration-300 group relative overflow-hidden",
+                "w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition-all duration-300 group relative overflow-hidden",
                 isMobile ? "text-sm" : "",
-                conversionSuccess && !isConverting ? "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600" : ""
+                conversionSuccess && !isConverting ? "from-green-600 to-green-500 hover:from-green-700 hover:to-green-600" : ""
               )}
               onClick={handleConvert}
               disabled={isConverting || !xmlFile}

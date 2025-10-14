@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
-import { transformUser } from './userUtils';
+import { convertSupabaseUser } from './userUtils';
 
 interface RegisterData {
   name: string;
@@ -51,53 +51,32 @@ export const useAuthentication = (
       if (error) throw error;
 
       if (data.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (!profile) {
-          throw new Error('Perfil não encontrado');
-        }
+        const currentUser = await convertSupabaseUser(data.user);
         
-        // Ensure role is a valid type
-        if (profile.role !== 'admin' && profile.role !== 'user' && profile.role !== 'ceo') {
-          profile.role = 'user'; // Default to user if invalid role
-        }
-        
-        const currentUser = transformUser(profile);
-        
-        if (currentUser?.isBanned) {
+        if (currentUser.isBanned) {
           throw new Error('Sua conta foi banida. Entre em contato com o administrador.');
         }
 
         await supabase
           .from('profiles')
           .update({ last_login: new Date().toISOString() })
-          .eq('id', currentUser?.id);
+          .eq('id', currentUser.id);
           
-        if (currentUser) {
-          setUser(currentUser);
-          await syncUsers();
-        }
-        
-        return { success: true };
+        setUser(currentUser);
+        await syncUsers();
       }
-      
-      return { success: false, message: 'Erro ao fazer login' };
     } catch (error) {
       console.error('Erro ao fazer login:', error);
       if (error instanceof Error) {
         if (error.message.includes('banida')) {
-          throw new Error(error.message);
+          throw error;
         } else if (error.message.includes('Invalid login credentials')) {
-          return { success: false, message: 'Email ou senha inválidos' };
+          throw new Error('Email ou senha inválidos');
         } else {
-          return { success: false, message: 'Falha ao fazer login' };
+          throw new Error('Falha ao fazer login');
         }
       } else {
-        return { success: false, message: 'Falha ao fazer login' };
+        throw new Error('Falha ao fazer login');
       }
     }
   };
@@ -140,7 +119,7 @@ export const useAuthentication = (
     }
   };
   
-  // Modified performRegistration to ensure role type safety
+  // Modified performRegistration to use the RPC function register_user_verified
   const performRegistration = async (data: RegisterData): Promise<RegisterResponse> => {
     try {
       // Initial validations
@@ -252,7 +231,7 @@ export const useAuthentication = (
           .select('*', { count: 'exact', head: true });
           
         const isFirstUser = count === 0;
-        const userRole = isFirstUser ? 'admin' : 'user' as 'admin' | 'user';
+        const userRole = isFirstUser ? 'admin' : 'user';
         
         // Call the register_user_verified RPC function
         const { data: rpcResult, error: rpcError } = await supabase.rpc(
@@ -299,25 +278,9 @@ export const useAuthentication = (
       }
 
       try {
-        // Get the newly created profile
-        const { data: newProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authResponse.data.user.id)
-          .single();
-          
-        if (newProfile) {
-          // Ensure role is a valid type
-          if (newProfile.role !== 'admin' && newProfile.role !== 'user' && newProfile.role !== 'ceo') {
-            newProfile.role = 'user'; // Default to user if invalid role
-          }
-          
-          const newUser = transformUser(newProfile);
-          if (newUser) {
-            setUser(newUser);
-            await syncUsers();
-          }
-        }
+        const newUser = await convertSupabaseUser(authResponse.data.user);
+        setUser(newUser);
+        await syncUsers();
       } catch (finalizeError) {
         console.error('Erro ao finalizar registro:', finalizeError);
       }
