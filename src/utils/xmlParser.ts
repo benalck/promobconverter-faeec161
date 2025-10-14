@@ -120,16 +120,21 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
       
       processedItemIds.add(uniqueId);
       
-      // Verificar se é um módulo principal (armário, gaveteiro, etc) - ESTES DEVEM SER EXCLUÍDOS
-      const isModuleContainer = description.toLowerCase().includes("armário") || 
-                                 description.toLowerCase().includes("caixa") ||
-                                 description.toLowerCase().includes("gaveteiro") ||
-                                 description.toLowerCase().includes("dispenseiro") ||
-                                 family.toLowerCase().includes("armário") ||
-                                 family.toLowerCase().includes("gaveteiro");
+      // Tamponamentos e Tampos com UNIQUEPARENTID="-2" são peças avulsas
+      if ((group === "Tamponamentos" || group === "Tampos") && uniqueParentId === "-2") {
+        console.log(`${uniqueId} é ${group} avulso - será tratado como peça avulsa`);
+        independentPieces.push(item);
+        return;
+      }
       
-      if (isModuleContainer && component === "N") {
-        console.log(`${uniqueId} é um módulo container - será usado para agrupar componentes`);
+      // Módulo principal: tem GROUP="Armários", "Gaveteiros", etc. OU é COMPONENT="N" com UNIQUEPARENTID="-2"
+      const isMainModule = (group.toLowerCase().includes("armário") ||
+                            group.toLowerCase().includes("gaveteiro") ||
+                            group.toLowerCase().includes("dispenseiro")) &&
+                           (uniqueParentId === "-2" || uniqueParentId === "-1");
+      
+      if (isMainModule) {
+        console.log(`${uniqueId} é um módulo principal (${group})`);
         moduleMap.set(uniqueId, {
           mainModule: item,
           components: []
@@ -137,9 +142,9 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
         return;
       }
       
-      // Se for um componente de outro item (parte de um módulo)
-      if (component === "Y" && uniqueParentId && uniqueParentId !== "-1" && uniqueParentId !== "-2" && uniqueParentId !== "") {
-        console.log(`${uniqueId} é componente do módulo ${uniqueParentId}`);
+      // Se tem UNIQUEPARENTID válido (não -1, -2 ou vazio), é componente de algum módulo
+      if (uniqueParentId && uniqueParentId !== "-1" && uniqueParentId !== "-2" && uniqueParentId !== "") {
+        console.log(`${uniqueId} é componente do parent ${uniqueParentId}`);
         if (!componentsByParent.has(uniqueParentId)) {
           componentsByParent.set(uniqueParentId, []);
         }
@@ -147,15 +152,8 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
         return;
       }
       
-      // Tamponamentos e Tampos são sempre tratados como peças avulsas
-      if (group === "Tamponamentos" || group === "Tampos") {
-        console.log(`${uniqueId} é um ${group} - será tratado como peça avulsa`);
-        independentPieces.push(item);
-        return;
-      }
-      
-      // Qualquer peça que não seja componente de outro item é considerada avulsa
-      console.log(`${uniqueId} é uma peça avulsa`);
+      // Qualquer outro item é considerado peça avulsa
+      console.log(`${uniqueId} é uma peça avulsa (sem parent válido)`);
       independentPieces.push(item);
     });
     
@@ -163,38 +161,69 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
     console.log(`Peças independentes encontradas: ${independentPieces.length}`);
     console.log(`Grupos de componentes: ${componentsByParent.size}`);
     
-    // Associar componentes aos seus módulos
+    // Associar componentes aos seus módulos, expandindo sub-módulos recursivamente
     componentsByParent.forEach((components, parentId) => {
       if (moduleMap.has(parentId)) {
-        moduleMap.get(parentId).components = components;
-        console.log(`Associados ${components.length} componentes ao módulo ${parentId}`);
-      } else {
-        // Se o parent não existe como módulo, verificar se algum dos independentes tem esse ID
-        // Isso pode acontecer quando o módulo pai foi marcado como independente
-        console.log(`Parent ${parentId} não encontrado no moduleMap, verificando se existe como independente...`);
+        // Parent já existe no moduleMap, adicionar componentes diretamente
+        const expandedComponents = [];
         
-        // Procurar o parent nos itens processados
+        components.forEach(comp => {
+          const compId = comp.getAttribute("UNIQUEID");
+          const compComponent = comp.getAttribute("COMPONENT") || "N";
+          
+          // Se o componente é COMPONENT="N" E tem seus próprios componentes, expandir
+          if (compComponent === "N" && componentsByParent.has(compId)) {
+            console.log(`Expandindo sub-módulo ${compId} dentro do módulo ${parentId}`);
+            const subComponents = componentsByParent.get(compId);
+            expandedComponents.push(...subComponents);
+          } else {
+            // Componente normal, adicionar diretamente
+            expandedComponents.push(comp);
+          }
+        });
+        
+        moduleMap.get(parentId).components = expandedComponents;
+        console.log(`Associados ${expandedComponents.length} componentes (expandidos) ao módulo ${parentId}`);
+      } else {
+        // Parent não está no moduleMap
+        // Procurar o parent nos itens processados para ver se é um módulo válido
         const parentItem = itemArray.find(item => item.getAttribute("UNIQUEID") === parentId);
         
         if (parentItem) {
-          const parentComponent = parentItem.getAttribute("COMPONENT") || "N";
+          const parentGroup = parentItem.getAttribute("GROUP") || "";
           const parentDesc = parentItem.getAttribute("DESCRIPTION") || "";
-          const parentFamily = parentItem.getAttribute("FAMILY") || "";
+          const parentParent = parentItem.getAttribute("UNIQUEPARENTID") || "";
           
-          // Se o parent é um módulo válido (armário, etc), criar o módulo agora
-          const isModuleContainer = parentDesc.toLowerCase().includes("armário") || 
-                                     parentDesc.toLowerCase().includes("caixa") ||
-                                     parentDesc.toLowerCase().includes("gaveteiro") ||
-                                     parentDesc.toLowerCase().includes("dispenseiro") ||
-                                     parentFamily.toLowerCase().includes("armário") ||
-                                     parentFamily.toLowerCase().includes("gaveteiro");
+          // Se o parent é um módulo principal (armário, gaveteiro, etc), criar agora
+          const isMainModule = (parentGroup.toLowerCase().includes("armário") ||
+                                parentGroup.toLowerCase().includes("gaveteiro") ||
+                                parentGroup.toLowerCase().includes("dispenseiro")) &&
+                               (parentParent === "-2" || parentParent === "-1");
           
-          if (isModuleContainer || parentComponent === "N") {
+          if (isMainModule) {
             console.log(`Criando módulo ${parentId} retroativamente: ${parentDesc}`);
+            
+            // Expandir componentes recursivamente
+            const expandedComponents = [];
+            components.forEach(comp => {
+              const compId = comp.getAttribute("UNIQUEID");
+              const compComponent = comp.getAttribute("COMPONENT") || "N";
+              
+              // Se o componente tem seus próprios componentes, expandir
+              if (compComponent === "N" && componentsByParent.has(compId)) {
+                console.log(`Expandindo sub-módulo ${compId} dentro do módulo retroativo ${parentId}`);
+                const subComponents = componentsByParent.get(compId);
+                expandedComponents.push(...subComponents);
+              } else {
+                expandedComponents.push(comp);
+              }
+            });
+            
             moduleMap.set(parentId, {
               mainModule: parentItem,
-              components: components
+              components: expandedComponents
             });
+            
             // Remover dos independentes se estava lá
             const indexInIndependent = independentPieces.findIndex(p => p.getAttribute("UNIQUEID") === parentId);
             if (indexInIndependent >= 0) {
@@ -202,12 +231,12 @@ const processItemElementsOptimized = (itemElements: NodeListOf<Element>, csvCont
             }
           } else {
             // Se não for um módulo válido, tratar componentes como independentes
-            console.log(`Parent ${parentId} não é um módulo válido, componentes serão independentes`);
+            console.log(`Parent ${parentId} (${parentDesc}) não é um módulo válido, componentes serão independentes`);
             independentPieces.push(...components);
           }
         } else {
           // Parent não encontrado, tratar componentes como independentes
-          console.log(`Parent ${parentId} não encontrado em lugar nenhum, componentes serão independentes`);
+          console.log(`Parent ${parentId} não encontrado, componentes serão independentes`);
           independentPieces.push(...components);
         }
       }
