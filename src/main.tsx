@@ -61,75 +61,10 @@ const App = lazy(() => {
   });
 });
 
-// Configuração de logs e detecção de erros
-console.log('Inicializando aplicação...');
-console.log('Ambiente:', import.meta.env.MODE);
-
-// Adicionar elemento para debug visível
-const debugElement = document.createElement('div');
-debugElement.id = 'debug-info';
-debugElement.style.position = 'fixed';
-debugElement.style.bottom = '0';
-debugElement.style.left = '0';
-debugElement.style.right = '0';
-debugElement.style.backgroundColor = 'rgba(0,0,0,0.8)';
-debugElement.style.color = 'white';
-debugElement.style.padding = '10px';
-debugElement.style.fontSize = '12px';
-debugElement.style.zIndex = '9999';
-debugElement.style.maxHeight = '200px';
-debugElement.style.overflow = 'auto';
-debugElement.style.display = 'none'; // Inicialmente oculto
-
-// Função para mostrar/ocultar debug info com triplo clique
-document.addEventListener('click', (e) => {
-  if (e.detail === 3) { // Triplo clique
-    const debugEl = document.getElementById('debug-info');
-    if (debugEl) {
-      debugEl.style.display = debugEl.style.display === 'none' ? 'block' : 'none';
-    }
-  }
-});
-
-// Adicionar ao DOM
-document.body.appendChild(debugElement);
-
-// Capturar informações do ambiente
-const envInfo = {
-  MODE: import.meta.env.MODE,
-  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL || 'não definido',
-  VITE_API_URL: import.meta.env.VITE_API_URL || 'não definido',
-  HAS_SUPABASE_KEY: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-  HAS_STRIPE_KEY: !!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
-  BROWSER: navigator.userAgent,
-  TIMESTAMP: new Date().toISOString()
-};
-
-// Guardar variáveis de ambiente e informações de depuração
-console.log('Informações do ambiente:', envInfo);
-debugElement.innerHTML = `
-  <h3>Debug Info (triplo clique para mostrar/ocultar)</h3>
-  <p>Ambiente: ${envInfo.MODE}</p>
-  <p>VITE_SUPABASE_URL: ${envInfo.VITE_SUPABASE_URL}</p>
-  <p>VITE_API_URL: ${envInfo.VITE_API_URL}</p>
-  <p>HAS_SUPABASE_KEY: ${envInfo.HAS_SUPABASE_KEY}</p>
-  <p>HAS_STRIPE_KEY: ${envInfo.HAS_STRIPE_KEY}</p>
-  <p>User Agent: ${envInfo.BROWSER}</p>
-  <p>Timestamp: ${envInfo.TIMESTAMP}</p>
-`;
-
 // Handler para erros globais
 window.addEventListener('error', (event) => {
   console.error('Erro global capturado:', event.error || event.message);
-  
-  // Atualizar elemento de debug
-  const debugEl = document.getElementById('debug-info');
-  if (debugEl) {
-    debugEl.innerHTML += `<p style="color: red">ERRO: ${event.error?.message || event.message || 'Erro desconhecido'}</p>`;
-    debugEl.style.display = 'block'; // Mostrar automaticamente em caso de erro
-  }
-  
-  // Remover loader
+
   const loader = document.getElementById('loading-fallback');
   if (loader) {
     loader.style.display = 'none';
@@ -139,13 +74,6 @@ window.addEventListener('error', (event) => {
 // Handler para rejeições de promessas não tratadas
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Promessa rejeitada não tratada:', event.reason);
-  
-  // Atualizar elemento de debug
-  const debugEl = document.getElementById('debug-info');
-  if (debugEl) {
-    debugEl.innerHTML += `<p style="color: orange">PROMESSA REJEITADA: ${event.reason?.message || 'Razão desconhecida'}</p>`;
-    debugEl.style.display = 'block'; // Mostrar automaticamente em caso de erro
-  }
 });
 
 // Renderizar aplicação com fallbacks
