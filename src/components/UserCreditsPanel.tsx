@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { User } from '@/contexts/auth/types';
 
 interface UserCreditsPanelProps {
   className?: string;
@@ -47,9 +48,12 @@ const UserCreditsPanel: React.FC<UserCreditsPanelProps> = ({ className }) => {
       }
       
       // Atualizar localmente
-      setUser({
-        ...user,
-        credits: data.credits || 0
+      setUser((prevUser) => {
+        if (!prevUser) return null;
+        return {
+          ...prevUser,
+          credits: data.credits || 0
+        } as User;
       });
       
       toast({
