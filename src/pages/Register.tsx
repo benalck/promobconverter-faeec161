@@ -260,7 +260,6 @@ export default function Register() {
     setShowPassword(!showPassword);
   };
 
-
   const handleResendConfirmation = async () => {
     if (!email) {
       toast({
@@ -463,17 +462,6 @@ export default function Register() {
                       className="pl-10"
                     />
                   </div>
-                </div>
-              )}
-              
-              {isLoginMode && (
-                <div className="flex justify-end mb-4">
-                  <Link 
-                    to="/forgot-password"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Esqueci minha senha
-                  </Link>
                 </div>
               )}
               

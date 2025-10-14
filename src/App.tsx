@@ -12,9 +12,6 @@ const Admin = lazy(() => import("@/pages/Admin"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
-const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
-const ForgotPassword = lazy(() => import("@/pages/ForgotPassword"));
-const CuttingPlan = lazy(() => import("@/pages/CuttingPlan"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -107,7 +104,6 @@ function App() {
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/register" element={<Register />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-              <Route path="/cutting-plan" element={<ProtectedRoute><CuttingPlan /></ProtectedRoute>} />
               
               {/* Rotas para verificação de email - consolidadas */}
               <Route path="/verify" element={<VerifyEmail />} />
@@ -122,11 +118,6 @@ function App() {
               <Route path="/verify-redirect/*" element={<VerifyEmail />} />
               <Route path="/#access_token=*" element={<VerifyEmail />} />
               <Route path="/*access_token=*" element={<VerifyEmail />} />
-              
-              {/* Rotas para redefinir senha */}
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/reset-password/*" element={<ResetPassword />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

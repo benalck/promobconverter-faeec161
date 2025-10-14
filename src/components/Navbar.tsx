@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, LogOut, Menu, User, Home, Scissors } from "lucide-react";
+import { ChevronDown, LogOut, Menu, User, Home } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -38,13 +38,6 @@ export default function Navbar() {
               <Button variant="ghost" size="sm" className="flex items-center gap-1">
                 <Home className="h-4 w-4 mr-1" />
                 <span>Início</span>
-              </Button>
-            </Link>
-            
-            <Link to="/cutting-plan">
-              <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                <Scissors className="h-4 w-4 mr-1" />
-                <span>Plano de Corte</span>
               </Button>
             </Link>
             
@@ -93,11 +86,6 @@ export default function Navbar() {
               <Link to="/" className="flex items-center justify-center w-full px-2 py-1 hover:bg-gray-100 rounded-md" onClick={() => setMenuOpen(false)}>
                 <Home className="h-4 w-4 mr-2" />
                 Início
-              </Link>
-              
-              <Link to="/cutting-plan" className="flex items-center justify-center w-full px-2 py-1 hover:bg-gray-100 rounded-md" onClick={() => setMenuOpen(false)}>
-                <Scissors className="h-4 w-4 mr-2" />
-                Plano de Corte
               </Link>
               
               {user?.role === 'admin' && (
