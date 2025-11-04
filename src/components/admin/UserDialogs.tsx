@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -13,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { User } from "@/contexts/auth/types";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatPhoneNumber } from "@/lib/utils"; // Import formatPhoneNumber
 
 interface DeleteDialogProps {
   open: boolean;
@@ -104,8 +104,8 @@ export function RoleDialog({ open, onOpenChange, onConfirm, selectedUser, users 
         <DialogHeader>
           <DialogTitle>Alterar Função</DialogTitle>
           <DialogDescription>
-            {user?.role === "admin" 
-              ? "Remover privilégios de administrador deste usuário?" 
+            {user?.role === "admin" || user?.role === "ceo"
+              ? "Remover privilégios de administrador/CEO deste usuário?" 
               : "Tornar este usuário um administrador?"}
           </DialogDescription>
         </DialogHeader>
@@ -152,6 +152,11 @@ export function AddUserDialog({
   setIsNewUserAdmin
 }: AddUserDialogProps) {
   const isMobile = useIsMobile();
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setNewUserPhone(formatted);
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -206,9 +211,10 @@ export function AddUserDialog({
               id="phone"
               type="tel"
               value={newUserPhone}
-              onChange={(e) => setNewUserPhone(e.target.value)}
+              onChange={handlePhoneChange}
               placeholder="(00) 00000-0000"
               className="mt-1"
+              maxLength={15}
             />
           </div>
           <div className="form-group flex items-center space-x-2">

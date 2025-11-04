@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,12 +13,12 @@ import {
   AlertCircle, 
   Loader2, 
   RefreshCcw, 
-  CheckCircle, 
-  Clock, 
   MessageSquare, 
   Mail, 
   MailCheck, 
-  MailX
+  MailX,
+  History,
+  Coins
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { UserTable } from "@/components/admin/UserTable";
@@ -29,6 +29,8 @@ import {
   RoleDialog,
   AddUserDialog
 } from "@/components/admin/UserDialogs";
+import { AddCreditsDialog } from "@/components/admin/AddCreditsDialog"; // New dialog
+import { AdminLogsTable } from "@/components/admin/AdminLogsTable"; // New component
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   getContactForms, 
@@ -46,13 +48,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { 
   Dialog, 
-  DialogTrigger, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
   DialogDescription, 
   DialogFooter
 } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { logAdminAction } from "@/utils/adminLogger"; // Import the new logger
 
 // Type for handling register user form
 interface RegisterUserForm {
@@ -62,8 +65,18 @@ interface RegisterUserForm {
   password: string;
 }
 
+interface AdminLog {
+  id: string;
+  admin_id: string;
+  action_type: string;
+  target_user_id: string | null;
+  details: any;
+  timestamp: string;
+}
+
 export default function Admin() {
   const { 
+    user: currentUser, // Renamed to avoid conflict with 'user' in loops
     users, 
     deleteUser, 
     isAdmin: isCurrentUserAdmin, 
@@ -81,16 +94,21 @@ export default function Admin() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showUserDetailsDialog, setShowUserDetailsDialog] = useState(false);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [showAddCreditsDialog, setShowAddCreditsDialog] = useState(false); // New dialog state
   
   // UI state
-  const [timeFilter, setTimeFilter] = useState("today");
-  const [activeTab, setActiveTab] = useState("users");
+  const [timeFilter, setTimeFilter] = useState("all"); // Default to 'all' for initial load
+  const [activeTab, setActiveTab] = useState("dashboard"); // Default to dashboard
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Contacts state
   const [contacts, setContacts] = useState<ContactForm[]>([]);
   const [selectedContact, setSelectedContact] = useState<ContactForm | null>(null);
   const [showContactDialog, setShowContactDialog] = useState(false);
+
+  // Admin Logs state
+  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   
   // Form states for the add user dialog
   const [newUserName, setNewUserName] = useState("");
@@ -106,6 +124,7 @@ export default function Admin() {
     isLoading: isLoadingSystem,
     error: systemError,
     fetchSystemMetrics,
+    fetchConversionsByDateRange,
     refetch: refetchSystemMetrics
   } = useSystemMetrics();
 
@@ -116,6 +135,41 @@ export default function Admin() {
     fetchUserMetrics
   } = useUserMetrics();
 
+  // Function to load contacts from localStorage
+  const loadContacts = useCallback(() => {
+    const allContacts = getContactForms();
+    // Sort by date, most recent first
+    allContacts.sort((a, b) => {
+      const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp);
+      const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp);
+      return dateB.getTime() - dateA.getTime();
+    });
+    setContacts(allContacts);
+  }, []);
+
+  // Function to load admin logs from Supabase
+  const fetchAdminLogs = useCallback(async () => {
+    setIsLoadingLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from('admin_actions_log')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      setAdminLogs(data as AdminLog[]);
+    } catch (error) {
+      console.error('Error fetching admin logs:', error);
+      toast({
+        title: "Erro ao carregar logs",
+        description: "Não foi possível carregar os logs de ações administrativas.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  }, [toast]);
+
   // Efeito para recarregar dados quando houver erro
   useEffect(() => {
     if (systemError || userError) {
@@ -125,29 +179,51 @@ export default function Admin() {
 
       return () => clearTimeout(retryTimeout);
     }
-  }, [systemError, userError]);
+  }, [systemError, userError, refreshData]);
   
-  // Carrega os contatos
+  // Initial data load and polling setup
   useEffect(() => {
-    loadContacts();
-    
-    // Configura um intervalo para atualizar a cada 30 segundos
-    const interval = setInterval(loadContacts, 30000);
-    
-    return () => clearInterval(interval);
-  }, []);
-  
-  // Função para carregar contatos do localStorage
-  const loadContacts = () => {
-    const allContacts = getContactForms();
-    // Ordenar por data, mais recente primeiro
-    allContacts.sort((a, b) => {
-      const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp);
-      const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp);
-      return dateB.getTime() - dateA.getTime();
-    });
-    setContacts(allContacts);
-  };
+    if (isCurrentUserAdmin) {
+      refreshData(); // Initial fetch
+      loadContacts();
+      fetchAdminLogs();
+
+      const pollingInterval = setInterval(() => {
+        refreshData();
+        loadContacts();
+        fetchAdminLogs();
+      }, 30000); // Poll every 30 seconds
+
+      return () => clearInterval(pollingInterval);
+    }
+  }, [isCurrentUserAdmin, refreshData, loadContacts, fetchAdminLogs]);
+
+  // Fetch daily stats when timeFilter changes
+  useEffect(() => {
+    if (isCurrentUserAdmin) {
+      const now = new Date();
+      let startDate: Date;
+      let endDate: Date = now;
+
+      switch (timeFilter) {
+        case 'today':
+          startDate = new Date(now.setHours(0, 0, 0, 0));
+          break;
+        case 'week':
+          startDate = new Date(now.setDate(now.getDate() - 7));
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'all':
+        default:
+          startDate = new Date(0); // Epoch start
+          break;
+      }
+      fetchConversionsByDateRange(startDate.toISOString(), endDate.toISOString());
+      fetchSystemMetrics(timeFilter); // Also refetch system metrics with the new filter
+    }
+  }, [timeFilter, isCurrentUserAdmin, fetchConversionsByDateRange, fetchSystemMetrics]);
   
   // Função para marcar contato como visualizado
   const markAsViewed = (contactId: string) => {
@@ -158,6 +234,7 @@ export default function Admin() {
         title: "Contato atualizado",
         description: "O contato foi marcado como visualizado.",
       });
+      logAdminAction('contact_viewed', null, { contactId });
     }
   };
   
@@ -170,11 +247,12 @@ export default function Admin() {
         title: "Contato atualizado",
         description: "O contato foi marcado como respondido.",
       });
+      logAdminAction('contact_replied', null, { contactId });
     }
   };
 
   // Function to refresh data
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     setIsRefreshing(true);
     try {
       console.log('Iniciando atualização de dados...');
@@ -182,7 +260,7 @@ export default function Admin() {
       // Tentativas individuais para identificar qual está falhando
       try {
         console.log('Atualizando métricas do sistema...');
-        await refetchSystemMetrics();
+        await refetchSystemMetrics(timeFilter);
         console.log('Métricas do sistema atualizadas com sucesso!');
       } catch (e) {
         console.error('Falha ao atualizar métricas do sistema:', e);
@@ -198,6 +276,7 @@ export default function Admin() {
       
       // Atualizar contatos
       loadContacts();
+      fetchAdminLogs();
       
       toast({
         title: "Dados atualizados",
@@ -213,7 +292,7 @@ export default function Admin() {
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [refetchSystemMetrics, fetchUserMetrics, loadContacts, fetchAdminLogs, toast, timeFilter]);
 
   const formatDate = (date: string | Date) => {
     try {
@@ -228,16 +307,16 @@ export default function Admin() {
     if (!selectedUser) return;
 
     try {
-      await deleteUser(selectedUser);
+      await deleteUser(selectedUser); // This now bans the user
       toast({
-        title: "Usuário excluído",
-        description: "O usuário foi excluído com sucesso.",
+        title: "Usuário banido",
+        description: "O usuário foi banido com sucesso.",
       });
     } catch (error) {
       console.error("Error deleting user:", error);
       toast({
-        title: "Erro ao excluir usuário",
-        description: "Ocorreu um erro ao excluir o usuário.",
+        title: "Erro ao banir usuário",
+        description: "Ocorreu um erro ao banir o usuário.",
         variant: "destructive",
       });
     }
@@ -248,14 +327,14 @@ export default function Admin() {
   const handleBanUser = async () => {
     if (!selectedUser) return;
 
-    const user = users.find((u) => u.id === selectedUser);
-    if (!user) return;
+    const userToUpdate = users.find((u) => u.id === selectedUser);
+    if (!userToUpdate) return;
 
     try {
-      await updateUser(selectedUser, { isBanned: !user.isBanned });
+      await updateUser(selectedUser, { isBanned: !userToUpdate.isBanned });
       toast({
-        title: user.isBanned ? "Usuário desbanido" : "Usuário banido",
-        description: user.isBanned
+        title: userToUpdate.isBanned ? "Usuário desbanido" : "Usuário banido",
+        description: userToUpdate.isBanned
           ? "O usuário foi desbanido com sucesso."
           : "O usuário foi banido com sucesso.",
       });
@@ -274,17 +353,18 @@ export default function Admin() {
   const handleChangeRole = async () => {
     if (!selectedUser) return;
 
-    const user = users.find((u) => u.id === selectedUser);
-    if (!user) return;
+    const userToUpdate = users.find((u) => u.id === selectedUser);
+    if (!userToUpdate) return;
 
     try {
+      const newRole = userToUpdate.role === "admin" ? "user" : "admin";
       await updateUser(selectedUser, {
-        role: user.role === "admin" ? "user" : "admin",
+        role: newRole,
       });
       toast({
         title: "Função alterada",
         description: `O usuário agora é ${
-          user.role === "admin" ? "usuário comum" : "administrador"
+          newRole === "admin" ? "administrador" : "usuário comum"
         }.`,
       });
     } catch (error) {
@@ -350,6 +430,36 @@ export default function Admin() {
 
     setShowAddUserDialog(false);
   };
+
+  const handleAddCredits = async (amount: number, description: string) => {
+    if (!selectedUser || !currentUser?.id) return;
+
+    try {
+      const { error } = await supabase.rpc('add_credits_to_user', {
+        p_target_user_id: selectedUser,
+        p_amount: amount,
+        p_admin_id: currentUser.id,
+        p_description: description
+      });
+
+      if (error) throw error;
+
+      await updateUser(selectedUser, { credits: (users.find(u => u.id === selectedUser)?.credits || 0) + amount });
+      toast({
+        title: "Créditos adicionados",
+        description: `${amount} créditos foram adicionados ao usuário.`,
+      });
+    } catch (error) {
+      console.error('Error adding credits:', error);
+      toast({
+        title: "Erro ao adicionar créditos",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao adicionar créditos.",
+        variant: "destructive",
+      });
+    } finally {
+      setShowAddCreditsDialog(false);
+    }
+  };
   
   // Exibe o badge de status do contato com a cor apropriada
   const renderStatusBadge = (status: 'pending' | 'viewed' | 'replied') => {
@@ -412,7 +522,7 @@ export default function Admin() {
             <div className="text-sm text-gray-500 max-w-md text-center mt-2">
               {errorMessage.includes("Could not find the function") && 
                 "As funções de métricas podem não estar disponíveis no banco de dados. Verifique as migrações."}
-              {errorMessage.includes("permission denied") && 
+              {errorMessage.includes("Access denied") && 
                 "Você não tem permissão para acessar estas métricas. Verifique suas permissões de administrador."}
             </div>
             <Button
@@ -462,9 +572,11 @@ export default function Admin() {
                   {isRefreshing ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    <>
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      Atualizar Dados
+                    </>
                   )}
-                  Atualizar Dados
                 </Button>
               </div>
             </CardHeader>
@@ -474,6 +586,9 @@ export default function Admin() {
                   <TabsTrigger value="dashboard" className="flex-1">Dashboard</TabsTrigger>
                   <TabsTrigger value="users" className="flex-1">Usuários</TabsTrigger>
                   <TabsTrigger value="contacts" className="flex-1">Contatos</TabsTrigger>
+                  {currentUser?.role === 'ceo' && ( // Only CEO can see logs
+                    <TabsTrigger value="logs" className="flex-1">Logs</TabsTrigger>
+                  )}
                 </TabsList>
                 
                 <TabsContent value="dashboard">
@@ -508,6 +623,10 @@ export default function Admin() {
                     }}
                     onShowAddUserDialog={() => {
                       setShowAddUserDialog(true);
+                    }}
+                    onShowAddCreditsDialog={(userId) => { // New prop
+                      setSelectedUser(userId);
+                      setShowAddCreditsDialog(true);
                     }}
                   />
                 </TabsContent>
@@ -599,6 +718,12 @@ export default function Admin() {
                     </Card>
                   )}
                 </TabsContent>
+
+                {currentUser?.role === 'ceo' && (
+                  <TabsContent value="logs">
+                    <AdminLogsTable logs={adminLogs} isLoading={isLoadingLogs} users={users} formatDate={formatDate} />
+                  </TabsContent>
+                )}
               </Tabs>
             </CardContent>
           </Card>
@@ -650,6 +775,14 @@ export default function Admin() {
           setNewUserPhone={setNewUserPhone}
           isNewUserAdmin={isNewUserAdmin}
           setIsNewUserAdmin={setIsNewUserAdmin}
+        />
+
+        <AddCreditsDialog
+          open={showAddCreditsDialog}
+          onOpenChange={setShowAddCreditsDialog}
+          onConfirm={handleAddCredits}
+          selectedUser={selectedUser}
+          users={users}
         />
 
         {/* Dialog de detalhes do contato */}

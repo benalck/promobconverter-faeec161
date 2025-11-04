@@ -52,7 +52,8 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     return <PageLoadingFallback />;
   }
 
-  if (!user || !user.role || user.role !== 'admin') {
+  // Allow access if user is admin or CEO
+  if (!user || (user.role !== 'admin' && user.role !== 'ceo')) {
     return <Navigate to="/register" replace />;
   }
 

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Download, PlusCircle, Eye, Shield, ShieldOff, Ban, Check, Trash } from "lucide-react";
+import { Search, Download, PlusCircle, Eye, Shield, ShieldOff, Ban, Check, Trash, Coins } from "lucide-react";
 import { User } from "@/contexts/auth/types";
 import { UserMetricsCollection } from "@/hooks/useUserMetrics";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +21,7 @@ interface UserTableProps {
   onShowBanDialog: (userId: string) => void;
   onShowDeleteDialog: (userId: string) => void;
   onShowAddUserDialog: () => void;
+  onShowAddCreditsDialog: (userId: string) => void; // New prop
 }
 
 export function UserTable({
@@ -32,7 +32,8 @@ export function UserTable({
   onShowRoleDialog,
   onShowBanDialog,
   onShowDeleteDialog,
-  onShowAddUserDialog
+  onShowAddUserDialog,
+  onShowAddCreditsDialog // New prop
 }: UserTableProps) {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -42,7 +43,8 @@ export function UserTable({
 
   const filteredUsers = users.filter((user) =>
     user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleToggleSelectAll = () => {
@@ -83,10 +85,12 @@ export function UserTable({
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         createdAt: user.createdAt,
         lastLogin: user.lastLogin,
-        isBanned: user.isBanned
+        isBanned: user.isBanned,
+        credits: user.credits
       }));
     
     const dataStr = JSON.stringify(selectedUserData, null, 2);
@@ -110,7 +114,7 @@ export function UserTable({
     if (isMobile) {
       return ['select', 'name', 'role', 'status', 'actions'];
     }
-    return ['select', 'name', 'email', 'role', 'status', 'conversions', 'successRate', 'lastConversion', 'actions'];
+    return ['select', 'name', 'email', 'phone', 'role', 'status', 'credits', 'conversions', 'successRate', 'lastConversion', 'actions'];
   };
 
   const visibleColumns = getColumns();
@@ -143,7 +147,7 @@ export function UserTable({
         <div className="flex items-center space-x-2 mt-4">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar usuários..."
+            placeholder="Buscar usuários por nome, email ou telefone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="max-w-sm"
@@ -167,8 +171,10 @@ export function UserTable({
                   )}
                   {visibleColumns.includes('name') && <TableHead>Nome</TableHead>}
                   {visibleColumns.includes('email') && <TableHead>Email</TableHead>}
+                  {visibleColumns.includes('phone') && <TableHead>Telefone</TableHead>}
                   {visibleColumns.includes('role') && <TableHead>Função</TableHead>}
                   {visibleColumns.includes('status') && <TableHead>Status</TableHead>}
+                  {visibleColumns.includes('credits') && <TableHead>Créditos</TableHead>}
                   {visibleColumns.includes('conversions') && <TableHead>Conversões</TableHead>}
                   {visibleColumns.includes('successRate') && <TableHead>Taxa de Sucesso</TableHead>}
                   {visibleColumns.includes('lastConversion') && <TableHead>Última Conversão</TableHead>}
@@ -209,10 +215,13 @@ export function UserTable({
                         {visibleColumns.includes('email') && (
                           <TableCell>{user.email}</TableCell>
                         )}
+                        {visibleColumns.includes('phone') && (
+                          <TableCell>{user.phone || 'N/A'}</TableCell>
+                        )}
                         {visibleColumns.includes('role') && (
                           <TableCell>
-                            <Badge variant={user.role === "admin" ? "default" : "outline"}>
-                              {user.role === "admin" ? "Admin" : "Usuário"}
+                            <Badge variant={user.role === "admin" || user.role === "ceo" ? "default" : "outline"}>
+                              {user.role === "admin" ? "Admin" : user.role === "ceo" ? "CEO" : "Usuário"}
                             </Badge>
                           </TableCell>
                         )}
@@ -222,6 +231,9 @@ export function UserTable({
                               {user.isBanned ? "Banido" : "Ativo"}
                             </Badge>
                           </TableCell>
+                        )}
+                        {visibleColumns.includes('credits') && (
+                          <TableCell>{user.credits}</TableCell>
                         )}
                         {visibleColumns.includes('conversions') && (
                           <TableCell>{metrics.totalConversions}</TableCell>
@@ -247,15 +259,25 @@ export function UserTable({
                                 variant="outline"
                                 size="icon"
                                 onClick={() => onShowUserDetails(user.id)}
+                                title="Ver Detalhes"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="icon"
-                                onClick={() => onShowRoleDialog(user.id)}
+                                onClick={() => onShowAddCreditsDialog(user.id)} // New button
+                                title="Adicionar Créditos"
                               >
-                                {user.role === "admin" ? (
+                                <Coins className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => onShowRoleDialog(user.id)}
+                                title={user.role === "admin" || user.role === "ceo" ? "Remover Admin/CEO" : "Tornar Admin"}
+                              >
+                                {user.role === "admin" || user.role === "ceo" ? (
                                   <Shield className="h-4 w-4" />
                                 ) : (
                                   <ShieldOff className="h-4 w-4" />
@@ -265,6 +287,7 @@ export function UserTable({
                                 variant="outline"
                                 size="icon"
                                 onClick={() => onShowBanDialog(user.id)}
+                                title={user.isBanned ? "Desbanir Usuário" : "Banir Usuário"}
                               >
                                 {user.isBanned ? (
                                   <Check className="h-4 w-4" />
@@ -276,6 +299,7 @@ export function UserTable({
                                 variant="outline"
                                 size="icon"
                                 onClick={() => onShowDeleteDialog(user.id)}
+                                title="Excluir Usuário (Banir)"
                               >
                                 <Trash className="h-4 w-4" />
                               </Button>

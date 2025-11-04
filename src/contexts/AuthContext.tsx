@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, AuthContextType } from './auth/types';
@@ -89,7 +88,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isAuthenticated: !!user,
-        isAdmin: !!user && user.role === 'admin',
+        // isAdmin now includes both 'admin' and 'ceo' roles
+        isAdmin: !!user && (user.role === 'admin' || user.role === 'ceo'),
         users,
         isInitialized,
         login,

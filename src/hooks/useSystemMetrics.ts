@@ -1,7 +1,7 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { subDays, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 
 // Interface for manter compatibilidade com os componentes existentes
 export interface SystemMetrics {
@@ -44,7 +44,7 @@ export function useSystemMetrics() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchSystemMetrics = useCallback(async (): Promise<SystemMetrics> => {
+  const fetchSystemMetrics = useCallback(async (timeFilter: string = 'all'): Promise<SystemMetrics> => {
     setIsLoading(true);
     setError(null);
 
@@ -55,24 +55,48 @@ export function useSystemMetrics() {
         throw new Error('Usuário não autenticado');
       }
       
-      // Verificar se o usuário é admin
+      // Verificar se o usuário é admin ou CEO
       if (!isAdmin) {
         throw new Error('Somente administradores podem acessar métricas do sistema');
       }
 
-      // Console log para debug
-      console.log('Buscando métricas do sistema...');
+      let startDate: Date | null = null;
+      let endDate: Date | null = null;
+      const now = new Date();
 
-      // Use a type assertion for the RPC call
-      const result = await supabase.rpc<'get_system_metrics', SystemMetricsResponse>(
-        'get_system_metrics',
+      switch (timeFilter) {
+        case 'today':
+          startDate = startOfDay(now);
+          endDate = endOfDay(now);
+          break;
+        case 'week':
+          startDate = subDays(startOfDay(now), 7);
+          endDate = endOfDay(now);
+          break;
+        case 'month':
+          startDate = startOfMonth(now);
+          endDate = endOfMonth(now);
+          break;
+        case 'all':
+        default:
+          startDate = null;
+          endDate = null;
+          break;
+      }
+
+      // Console log para debug
+      console.log('Buscando métricas do sistema com filtro:', timeFilter, 'Start:', startDate, 'End:', endDate);
+
+      // Use the secure RPC call
+      const result = await supabase.rpc<'get_system_metrics_secure', SystemMetricsResponse>(
+        'get_system_metrics_secure',
         { 
-          p_start_date: null,
-          p_end_date: null
+          p_start_date: startDate?.toISOString() || null,
+          p_end_date: endDate?.toISOString() || null
         }
       );
 
-      console.log('Resultado da função get_system_metrics:', result);
+      console.log('Resultado da função get_system_metrics_secure:', result);
 
       if (result.error) {
         console.error('Erro na função RPC:', result.error);
@@ -83,7 +107,7 @@ export function useSystemMetrics() {
           throw new Error('Função de métricas não encontrada no banco de dados. Verifique se as migrações foram aplicadas.');
         }
         
-        if (result.error.message.includes("permission denied")) {
+        if (result.error.message.includes("Access denied")) {
           throw new Error('Permissão negada para acessar métricas. Verifique suas permissões.');
         }
 
@@ -186,8 +210,8 @@ export function useSystemMetrics() {
     }
   }, []);
 
-  const refetch = useCallback(async () => {
-    return fetchSystemMetrics();
+  const refetch = useCallback(async (timeFilter?: string) => {
+    return fetchSystemMetrics(timeFilter);
   }, [fetchSystemMetrics]);
 
   // Add effect to fetch metrics automatically

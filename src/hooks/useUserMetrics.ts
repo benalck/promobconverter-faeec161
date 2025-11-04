@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,17 +25,15 @@ export interface UserMetricsCollection {
 }
 
 interface UserMetricResponse {
+  user_id: string;
   total_conversions: number;
-  successful_conversions?: number;
-  failed_conversions?: number;
-  average_conversion_time?: number;
-  last_conversion?: string;
   success_rate: number;
   average_response_time: number;
+  total_file_size: number;
 }
 
 export function useUserMetrics() {
-  const { user, users } = useAuth();
+  const { user, users, isAdmin } = useAuth(); // Added isAdmin
   const [metrics, setMetrics] = useState<UserMetricsCollection>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -47,10 +44,10 @@ export function useUserMetrics() {
       console.log(`Buscando métricas para o usuário ${userId}...`);
       
       // Use type assertion for the RPC call
-      const result = await supabase.rpc<'get_user_metrics', UserMetricResponse>(
-        'get_user_metrics',
+      const result = await supabase.rpc<'get_user_metrics_secure', UserMetricResponse[]>(
+        'get_user_metrics_secure',
         {
-          p_user_id: userId,
+          target_user_id: userId,
           p_start_date: null,
           p_end_date: null
         }
@@ -63,7 +60,7 @@ export function useUserMetrics() {
         throw new Error(result.error.message);
       }
 
-      const data = result.data;
+      const data = result.data?.[0]; // get_user_metrics_secure returns a table, so take the first row
       if (!data) {
         console.warn(`Sem dados para o usuário ${userId}`);
         return null;
@@ -75,27 +72,18 @@ export function useUserMetrics() {
         return null;
       }
 
-      // Calcular conversões bem-sucedidas usando a taxa de sucesso
-      const successfulConversions = data.successful_conversions !== undefined 
-        ? data.successful_conversions 
-        : Math.round(data.total_conversions * (data.success_rate || 0) / 100);
+      // Calculate successful conversions using the success rate
+      const successfulConversions = Math.round(data.total_conversions * (data.success_rate || 0) / 100);
       
-      // Calcular conversões com falha
-      const failedConversions = data.failed_conversions !== undefined
-        ? data.failed_conversions
-        : (data.total_conversions - successfulConversions);
-
-      // Usar o tempo médio de resposta se disponível
-      const averageTime = data.average_conversion_time !== undefined
-        ? data.average_conversion_time
-        : (data.average_response_time || 0);
+      // Calculate failed conversions
+      const failedConversions = data.total_conversions - successfulConversions;
 
       const userMetrics = {
         totalConversions: data.total_conversions,
         successfulConversions: successfulConversions,
         failedConversions: failedConversions,
-        averageConversionTime: averageTime,
-        lastConversion: data.last_conversion || '-'
+        averageConversionTime: data.average_response_time || 0,
+        lastConversion: '-' // This RPC doesn't return last_conversion, so we'll keep it as '-'
       };
 
       console.log(`Métricas mapeadas para usuário ${userId}:`, userMetrics);
@@ -107,7 +95,8 @@ export function useUserMetrics() {
   }, []);
 
   const fetchUserMetrics = useCallback(async (): Promise<UserMetricsCollection> => {
-    if (!user || !users || users.length === 0) return {};
+    // Only fetch if current user is admin/CEO
+    if (!isAdmin || !user || !users || users.length === 0) return {};
     
     setIsLoading(true);
     setError(null);
@@ -149,16 +138,16 @@ export function useUserMetrics() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, users, fetchUserMetric]);
+  }, [user, users, fetchUserMetric, isAdmin]);
 
   // Efeito para buscar métricas automaticamente quando o componente montar
   useEffect(() => {
-    if (users && users.length > 0) {
+    if (isAdmin && users && users.length > 0) { // Only fetch if current user is admin/CEO
       fetchUserMetrics().catch(error => {
         console.error('Erro ao carregar métricas de usuários:', error);
       });
     }
-  }, [users, fetchUserMetrics]);
+  }, [users, fetchUserMetrics, isAdmin]);
 
   return {
     metrics,

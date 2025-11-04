@@ -1,8 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
 import { useToast } from '@/hooks/use-toast';
+import { logAdminAction } from '@/utils/adminLogger'; // Import the new logger
 
 export interface UserProfile {
   id: string;
@@ -42,11 +42,13 @@ export const useUserManagement = (
           id: profile.id,
           name: profile.name || '',
           email: profile.email || '',
-          phone: '',  // We don't have easy access to phone without admin API
-          role: profile.role as 'admin' | 'user',
+          phone: profile.phone || '', // Now fetching phone from profiles table
+          role: profile.role as 'admin' | 'user' | 'ceo',
           createdAt: profile.created_at,
           lastLogin: profile.last_login || undefined,
-          isBanned: profile.is_banned
+          isBanned: profile.is_banned,
+          credits: profile.credits || 0,
+          emailVerified: profile.email_verified || false,
         };
       });
 
@@ -71,6 +73,7 @@ export const useUserManagement = (
         
       if (error) throw error;
       
+      await logAdminAction('ban_user', id, { reason: 'User marked as banned instead of deleted' });
       await syncUsers();
       
       return;
@@ -85,14 +88,18 @@ export const useUserManagement = (
       const profileData: { 
         name?: string; 
         is_banned?: boolean;
-        role?: string;
+        role?: 'admin' | 'user' | 'ceo';
+        credits?: number;
+        phone?: string;
       } = {};
       
       if (data.name !== undefined) profileData.name = data.name;
       if (data.isBanned !== undefined) profileData.is_banned = data.isBanned;
+      if (data.credits !== undefined) profileData.credits = data.credits;
+      if (data.phone !== undefined) profileData.phone = data.phone;
       
       if (data.role !== undefined) {
-        if (data.role === 'admin' || data.role === 'user') {
+        if (data.role === 'admin' || data.role === 'user' || data.role === 'ceo') {
           profileData.role = data.role;
         } else {
           profileData.role = 'user';
@@ -108,6 +115,8 @@ export const useUserManagement = (
           
         if (error) throw error;
         
+        // Log admin action for updates
+        await logAdminAction('update_user_profile', id, { updates: data });
         await syncUsers();
       }
       
@@ -159,9 +168,9 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     id: profile.id,
     name: profile.name || '',
     email: profile.email || '',
-    role: profile.role || 'user',
+    role: profile.role as 'admin' | 'user' | 'ceo' || 'user',
     created_at: profile.created_at,
-    phone: ''  // We don't have access to phone without admin API
+    phone: profile.phone || ''
   };
 }
 
@@ -174,6 +183,7 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
         name,
         email: user.email,
         role: 'user',
+        phone: user.phone || ''
       }
     ])
     .select()
@@ -188,15 +198,15 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
     id: profile.id,
     name: profile.name,
     email: user.email,
-    role: profile.role,
+    role: profile.role as 'admin' | 'user' | 'ceo',
     created_at: profile.created_at,
-    phone: user.phone
+    phone: profile.phone || ''
   };
 }
 
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> {
   // Filter out properties that don't exist in the profiles table
-  const { email, phone, ...validUpdates } = updates;
+  const { email, ...validUpdates } = updates;
   
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -214,20 +224,21 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
     id: profile.id,
     name: profile.name,
     email: profile.email || '',
-    role: profile.role,
+    role: profile.role as 'admin' | 'user' | 'ceo',
     created_at: profile.created_at,
-    phone: ''
+    phone: profile.phone || ''
   };
 }
 
 export async function deleteUserProfile(userId: string): Promise<boolean> {
+  // Instead of deleting, we'll ban the user
   const { error } = await supabase
     .from('profiles')
-    .delete()
+    .update({ is_banned: true })
     .eq('id', userId);
 
   if (error) {
-    console.error('Error deleting user profile:', error);
+    console.error('Error banning user profile:', error);
     return false;
   }
 

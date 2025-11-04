@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { convertSupabaseUser } from './userUtils';
+import { logAdminAction } from '@/utils/adminLogger'; // Import the new logger
 
 interface RegisterData {
   name: string;
@@ -223,7 +224,7 @@ export const useAuthentication = (
           options: {
             data: {
               name,
-              phone,
+              phone, // Pass phone to user_metadata
               action: 'confirm_email'
             }
           }
@@ -265,7 +266,7 @@ export const useAuthentication = (
           .select('*', { count: 'exact', head: true });
           
         const isFirstUser = count === 0;
-        const userRole = isFirstUser ? 'admin' : 'user';
+        const userRole = isFirstUser ? 'ceo' : 'user'; // First user is CEO
         
         // Call the register_user_verified RPC function
         const { data: rpcResult, error: rpcError } = await supabase.rpc(
@@ -288,6 +289,7 @@ export const useAuthentication = (
               id: authResponse.data.user.id,
               name,
               email,
+              phone, // Insert phone into profiles table
               role: userRole,
               created_at: new Date().toISOString(),
               last_login: new Date().toISOString(),
@@ -315,6 +317,7 @@ export const useAuthentication = (
         const newUser = await convertSupabaseUser(authResponse.data.user);
         setUser(newUser);
         await syncUsers();
+        await logAdminAction('new_user_registration', newUser.id, { email: newUser.email, role: newUser.role });
       } catch (finalizeError) {
         console.error('Erro ao finalizar registro:', finalizeError);
       }

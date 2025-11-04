@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -17,8 +16,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  role: 'admin' | 'user';
+  phone?: string; // Make phone optional as it might not always be present
+  role: 'admin' | 'user' | 'ceo'; // Add 'ceo' role
   createdAt: string;
   lastLogin?: string;
   isBanned?: boolean;
@@ -31,7 +30,7 @@ export interface User {
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isAdmin: boolean;
+  isAdmin: boolean; // This will now cover both admin and CEO
   users: User[];
   isInitialized: boolean;
   login: (email: string, password: string) => Promise<void>;

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, Lock, Mail, User, EyeOff, Eye, Phone, X } from "lucide-react";
-import { formatPhoneNumber } from "@/lib/utils";
+import { formatPhoneNumber } from "@/lib/utils"; // Import formatPhoneNumber
 import { sendConfirmationEmail } from "@/lib/email";
 import React from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,21 +98,8 @@ export default function Register() {
     return null;
   };
 
-  const formatPhone = (value: string) => {
-    let numbers = value.replace(/\D/g, '');
-    
-    numbers = numbers.slice(0, 11);
-    
-    let formatted = numbers;
-    if (numbers.length > 0) formatted = '(' + formatted;
-    if (numbers.length > 2) formatted = formatted.slice(0, 3) + ') ' + formatted.slice(3);
-    if (numbers.length > 7) formatted = formatted.slice(0, 10) + '-' + formatted.slice(10);
-    
-    return formatted;
-  };
-
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
+    const formatted = formatPhoneNumber(e.target.value); // Use the utility function
     setPhone(formatted);
   };
 

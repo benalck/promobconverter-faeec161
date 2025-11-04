@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -6,6 +5,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { User } from "@/contexts/auth/types";
 import { UserMetricsCollection } from "@/hooks/useUserMetrics";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
+import { Mail } from "lucide-react";
 
 interface UserDetailsDialogProps {
   open: boolean;
@@ -25,6 +28,31 @@ export function UserDetailsDialog({
   formatDate 
 }: UserDetailsDialogProps) {
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+
+  const handleResetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error("Erro ao solicitar redefinição de senha:", error);
+        sonnerToast.error("Erro ao enviar link", {
+          description: "Se o e-mail estiver cadastrado, você receberá um link de redefinição.",
+        });
+      } else {
+        sonnerToast.success("Link enviado!", {
+          description: "Verifique a caixa de entrada (e spam) do usuário para o link de redefinição.",
+        });
+      }
+    } catch (err) {
+      console.error("Erro inesperado na redefinição de senha:", err);
+      sonnerToast.error("Erro inesperado", {
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+      });
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -63,8 +91,12 @@ export function UserDetailsDialog({
                         <div className="text-sm">{user.email}</div>
                       </div>
                       <div className="space-y-1">
+                        <Label>Telefone</Label>
+                        <div className="text-sm">{user.phone || 'N/A'}</div>
+                      </div>
+                      <div className="space-y-1">
                         <Label>Função</Label>
-                        <div className="text-sm">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</div>
+                        <div className="text-sm">{user.role === 'admin' ? 'Administrador' : user.role === 'ceo' ? 'CEO' : 'Usuário'}</div>
                       </div>
                       <div className="space-y-1">
                         <Label>Status</Label>
@@ -129,8 +161,18 @@ export function UserDetailsDialog({
             </div>
           </ScrollArea>
         )}
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>
+        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-4">
+          {selectedUser && users.find(u => u.id === selectedUser)?.email && (
+            <Button 
+              variant="outline" 
+              onClick={() => handleResetPassword(users.find(u => u.id === selectedUser)!.email!)}
+              className="w-full sm:w-auto"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Resetar Senha
+            </Button>
+          )}
+          <Button onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Fechar
           </Button>
         </DialogFooter>
