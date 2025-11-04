@@ -765,6 +765,7 @@ export type Database = {
           name: string | null
           plan_expiry_date: string | null
           role: string | null
+          phone: string | null
         }
         Insert: {
           active_plan?: string | null
@@ -778,6 +779,7 @@ export type Database = {
           name?: string | null
           plan_expiry_date?: string | null
           role?: string | null
+          phone?: string | null
         }
         Update: {
           active_plan?: string | null
@@ -791,6 +793,7 @@ export type Database = {
           name?: string | null
           plan_expiry_date?: string | null
           role?: string | null
+          phone?: string | null
         }
         Relationships: [
           {
@@ -934,16 +937,69 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_actions_log: {
+        Row: {
+          admin_id: string | null
+          action_type: string
+          details: Json | null
+          id: string
+          target_user_id: string | null
+          timestamp: string
+        }
+        Insert: {
+          admin_id?: string | null
+          action_type: string
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+          timestamp?: string
+        }
+        Update: {
+          admin_id?: string | null
+          action_type?: string
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_actions_log_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_log_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      add_credits_to_user: {
+        Args: {
+          p_admin_id: string
+          p_amount: number
+          p_description?: string
+          p_target_user_id: string
+        }
+        Returns: undefined
+      }
       add_monthly_credits: { Args: never; Returns: undefined }
       add_monthly_credits_for_user: {
         Args: { user_id: string }
         Returns: undefined
       }
+      auto_verify_email: { Args: never; Returns: unknown }
+      auto_verify_email_backup: { Args: never; Returns: unknown }
       create_user_profile: {
         Args: {
           user_email: string
@@ -953,6 +1009,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      debug_registration: { Args: never; Returns: unknown }
       diagnose_registration_issues: {
         Args: never
         Returns: {
@@ -998,7 +1055,7 @@ export type Database = {
         Returns: Json
       }
       get_system_metrics_secure: {
-        Args: never
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
           active_users: number
           average_response_time: number
@@ -1043,6 +1100,7 @@ export type Database = {
           user_count: number
         }[]
       }
+      handle_new_user: { Args: never; Returns: unknown }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1053,6 +1111,15 @@ export type Database = {
       is_admin_or_ceo: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_ceo: { Args: never; Returns: boolean }
+      log_admin_action: {
+        Args: {
+          p_action_type: string
+          p_admin_id?: string
+          p_details?: Json
+          p_target_user_id?: string
+        }
+        Returns: undefined
+      }
       register_user: {
         Args: {
           user_email: string
@@ -1087,6 +1154,8 @@ export type Database = {
         }
         Returns: string
       }
+      update_cutting_plans_updated_at: { Args: never; Returns: unknown }
+      update_updated_at_column: { Args: never; Returns: unknown }
       user_metrics_calc: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
