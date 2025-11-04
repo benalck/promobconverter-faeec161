@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -13,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { User } from "@/contexts/auth/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatPhoneNumber } from "@/lib/utils"; // Import formatPhoneNumber
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DeleteDialogProps {
   open: boolean;
@@ -89,31 +91,60 @@ export function BanDialog({ open, onOpenChange, onConfirm, selectedUser, users }
 interface RoleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: (newRole: 'admin' | 'user') => void; // Modified to pass new role
   selectedUser: string | null;
   users: User[];
+  currentUserRole: 'admin' | 'user' | 'ceo'; // New prop
 }
 
-export function RoleDialog({ open, onOpenChange, onConfirm, selectedUser, users }: RoleDialogProps) {
+export function RoleDialog({ open, onOpenChange, onConfirm, selectedUser, users, currentUserRole }: RoleDialogProps) {
   const user = users.find(u => u.id === selectedUser);
   const isMobile = useIsMobile();
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'user'>(user?.role === 'admin' ? 'admin' : 'user');
+
+  // Update selectedRole when user changes
+  useEffect(() => {
+    if (user) {
+      setSelectedRole(user.role === 'admin' ? 'admin' : 'user');
+    }
+  }, [user]);
+
+  if (!user) return null;
+
+  const handleConfirm = () => {
+    onConfirm(selectedRole);
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={isMobile ? "max-w-[90vw] p-4" : ""}>
         <DialogHeader>
-          <DialogTitle>Alterar Função</DialogTitle>
+          <DialogTitle>Alterar Função do Usuário</DialogTitle>
           <DialogDescription>
-            {user?.role === "admin" || user?.role === "ceo"
-              ? "Remover privilégios de administrador/CEO deste usuário?" 
-              : "Tornar este usuário um administrador?"}
+            Você está alterando a função de <span className="font-semibold">{user.name}</span>.
           </DialogDescription>
         </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="form-group">
+            <Label htmlFor="role-select" className="text-right">
+              Função
+            </Label>
+            <Select value={selectedRole} onValueChange={(value: 'admin' | 'user') => setSelectedRole(value)}>
+              <SelectTrigger id="role-select" className="mt-1">
+                <SelectValue placeholder="Selecione a função" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">Usuário</SelectItem>
+                <SelectItem value="admin">Administrador</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={onConfirm}>Confirmar</Button>
+          <Button onClick={handleConfirm}>Confirmar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -134,6 +165,7 @@ interface AddUserDialogProps {
   setNewUserPhone: (value: string) => void;
   isNewUserAdmin: boolean;
   setIsNewUserAdmin: (value: boolean) => void;
+  currentUserRole: 'admin' | 'user' | 'ceo'; // New prop
 }
 
 export function AddUserDialog({ 
@@ -149,7 +181,8 @@ export function AddUserDialog({
   newUserPhone,
   setNewUserPhone,
   isNewUserAdmin,
-  setIsNewUserAdmin
+  setIsNewUserAdmin,
+  currentUserRole // New prop
 }: AddUserDialogProps) {
   const isMobile = useIsMobile();
 
@@ -217,14 +250,16 @@ export function AddUserDialog({
               maxLength={15}
             />
           </div>
-          <div className="form-group flex items-center space-x-2">
-            <Switch
-              id="admin"
-              checked={isNewUserAdmin}
-              onCheckedChange={setIsNewUserAdmin}
-            />
-            <Label htmlFor="admin">Usuário Administrador</Label>
-          </div>
+          {currentUserRole === 'ceo' && ( // Only CEO can set admin role for new users
+            <div className="form-group flex items-center space-x-2">
+              <Switch
+                id="admin"
+                checked={isNewUserAdmin}
+                onCheckedChange={setIsNewUserAdmin}
+              />
+              <Label htmlFor="admin">Usuário Administrador</Label>
+            </div>
+          )}
         </div>
         <DialogFooter className={isMobile ? "flex-col space-y-2" : ""}>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

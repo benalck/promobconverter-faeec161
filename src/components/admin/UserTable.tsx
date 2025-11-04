@@ -21,7 +21,9 @@ interface UserTableProps {
   onShowBanDialog: (userId: string) => void;
   onShowDeleteDialog: (userId: string) => void;
   onShowAddUserDialog: () => void;
-  onShowAddCreditsDialog: (userId: string) => void; // New prop
+  onShowAddCreditsDialog: (userId: string) => void;
+  currentUserRole: 'admin' | 'user' | 'ceo'; // New prop
+  currentUserId: string; // New prop
 }
 
 export function UserTable({
@@ -33,7 +35,9 @@ export function UserTable({
   onShowBanDialog,
   onShowDeleteDialog,
   onShowAddUserDialog,
-  onShowAddCreditsDialog // New prop
+  onShowAddCreditsDialog,
+  currentUserRole, // New prop
+  currentUserId // New prop
 }: UserTableProps) {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -197,6 +201,9 @@ export function UserTable({
                       averageConversionTime: 0,
                       lastConversion: '-'
                     };
+
+                    // Determine if the current user can perform actions on this specific user
+                    const canModifyUser = currentUserRole === 'ceo' && user.id !== currentUserId && user.role !== 'ceo';
                     
                     return (
                       <TableRow key={user.id}>
@@ -266,8 +273,9 @@ export function UserTable({
                               <Button
                                 variant="outline"
                                 size="icon"
-                                onClick={() => onShowAddCreditsDialog(user.id)} // New button
+                                onClick={() => onShowAddCreditsDialog(user.id)}
                                 title="Adicionar Créditos"
+                                disabled={currentUserRole === 'user'} // Only Admin/CEO can add credits
                               >
                                 <Coins className="h-4 w-4" />
                               </Button>
@@ -275,9 +283,10 @@ export function UserTable({
                                 variant="outline"
                                 size="icon"
                                 onClick={() => onShowRoleDialog(user.id)}
-                                title={user.role === "admin" || user.role === "ceo" ? "Remover Admin/CEO" : "Tornar Admin"}
+                                title={user.role === "admin" ? "Remover Admin" : "Tornar Admin"}
+                                disabled={!canModifyUser} // Only CEO can modify roles of non-CEOs
                               >
-                                {user.role === "admin" || user.role === "ceo" ? (
+                                {user.role === "admin" ? (
                                   <Shield className="h-4 w-4" />
                                 ) : (
                                   <ShieldOff className="h-4 w-4" />
@@ -288,6 +297,7 @@ export function UserTable({
                                 size="icon"
                                 onClick={() => onShowBanDialog(user.id)}
                                 title={user.isBanned ? "Desbanir Usuário" : "Banir Usuário"}
+                                disabled={!canModifyUser} // Only CEO can ban/unban non-CEOs
                               >
                                 {user.isBanned ? (
                                   <Check className="h-4 w-4" />
@@ -300,6 +310,7 @@ export function UserTable({
                                 size="icon"
                                 onClick={() => onShowDeleteDialog(user.id)}
                                 title="Excluir Usuário (Banir)"
+                                disabled={!canModifyUser} // Only CEO can delete/ban non-CEOs
                               >
                                 <Trash className="h-4 w-4" />
                               </Button>

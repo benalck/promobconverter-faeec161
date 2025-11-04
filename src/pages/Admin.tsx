@@ -350,14 +350,13 @@ export default function Admin() {
     setShowBanDialog(false);
   };
 
-  const handleChangeRole = async () => {
+  const handleChangeRole = async (newRole: 'admin' | 'user') => {
     if (!selectedUser) return;
 
     const userToUpdate = users.find((u) => u.id === selectedUser);
     if (!userToUpdate) return;
 
     try {
-      const newRole = userToUpdate.role === "admin" ? "user" : "admin";
       await updateUser(selectedUser, {
         role: newRole,
       });
@@ -444,7 +443,17 @@ export default function Admin() {
 
       if (error) throw error;
 
+      // Update the user's credits in the local state
+      const updatedUsers = users.map(u => 
+        u.id === selectedUser ? { ...u, credits: (u.credits || 0) + amount } : u
+      );
+      // This will trigger a re-render of the UserTable with updated credits
+      // For the current user, if their credits were updated, AuthContext will handle it.
+      // For other users, we need to manually update the 'users' state in AuthContext.
+      // Since AuthContext's `updateUser` already calls `syncUsers`, this will be handled.
+      // So, we just need to call `updateUser` from AuthContext.
       await updateUser(selectedUser, { credits: (users.find(u => u.id === selectedUser)?.credits || 0) + amount });
+
       toast({
         title: "Créditos adicionados",
         description: `${amount} créditos foram adicionados ao usuário.`,
@@ -605,6 +614,8 @@ export default function Admin() {
                     users={users}
                     userMetrics={userMetrics}
                     formatDate={formatDate}
+                    currentUserRole={currentUser?.role || 'user'} // Pass current user's role
+                    currentUserId={currentUser?.id || ''} // Pass current user's ID
                     onShowUserDetails={(userId) => {
                       setSelectedUser(userId);
                       setShowUserDetailsDialog(true);
@@ -759,6 +770,7 @@ export default function Admin() {
           onConfirm={handleChangeRole}
           selectedUser={selectedUser}
           users={users}
+          currentUserRole={currentUser?.role || 'user'} // Pass current user's role
         />
 
         <AddUserDialog 
@@ -775,6 +787,7 @@ export default function Admin() {
           setNewUserPhone={setNewUserPhone}
           isNewUserAdmin={isNewUserAdmin}
           setIsNewUserAdmin={setIsNewUserAdmin}
+          currentUserRole={currentUser?.role || 'user'} // Pass current user's role
         />
 
         <AddCreditsDialog
@@ -796,7 +809,7 @@ export default function Admin() {
               <DialogDescription>
                 Informações enviadas pelo usuário
               </DialogDescription>
-            </DialogHeader>
+            </CardHeader>
             
             {selectedContact && (
               <div className="space-y-4">
