@@ -170,16 +170,59 @@ export default function Admin() {
     }
   }, [toast]);
 
+  // Function to refresh data
+  const refreshData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      console.log('Iniciando atualização de dados...');
+      
+      // Tentativas individuais para identificar qual está falhando
+      try {
+        console.log('Atualizando métricas do sistema...');
+        await refetchSystemMetrics(timeFilter);
+        console.log('Métricas do sistema atualizadas com sucesso!');
+      } catch (e) {
+        console.error('Falha ao atualizar métricas do sistema:', e);
+      }
+      
+      try {
+        console.log('Atualizando métricas de usuários...');
+        await fetchUserMetrics();
+        console.log('Métricas de usuários atualizadas com sucesso!');
+      } catch (e) {
+        console.error('Falha ao atualizar métricas de usuários:', e);
+      }
+      
+      // Atualizar contatos
+      loadContacts();
+      fetchAdminLogs();
+      
+      toast({
+        title: "Dados atualizados",
+        description: "Os dados da administração foram atualizados com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar dados:', error);
+      toast({
+        title: "Erro ao atualizar dados",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao atualizar os dados.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchSystemMetrics, fetchUserMetrics, loadContacts, fetchAdminLogs, toast, timeFilter]);
+
   // Efeito para recarregar dados quando houver erro
   useEffect(() => {
     if (systemError || userError) {
       const retryTimeout = setTimeout(() => {
-        refreshData();
+        refreshData(); 
       }, 5000); // Tenta novamente após 5 segundos
 
       return () => clearTimeout(retryTimeout);
     }
-  }, [systemError, userError, refreshData]);
+  }, [systemError, userError]); // refreshData removido das dependências
   
   // Initial data load and polling setup
   useEffect(() => {
@@ -250,49 +293,6 @@ export default function Admin() {
       logAdminAction('contact_replied', null, { contactId });
     }
   };
-
-  // Function to refresh data
-  const refreshData = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      console.log('Iniciando atualização de dados...');
-      
-      // Tentativas individuais para identificar qual está falhando
-      try {
-        console.log('Atualizando métricas do sistema...');
-        await refetchSystemMetrics(timeFilter);
-        console.log('Métricas do sistema atualizadas com sucesso!');
-      } catch (e) {
-        console.error('Falha ao atualizar métricas do sistema:', e);
-      }
-      
-      try {
-        console.log('Atualizando métricas de usuários...');
-        await fetchUserMetrics();
-        console.log('Métricas de usuários atualizadas com sucesso!');
-      } catch (e) {
-        console.error('Falha ao atualizar métricas de usuários:', e);
-      }
-      
-      // Atualizar contatos
-      loadContacts();
-      fetchAdminLogs();
-      
-      toast({
-        title: "Dados atualizados",
-        description: "Os dados da administração foram atualizados com sucesso.",
-      });
-    } catch (error) {
-      console.error('Erro ao atualizar dados:', error);
-      toast({
-        title: "Erro ao atualizar dados",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao atualizar os dados.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [refetchSystemMetrics, fetchUserMetrics, loadContacts, fetchAdminLogs, toast, timeFilter]);
 
   const formatDate = (date: string | Date) => {
     try {
