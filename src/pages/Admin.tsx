@@ -16,9 +16,7 @@ import {
   MessageSquare, 
   Mail, 
   MailCheck, 
-  MailX,
   History,
-  Coins
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { UserTable } from "@/components/admin/UserTable";
@@ -29,8 +27,8 @@ import {
   RoleDialog,
   AddUserDialog
 } from "@/components/admin/UserDialogs";
-import { AddCreditsDialog } from "@/components/admin/AddCreditsDialog"; // New dialog
-import { AdminLogsTable } from "@/components/admin/AdminLogsTable"; // New component
+import { AddCreditsDialog } from "@/components/admin/AddCreditsDialog";
+import { AdminLogsTable } from "@/components/admin/AdminLogsTable";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   getContactForms, 
@@ -55,7 +53,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { logAdminAction } from "@/utils/adminLogger"; // Import the new logger
+import { logAdminAction } from "@/utils/adminLogger";
 
 // Type for handling register user form
 interface RegisterUserForm {
@@ -76,7 +74,7 @@ interface AdminLog {
 
 export default function Admin() {
   const { 
-    user: currentUser, // Renamed to avoid conflict with 'user' in loops
+    user: currentUser,
     users, 
     deleteUser, 
     isAdmin: isCurrentUserAdmin, 
@@ -94,11 +92,11 @@ export default function Admin() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [showUserDetailsDialog, setShowUserDetailsDialog] = useState(false);
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
-  const [showAddCreditsDialog, setShowAddCreditsDialog] = useState(false); // New dialog state
+  const [showAddCreditsDialog, setShowAddCreditsDialog] = useState(false);
   
   // UI state
-  const [timeFilter, setTimeFilter] = useState("all"); // Default to 'all' for initial load
-  const [activeTab, setActiveTab] = useState("dashboard"); // Default to dashboard
+  const [timeFilter, setTimeFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Contacts state
@@ -138,7 +136,6 @@ export default function Admin() {
   // Function to load contacts from localStorage
   const loadContacts = useCallback(() => {
     const allContacts = getContactForms();
-    // Sort by date, most recent first
     allContacts.sort((a, b) => {
       const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp);
       const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp);
@@ -176,7 +173,6 @@ export default function Admin() {
     try {
       console.log('Iniciando atualização de dados...');
       
-      // Tentativas individuais para identificar qual está falhando
       try {
         console.log('Atualizando métricas do sistema...');
         await refetchSystemMetrics(timeFilter);
@@ -193,7 +189,6 @@ export default function Admin() {
         console.error('Falha ao atualizar métricas de usuários:', e);
       }
       
-      // Atualizar contatos
       loadContacts();
       fetchAdminLogs();
       
@@ -218,32 +213,28 @@ export default function Admin() {
     if (systemError || userError) {
       const retryTimeout = setTimeout(() => {
         refreshData(); 
-      }, 5000); // Tenta novamente após 5 segundos
+      }, 5000);
 
       return () => clearTimeout(retryTimeout);
     }
-  }, [systemError, userError]); // refreshData removido das dependências
+  }, [systemError, userError, refreshData]);
   
   // Initial data load and polling setup
   useEffect(() => {
-    if (isCurrentUserAdmin) {
-      refreshData(); // Initial fetch
-      loadContacts();
-      fetchAdminLogs();
+    if (currentUser?.role === 'admin' || currentUser?.role === 'ceo') {
+      refreshData();
 
       const pollingInterval = setInterval(() => {
         refreshData();
-        loadContacts();
-        fetchAdminLogs();
-      }, 30000); // Poll every 30 seconds
+      }, 30000);
 
       return () => clearInterval(pollingInterval);
     }
-  }, [isCurrentUserAdmin, refreshData, loadContacts, fetchAdminLogs]);
+  }, [currentUser?.role, refreshData]);
 
   // Fetch daily stats when timeFilter changes
   useEffect(() => {
-    if (isCurrentUserAdmin) {
+    if (currentUser?.role === 'admin' || currentUser?.role === 'ceo') {
       const now = new Date();
       let startDate: Date;
       let endDate: Date = now;
@@ -260,13 +251,13 @@ export default function Admin() {
           break;
         case 'all':
         default:
-          startDate = new Date(0); // Epoch start
+          startDate = new Date(0);
           break;
       }
       fetchConversionsByDateRange(startDate.toISOString(), endDate.toISOString());
-      fetchSystemMetrics(timeFilter); // Also refetch system metrics with the new filter
+      fetchSystemMetrics(timeFilter);
     }
-  }, [timeFilter, isCurrentUserAdmin, fetchConversionsByDateRange, fetchSystemMetrics]);
+  }, [timeFilter, currentUser?.role, fetchConversionsByDateRange, fetchSystemMetrics]);
   
   // Função para marcar contato como visualizado
   const markAsViewed = (contactId: string) => {
@@ -307,7 +298,7 @@ export default function Admin() {
     if (!selectedUser) return;
 
     try {
-      await deleteUser(selectedUser); // This now bans the user
+      await deleteUser(selectedUser);
       toast({
         title: "Usuário banido",
         description: "O usuário foi banido com sucesso.",
@@ -380,18 +371,16 @@ export default function Admin() {
 
   const handleAddUser = async () => {
     try {
-      // Create user data object with proper type
       const userData: RegisterUserForm = {
         name: newUserName,
         email: newUserEmail,
         password: newUserPassword,
-        phone: newUserPhone || "(00) 00000-0000" // Add a default phone
+        phone: newUserPhone || "(00) 00000-0000"
       };
       
       const result = await register(userData);
       
       if (result.success) {
-        // If registration successful, update role if admin
         if (isNewUserAdmin) {
           const newUser = users.find(u => u.email === newUserEmail);
           if (newUser) {
@@ -443,15 +432,6 @@ export default function Admin() {
 
       if (error) throw error;
 
-      // Update the user's credits in the local state
-      const updatedUsers = users.map(u => 
-        u.id === selectedUser ? { ...u, credits: (u.credits || 0) + amount } : u
-      );
-      // This will trigger a re-render of the UserTable with updated credits
-      // For the current user, if their credits were updated, AuthContext will handle it.
-      // For other users, we need to manually update the 'users' state in AuthContext.
-      // Since AuthContext's `updateUser` already calls `syncUsers`, this will be handled.
-      // So, we just need to call `updateUser` from AuthContext.
       await updateUser(selectedUser, { credits: (users.find(u => u.id === selectedUser)?.credits || 0) + amount });
 
       toast({
@@ -470,7 +450,6 @@ export default function Admin() {
     }
   };
   
-  // Exibe o badge de status do contato com a cor apropriada
   const renderStatusBadge = (status: 'pending' | 'viewed' | 'replied') => {
     if (status === 'pending') {
       return <Badge variant="destructive">Pendente</Badge>;
@@ -481,7 +460,6 @@ export default function Admin() {
     }
   };
   
-  // Obtém a contagem total de contatos por status
   const getContactCountByStatus = (status: 'pending' | 'viewed' | 'replied') => {
     return contacts.filter(contact => contact.status === status).length;
   };
@@ -595,7 +573,7 @@ export default function Admin() {
                   <TabsTrigger value="dashboard" className="flex-1">Dashboard</TabsTrigger>
                   <TabsTrigger value="users" className="flex-1">Usuários</TabsTrigger>
                   <TabsTrigger value="contacts" className="flex-1">Contatos</TabsTrigger>
-                  {currentUser?.role === 'ceo' && ( // Only CEO can see logs
+                  {currentUser?.role === 'ceo' && (
                     <TabsTrigger value="logs" className="flex-1">Logs</TabsTrigger>
                   )}
                 </TabsList>
@@ -614,8 +592,8 @@ export default function Admin() {
                     users={users}
                     userMetrics={userMetrics}
                     formatDate={formatDate}
-                    currentUserRole={currentUser?.role || 'user'} // Pass current user's role
-                    currentUserId={currentUser?.id || ''} // Pass current user's ID
+                    currentUserRole={currentUser?.role || 'user'}
+                    currentUserId={currentUser?.id || ''}
                     onShowUserDetails={(userId) => {
                       setSelectedUser(userId);
                       setShowUserDetailsDialog(true);
@@ -635,7 +613,7 @@ export default function Admin() {
                     onShowAddUserDialog={() => {
                       setShowAddUserDialog(true);
                     }}
-                    onShowAddCreditsDialog={(userId) => { // New prop
+                    onShowAddCreditsDialog={(userId) => {
                       setSelectedUser(userId);
                       setShowAddCreditsDialog(true);
                     }}
@@ -700,7 +678,6 @@ export default function Admin() {
                                       setSelectedContact(contact);
                                       setShowContactDialog(true);
                                       
-                                      // Marcar como visualizado automaticamente
                                       if (contact.status === 'pending') {
                                         markAsViewed(contact.id);
                                       }
@@ -740,7 +717,6 @@ export default function Admin() {
           </Card>
         </div>
 
-        {/* All dialogs */}
         <UserDetailsDialog 
           open={showUserDetailsDialog} 
           onOpenChange={setShowUserDetailsDialog}
@@ -770,7 +746,7 @@ export default function Admin() {
           onConfirm={handleChangeRole}
           selectedUser={selectedUser}
           users={users}
-          currentUserRole={currentUser?.role || 'user'} // Pass current user's role
+          currentUserRole={currentUser?.role || 'user'}
         />
 
         <AddUserDialog 
@@ -787,7 +763,7 @@ export default function Admin() {
           setNewUserPhone={setNewUserPhone}
           isNewUserAdmin={isNewUserAdmin}
           setIsNewUserAdmin={setIsNewUserAdmin}
-          currentUserRole={currentUser?.role || 'user'} // Pass current user's role
+          currentUserRole={currentUser?.role || 'user'}
         />
 
         <AddCreditsDialog
@@ -798,7 +774,6 @@ export default function Admin() {
           users={users}
         />
 
-        {/* Dialog de detalhes do contato */}
         <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -809,7 +784,7 @@ export default function Admin() {
               <DialogDescription>
                 Informações enviadas pelo usuário
               </DialogDescription>
-            </CardHeader>
+            </DialogHeader>
             
             {selectedContact && (
               <div className="space-y-4">
@@ -860,9 +835,7 @@ export default function Admin() {
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      // Abrir cliente de email do usuário
                       window.location.href = `mailto:${selectedContact.email}?subject=PromobConverter Pro - Resposta ao seu contato&body=Olá ${selectedContact.name},%0D%0A%0D%0AObrigado por entrar em contato conosco.%0D%0A%0D%0A`;
-                      // Marcar como respondido automaticamente quando clicar em responder
                       markAsReplied(selectedContact.id);
                     }}
                   >
