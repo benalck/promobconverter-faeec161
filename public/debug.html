@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug - Conversor XML para Excel</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #2563eb;
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 10px;
+    }
+    .card {
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .error {
+      background-color: #fee2e2;
+      border-color: #fecaca;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 8px;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    pre {
+      background-color: #f1f5f9;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .success {
+      color: #16a34a;
+    }
+    .failure {
+      color: #dc2626;
+    }
+  </style>
+</head>
+<body>
+  <h1>Página de Diagnóstico</h1>
+  
+  <div class="card">
+    <h2>Informações do Ambiente</h2>
+    <div id="env-info">Carregando...</div>
+  </div>
+  
+  <div class="card">
+    <h2>Teste de Conectividade</h2>
+    <div id="connectivity-test">
+      <button onclick="testConnectivity()">Testar Conectividade</button>
+      <div id="connectivity-results"></div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Teste de Recursos</h2>
+    <div id="resource-test">
+      <button onclick="testResources()">Testar Recursos</button>
+      <div id="resource-results"></div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Ações</h2>
+    <button onclick="clearCache()">Limpar Cache</button>
+    <button onclick="window.location.href='/'">Voltar para o Início</button>
+  </div>
+  
+  <script>
+    // Informações do ambiente
+    function loadEnvInfo() {
+      const envInfo = document.getElementById('env-info');
+      envInfo.innerHTML = `
+        <p><strong>User Agent:</strong> ${navigator.userAgent}</p>
+        <p><strong>Data/Hora:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>Resolução:</strong> ${window.innerWidth}x${window.innerHeight}</p>
+        <p><strong>URL:</strong> ${window.location.href}</p>
+      `;
+    }
+    
+    // Teste de conectividade
+    async function testConnectivity() {
+      const results = document.getElementById('connectivity-results');
+      results.innerHTML = '<p>Testando conectividade...</p>';
+      
+      const endpoints = [
+        { name: 'Google', url: 'https://www.google.com' },
+        { name: 'Supabase', url: 'https://npnkmbflfflqpjwhxbfu.supabase.co' },
+        { name: 'API', url: 'https://promobconverter.lovable.ai/health' }
+      ];
+      
+      let resultsHtml = '';
+      
+      for (const endpoint of endpoints) {
+        try {
+          const startTime = performance.now();
+          const response = await fetch(endpoint.url, { 
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-cache'
+          });
+          const endTime = performance.now();
+          const latency = Math.round(endTime - startTime);
+          
+          resultsHtml += `<p><strong>${endpoint.name}:</strong> <span class="success">Conectado</span> (${latency}ms)</p>`;
+        } catch (error) {
+          resultsHtml += `<p><strong>${endpoint.name}:</strong> <span class="failure">Falha</span> (${error.message})</p>`;
+        }
+      }
+      
+      results.innerHTML = resultsHtml;
+    }
+    
+    // Teste de recursos
+    async function testResources() {
+      const results = document.getElementById('resource-results');
+      results.innerHTML = '<p>Testando recursos...</p>';
+      
+      const resources = [
+        { name: 'index.html', url: '/index.html' },
+        { name: 'main.js', url: '/assets/index.js' },
+        { name: 'CSS', url: '/assets/index.css' },
+        { name: 'Favicon', url: '/favicon.ico' }
+      ];
+      
+      let resultsHtml = '';
+      
+      for (const resource of resources) {
+        try {
+          const response = await fetch(resource.url, { 
+            method: 'HEAD',
+            cache: 'no-cache'
+          });
+          
+          if (response.ok) {
+            resultsHtml += `<p><strong>${resource.name}:</strong> <span class="success">Disponível</span></p>`;
+          } else {
+            resultsHtml += `<p><strong>${resource.name}:</strong> <span class="failure">Indisponível</span> (Status: ${response.status})</p>`;
+          }
+        } catch (error) {
+          resultsHtml += `<p><strong>${resource.name}:</strong> <span class="failure">Erro</span> (${error.message})</p>`;
+        }
+      }
+      
+      results.innerHTML = resultsHtml;
+    }
+    
+    // Limpar cache
+    function clearCache() {
+      if ('caches' in window) {
+        caches.keys().then(cacheNames => {
+          cacheNames.forEach(cacheName => {
+            caches.delete(cacheName);
+          });
+          alert('Cache limpo com sucesso!');
+        });
+      } else {
+        alert('API de Cache não disponível neste navegador');
+      }
+      
+      // Limpar localStorage
+      localStorage.clear();
+      
+      // Limpar sessionStorage
+      sessionStorage.clear();
+    }
+    
+    // Inicializar
+    loadEnvInfo();
+  </script>
+</body>
+</html> 
