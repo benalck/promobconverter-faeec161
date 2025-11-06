@@ -10,7 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layers, Package, Scissors } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CutPlan2DVisualization from "./CutPlan2DVisualization";
+// import CutPlan2DVisualization from "./CutPlan2DVisualization"; // Removido
 import CostReport from "./CostReport";
 
 export interface PieceData {
@@ -69,9 +69,9 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
   return (
     <div className="space-y-6 mt-6 animate-fade-in">
       <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2"> {/* Alterado para 2 colunas */}
           <TabsTrigger value="summary">Resumo de Materiais</TabsTrigger>
-          <TabsTrigger value="cutplan">Plano de Corte</TabsTrigger>
+          {/* <TabsTrigger value="cutplan">Plano de Corte</TabsTrigger> */} {/* Removido */}
           <TabsTrigger value="costs">Custos</TabsTrigger>
         </TabsList>
         
@@ -138,9 +138,9 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
           </Card>
         </TabsContent>
         
-        <TabsContent value="cutplan">
-          <CutPlan2DVisualization pieces={pieces} materialsSummary={materials} show={true} />
-        </TabsContent>
+        {/* <TabsContent value="cutplan"> */}
+          {/* <CutPlan2DVisualization pieces={pieces} materialsSummary={materials} show={true} /> */}
+        {/* </TabsContent> */}
         
         <TabsContent value="costs">
           <CostReport materials={materials} show={true} />

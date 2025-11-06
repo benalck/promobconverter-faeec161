@@ -35,7 +35,7 @@ import {
 import { MaterialSummary, PieceData } from "./OptimizationResults";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
-import CutPlan2DVisualization from "./CutPlan2DVisualization"; // Importar o componente refatorado
+// import CutPlan2DVisualization from "./CutPlan2DVisualization"; // Importar o componente refatorado
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart, Pie, Cell } from 'recharts';
 
 
@@ -186,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border border-slate-700 rounded-lg p-1">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border border-slate-700 rounded-lg p-1"> {/* Alterado para 3 colunas */}
           <TabsTrigger 
             value="summary" 
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
@@ -194,13 +194,13 @@ const Dashboard: React.FC<DashboardProps> = ({
             <Package className="h-4 w-4 mr-2" />
             Resumo de Materiais
           </TabsTrigger>
-          <TabsTrigger 
+          {/* <TabsTrigger 
             value="cutting" 
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
           >
             <Scissors className="h-4 w-4 mr-2" />
             Plano de Corte
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger 
             value="costs" 
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
@@ -304,13 +304,13 @@ const Dashboard: React.FC<DashboardProps> = ({
         </TabsContent>
 
         {/* Cutting Plan Tab */}
-        <TabsContent value="cutting" className="space-y-6">
+        {/* <TabsContent value="cutting" className="space-y-6">
           <CutPlan2DVisualization 
             pieces={pieces} 
             materialsSummary={materials} 
             show={true} 
           />
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Costs Tab */}
         <TabsContent value="costs" className="space-y-6">
