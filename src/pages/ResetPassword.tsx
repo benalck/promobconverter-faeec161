@@ -17,115 +17,39 @@ export default function ResetPasswordPage() {
   const [isSessionValid, setIsSessionValid] = useState(false);
 
   useEffect(() => {
-    const setupSessionFromUrl = async () => {
-      console.log("🔍 Iniciando validação de link de redefinição de senha...");
+    const validateSession = async () => {
+      console.log("🔍 Validando sessão para redefinição de senha...");
       console.log("URL completa:", window.location.href);
       
       try {
         setIsValidating(true);
-
-        // Extrai parâmetros do hash (#) e query (?)
-        const hashString = window.location.hash.substring(1);
-        const searchString = window.location.search.substring(1);
-        console.log("Hash string:", hashString);
-        console.log("Search string:", searchString);
         
-        const hashParams = new URLSearchParams(hashString);
-        const searchParams = new URLSearchParams(searchString);
+        // O Supabase client já processa automaticamente os tokens da URL
+        // por causa de detectSessionInUrl: true, então só precisamos
+        // verificar se há uma sessão válida
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        // Função auxiliar para buscar parâmetros em ambos os lugares
-        const getParam = (key: string) => hashParams.get(key) || searchParams.get(key);
-
-        // Detecta todos os formatos possíveis de autenticação do Supabase
-        const type = getParam("type");
-        const code = getParam("code");
-        const token_hash = getParam("token_hash");
-        const token = getParam("token");
-        const access_token = getParam("access_token");
-        const refresh_token = getParam("refresh_token");
-
-        console.log("📋 Parâmetros detectados:", { 
-          type, 
-          code: code ? "presente" : "ausente", 
-          token_hash: token_hash ? "presente" : "ausente", 
-          token: token ? "presente" : "ausente",
-          access_token: access_token ? "presente" : "ausente",
-          refresh_token: refresh_token ? "presente" : "ausente"
+        console.log("📋 Resultado da sessão:", { 
+          temSessao: !!session,
+          erro: error?.message 
         });
 
-        let sessionEstablished = false;
-
-        // Estratégia 1: PKCE flow com code (mais moderno)
-        if (code) {
-          console.log("🔄 Tentando exchangeCodeForSession...");
-          try {
-            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-            if (!error && data.session) {
-              console.log("✅ Sessão criada via exchangeCodeForSession");
-              sessionEstablished = true;
-            } else {
-              console.warn("⚠️ exchangeCodeForSession falhou:", error?.message);
-            }
-          } catch (err) {
-            console.error("❌ Erro em exchangeCodeForSession:", err);
-          }
-        }
-
-        // Estratégia 2: Token hash com type=recovery (OTP)
-        if (!sessionEstablished && type === "recovery" && (token_hash || token)) {
-          console.log("🔄 Tentando verifyOtp...");
-          try {
-            const { data, error } = await supabase.auth.verifyOtp({
-              token_hash: token_hash || token || "",
-              type: "recovery",
-            });
-            if (!error && data.session) {
-              console.log("✅ Sessão criada via verifyOtp");
-              sessionEstablished = true;
-            } else {
-              console.warn("⚠️ verifyOtp falhou:", error?.message);
-            }
-          } catch (err) {
-            console.error("❌ Erro em verifyOtp:", err);
-          }
-        }
-
-        // Estratégia 3: Access/refresh tokens (fluxo legado)
-        if (!sessionEstablished && access_token && refresh_token) {
-          console.log("🔄 Tentando setSession...");
-          try {
-            const { data, error } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-            if (!error && data.session) {
-              console.log("✅ Sessão criada via setSession");
-              sessionEstablished = true;
-            } else {
-              console.warn("⚠️ setSession falhou:", error?.message);
-            }
-          } catch (err) {
-            console.error("❌ Erro em setSession:", err);
-          }
-        }
-
-        if (sessionEstablished) {
-          console.log("🎉 Sessão estabelecida com sucesso!");
+        if (session) {
+          console.log("✅ Sessão válida encontrada!");
           setIsSessionValid(true);
-          setMessage("");
           sonnerToast.success("Link validado com sucesso!", {
             description: "Agora você pode redefinir sua senha.",
             duration: 4000,
           });
-
-          // Limpa a URL
-          window.history.replaceState(null, "", window.location.pathname);
+          
+          // Limpa a URL sem recarregar a página
+          window.history.replaceState({}, document.title, "/reset-password");
         } else {
-          console.error("❌ Nenhuma estratégia de autenticação funcionou");
-          throw new Error("Não foi possível validar o link de redefinição");
+          console.error("❌ Nenhuma sessão válida encontrada");
+          throw new Error("Link de redefinição inválido ou expirado");
         }
       } catch (error) {
-        console.error("❌ Erro ao validar link de redefinição:", error);
+        console.error("❌ Erro ao validar sessão:", error);
         sonnerToast.error("Link inválido ou expirado", {
           description: "Por favor, solicite um novo link de redefinição de senha.",
           duration: 5000,
@@ -138,7 +62,9 @@ export default function ResetPasswordPage() {
       }
     };
 
-    setupSessionFromUrl();
+    // Pequeno delay para dar tempo ao Supabase client processar a URL
+    const timer = setTimeout(validateSession, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const validatePassword = (password: string): string | null => {
