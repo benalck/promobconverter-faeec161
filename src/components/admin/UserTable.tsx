@@ -118,7 +118,7 @@ export function UserTable({
     if (isMobile) {
       return ['select', 'name', 'role', 'status', 'actions'];
     }
-    return ['select', 'name', 'email', 'phone', 'role', 'status', 'credits', 'conversions', 'successRate', 'lastConversion', 'actions'];
+    return ['select', 'name', 'email', 'phone', 'role', 'status', 'emailVerified', 'credits', 'createdAt', 'lastLogin', 'conversions', 'successRate', 'lastConversion', 'actions'];
   };
 
   const visibleColumns = getColumns();
@@ -178,7 +178,10 @@ export function UserTable({
                   {visibleColumns.includes('phone') && <TableHead>Telefone</TableHead>}
                   {visibleColumns.includes('role') && <TableHead>Função</TableHead>}
                   {visibleColumns.includes('status') && <TableHead>Status</TableHead>}
+                  {visibleColumns.includes('emailVerified') && <TableHead>Email Verificado</TableHead>}
                   {visibleColumns.includes('credits') && <TableHead>Créditos</TableHead>}
+                  {visibleColumns.includes('createdAt') && <TableHead>Cadastrado em</TableHead>}
+                  {visibleColumns.includes('lastLogin') && <TableHead>Último Login</TableHead>}
                   {visibleColumns.includes('conversions') && <TableHead>Conversões</TableHead>}
                   {visibleColumns.includes('successRate') && <TableHead>Taxa de Sucesso</TableHead>}
                   {visibleColumns.includes('lastConversion') && <TableHead>Última Conversão</TableHead>}
@@ -239,8 +242,21 @@ export function UserTable({
                             </Badge>
                           </TableCell>
                         )}
+                        {visibleColumns.includes('emailVerified') && (
+                          <TableCell>
+                            <Badge variant={user.emailVerified ? "default" : "secondary"}>
+                              {user.emailVerified ? "Verificado" : "Não Verificado"}
+                            </Badge>
+                          </TableCell>
+                        )}
                         {visibleColumns.includes('credits') && (
-                          <TableCell>{user.credits}</TableCell>
+                          <TableCell>{user.credits || 0}</TableCell>
+                        )}
+                        {visibleColumns.includes('createdAt') && (
+                          <TableCell>{formatDate(user.createdAt)}</TableCell>
+                        )}
+                        {visibleColumns.includes('lastLogin') && (
+                          <TableCell>{user.lastLogin ? formatDate(user.lastLogin) : 'Nunca'}</TableCell>
                         )}
                         {visibleColumns.includes('conversions') && (
                           <TableCell>{metrics.totalConversions}</TableCell>
