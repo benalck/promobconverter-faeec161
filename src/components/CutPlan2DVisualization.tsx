@@ -1,62 +1,66 @@
-
-import React, { useState } from "react";
-import { PieceData } from "./OptimizationResults";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { PieceData, MaterialSummary } from "./OptimizationResults";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Ruler, ZoomIn, ZoomOut, ArrowLeft, ArrowRight } from "lucide-react";
+import { Ruler, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, Download, Info, LayoutGrid, Layers, Percent, Clock, Cube } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Dimensões padrão de chapas inteiras (em mm)
 const STANDARD_SHEET_WIDTH = 2750;
 const STANDARD_SHEET_HEIGHT = 1850;
 
-// Cores para diferentes peças
-const PIECE_COLORS = [
-  "#4299e1", // blue-500
-  "#3182ce", // blue-600
-  "#2b6cb0", // blue-700
-  "#4c51bf", // indigo-600
-  "#5a67d8", // indigo-500
-  "#6b46c1", // purple-600
-  "#805ad5", // purple-500
-  "#d53f8c", // pink-600
-  "#ed64a6", // pink-500
-  "#9f7aea", // purple-400
-  "#667eea", // indigo-400
-];
+// Cores para diferentes materiais (CUT PRO-inspired)
+const MATERIAL_COLORS: Record<string, string> = {
+  "MDF Branco": "#00C853", // Verde-limão
+  "MDF Carvalho": "#FFC107", // Amarelo
+  "MDF Preto": "#607D8B", // Cinza azulado
+  "MDP": "#2196F3", // Azul Promob
+  "Compensado": "#FF5722", // Laranja
+  "Madeira Maciça": "#795548", // Marrom
+  "default": "#9E9E9E" // Cinza padrão
+};
 
 interface CutPlan2DVisualizationProps {
   pieces: PieceData[];
+  materialsSummary: MaterialSummary[]; // Adicionado para o resumo
   show: boolean;
 }
 
-const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces, show }) => {
-  const [scale, setScale] = useState(0.2); // Aumente o scale inicial para 20%
+const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces, materialsSummary, show }) => {
+  const [scale, setScale] = useState(0.2); // Escala inicial para caber na tela
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startDragX, setStartDragX] = useState(0);
+  const [startDragY, setStartDragY] = useState(0);
   const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
-  const [showDetails, setShowDetails] = useState(false);
+  const [hoveredPiece, setHoveredPiece] = useState<any | null>(null);
+  const [showDetails, setShowDetails] = useState(false); // Para o toggle de detalhes das peças
+  const containerRef = useRef<HTMLDivElement>(null);
 
   if (!show || !pieces.length) {
     return null;
   }
 
-  // Função para criar um layout simples de corte
-  // Nota: Este é um algoritmo simples para demonstração
-  // Um algoritmo real de corte seria mais complexo e eficiente
+  // Função para criar um layout simples de corte (mantido do original, mas adaptado para SVG)
   const createSimpleCutPlan = (pieces: PieceData[]) => {
-    // Agrupar peças por material
     const materialGroups: Record<string, PieceData[]> = {};
-    
     pieces.forEach(piece => {
       const key = `${piece.material}|${piece.thickness}|${piece.color}`;
       if (!materialGroups[key]) {
         materialGroups[key] = [];
       }
-      
-      // Adicionar cada peça de acordo com sua quantidade
       for (let i = 0; i < piece.quantity; i++) {
         materialGroups[key].push({...piece, quantity: 1});
       }
     });
-    
+
     const sheets: Array<{
       material: string;
       thickness: string;
@@ -70,15 +74,13 @@ const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces,
         color: string;
         name: string;
       }>;
+      utilization: number;
     }> = [];
-    
-    // Para cada grupo de material, criar chapas com as peças
+
     Object.entries(materialGroups).forEach(([key, piecesInGroup]) => {
       const [material, thickness, color] = key.split('|');
-      
-      // Ordenar as peças por tamanho (maior primeiro)
       piecesInGroup.sort((a, b) => (b.width * b.depth) - (a.width * a.depth));
-      
+
       let currentSheet = {
         material,
         thickness,
@@ -91,336 +93,436 @@ const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces,
           depth: number;
           color: string;
           name: string;
-        }>
+        }>,
+        utilization: 0
       };
-      
-      // Grid para acompanhar espaço ocupado
-      let grid = Array(Math.ceil(STANDARD_SHEET_HEIGHT / 50)).fill(0)
-        .map(() => Array(Math.ceil(STANDARD_SHEET_WIDTH / 50)).fill(false));
-      
-      // Tentar encaixar cada peça
+      let currentX = 0;
+      let currentY = 0;
+      let rowHeight = 0;
+      let usedArea = 0;
+
       piecesInGroup.forEach((piece, index) => {
-        // Gerar nome para a peça
-        const pieceName = `Peça ${index + 1}`;
-        
-        // Verificar se a peça cabe na chapa atual
-        let placed = false;
-        
-        // Usar algoritmo simples de primeiro encaixe
-        for (let y = 0; y < grid.length && !placed; y++) {
-          for (let x = 0; x < grid[0].length && !placed; x++) {
-            // Verificar se o espaço está livre
-            if (!grid[y][x]) {
-              const pieceWidth = Math.ceil(piece.width / 50);
-              const pieceDepth = Math.ceil(piece.depth / 50);
-              
-              // Verificar se a peça cabe nesta posição
-              let fits = true;
-              
-              if (y + pieceDepth > grid.length || x + pieceWidth > grid[0].length) {
-                fits = false;
-              } else {
-                // Verificar se todos os espaços necessários estão livres
-                for (let dy = 0; dy < pieceDepth && fits; dy++) {
-                  for (let dx = 0; dx < pieceWidth && fits; dx++) {
-                    if (grid[y + dy][x + dx]) {
-                      fits = false;
-                    }
-                  }
-                }
-              }
-              
-              // Se cabe, marcar como ocupado
-              if (fits) {
-                for (let dy = 0; dy < pieceDepth; dy++) {
-                  for (let dx = 0; dx < pieceWidth; dx++) {
-                    grid[y + dy][x + dx] = true;
-                  }
-                }
-                
-                // Adicionar a peça à chapa atual
-                currentSheet.pieces.push({
-                  piece,
-                  x: x * 50,
-                  y: y * 50,
-                  width: piece.width,
-                  depth: piece.depth,
-                  color: PIECE_COLORS[index % PIECE_COLORS.length],
-                  name: pieceName
-                });
-                
-                placed = true;
-              }
-            }
-          }
-        }
-        
-        // Se não foi possível colocar na chapa atual, criar uma nova
-        if (!placed) {
-          if (currentSheet.pieces.length > 0) {
+        const pieceName = `${piece.family} - ${piece.width}x${piece.depth}`;
+        const pieceColor = MATERIAL_COLORS[`${piece.material} ${piece.color}`] || MATERIAL_COLORS.default;
+
+        if (currentX + piece.width <= STANDARD_SHEET_WIDTH) {
+          currentSheet.pieces.push({
+            piece,
+            x: currentX,
+            y: currentY,
+            width: piece.width,
+            depth: piece.depth,
+            color: pieceColor,
+            name: pieceName
+          });
+          usedArea += piece.width * piece.depth;
+          currentX += piece.width;
+          rowHeight = Math.max(rowHeight, piece.depth);
+        } else {
+          currentX = 0;
+          currentY += rowHeight;
+          rowHeight = 0;
+
+          if (currentY + piece.depth > STANDARD_SHEET_HEIGHT) {
+            currentSheet.utilization = (usedArea / (STANDARD_SHEET_WIDTH * STANDARD_SHEET_HEIGHT)) * 100;
             sheets.push(currentSheet);
+            currentSheet = {
+              material,
+              thickness,
+              color,
+              pieces: [],
+              utilization: 0
+            };
+            currentX = 0;
+            currentY = 0;
+            rowHeight = 0;
+            usedArea = 0;
           }
-          
-          // Nova chapa
-          currentSheet = {
-            material,
-            thickness, 
-            color,
-            pieces: [{
-              piece,
-              x: 0,
-              y: 0,
-              width: piece.width,
-              depth: piece.depth,
-              color: PIECE_COLORS[index % PIECE_COLORS.length],
-              name: pieceName
-            }]
-          };
-          
-          // Reiniciar grid
-          grid = Array(Math.ceil(STANDARD_SHEET_HEIGHT / 50)).fill(0)
-            .map(() => Array(Math.ceil(STANDARD_SHEET_WIDTH / 50)).fill(false));
-          
-          // Marcar espaço como ocupado
-          const pieceWidth = Math.ceil(piece.width / 50);
-          const pieceDepth = Math.ceil(piece.depth / 50);
-          
-          for (let dy = 0; dy < pieceDepth; dy++) {
-            for (let dx = 0; dx < pieceWidth; dx++) {
-              if (dy < grid.length && dx < grid[0].length) {
-                grid[dy][dx] = true;
-              }
-            }
-          }
+
+          currentSheet.pieces.push({
+            piece,
+            x: currentX,
+            y: currentY,
+            width: piece.width,
+            depth: piece.depth,
+            color: pieceColor,
+            name: pieceName
+          });
+          usedArea += piece.width * piece.depth;
+          currentX += piece.width;
+          rowHeight = Math.max(rowHeight, piece.depth);
         }
       });
-      
-      // Adicionar a última chapa se tiver peças
+
       if (currentSheet.pieces.length > 0) {
+        currentSheet.utilization = (usedArea / (STANDARD_SHEET_WIDTH * STANDARD_SHEET_HEIGHT)) * 100;
         sheets.push(currentSheet);
       }
     });
-    
     return sheets;
   };
-  
+
   const cutPlans = createSimpleCutPlan(pieces);
-  
+
   if (cutPlans.length === 0) {
     return (
-      <Card className="mt-6">
-        <CardContent className="pt-6">
-          <p className="text-center text-gray-500">Não foi possível gerar um plano de corte com as peças fornecidas.</p>
+      <Card className="mt-6 bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+        <CardContent className="pt-6 text-center text-gray-400">
+          <p>Não foi possível gerar um plano de corte com as peças fornecidas.</p>
         </CardContent>
       </Card>
     );
   }
-  
+
   const currentSheet = cutPlans[currentSheetIndex];
-  
+  const totalSheets = cutPlans.length;
+
   // Funções para navegação entre chapas
   const goToPreviousSheet = () => {
     setCurrentSheetIndex((prev) => (prev > 0 ? prev - 1 : prev));
-  };
-  
-  const goToNextSheet = () => {
-    setCurrentSheetIndex((prev) => (prev < cutPlans.length - 1 ? prev + 1 : prev));
-  };
-  
-  // Funções para zoom
-  const zoomIn = () => {
-    setScale((prev) => Math.min(prev + 0.05, 0.5));
-  };
-  
-  const zoomOut = () => {
-    setScale((prev) => Math.max(prev - 0.05, 0.15));
-  };
-  
-  // Calcular a utilização da chapa
-  const calculateUsage = (sheet: typeof currentSheet) => {
-    const usedArea = sheet.pieces.reduce((sum, p) => sum + (p.width * p.depth), 0);
-    const totalArea = STANDARD_SHEET_WIDTH * STANDARD_SHEET_HEIGHT;
-    return ((usedArea / totalArea) * 100).toFixed(1);
-  };
-  
-  // Toggle para mostrar detalhes das peças
-  const toggleDetails = () => {
-    setShowDetails(!showDetails);
+    setOffsetX(0); // Reset pan on sheet change
+    setOffsetY(0);
   };
 
+  const goToNextSheet = () => {
+    setCurrentSheetIndex((prev) => (prev < totalSheets - 1 ? prev + 1 : prev));
+    setOffsetX(0); // Reset pan on sheet change
+    setOffsetY(0);
+  };
+
+  // Funções para zoom
+  const zoomIn = () => setScale((prev) => Math.min(prev + 0.05, 1.5));
+  const zoomOut = () => setScale((prev) => Math.max(prev - 0.05, 0.1));
+
+  // Funções para Pan
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    setStartDragX(e.clientX - offsetX);
+    setStartDragY(e.clientY - offsetY);
+  }, [offsetX, offsetY]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setOffsetX(e.clientX - startDragX);
+    setOffsetY(e.clientY - startDragY);
+  }, [isDragging, startDragX, startDragY]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Resumo técnico
+  const totalPieces = currentSheet.pieces.length;
+  const averageUtilization = cutPlans.reduce((sum, sheet) => sum + sheet.utilization, 0) / totalSheets;
+  const totalWasteArea = (STANDARD_SHEET_WIDTH * STANDARD_SHEET_HEIGHT * totalSheets - pieces.reduce((sum, p) => sum + (p.width * p.depth * p.quantity), 0)) / 1000000; // em m²
+  const estimatedCutTime = totalPieces * 0.5; // Exemplo: 30 segundos por peça
+
+  // Função para exportar como PNG
+  const exportAsPNG = useCallback(() => {
+    if (!containerRef.current) return;
+    // Implementação de exportação para PNG (requer biblioteca como html2canvas)
+    // Por simplicidade, vamos apenas simular um toast
+    toast({
+      title: "Exportar PNG",
+      description: "Funcionalidade de exportação PNG em desenvolvimento.",
+      variant: "default",
+    });
+  }, [toast]);
+
+  // Função para exportar como PDF
+  const exportAsPDF = useCallback(() => {
+    if (!containerRef.current) return;
+    // Implementação de exportação para PDF (requer biblioteca como jsPDF + html2canvas)
+    // Por simplicidade, vamos apenas simular um toast
+    toast({
+      title: "Exportar PDF",
+      description: "Funcionalidade de exportação PDF em desenvolvimento.",
+      variant: "default",
+    });
+  }, [toast]);
+
   return (
-    <Card className="mt-6 animate-fade-in">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 pb-3">
-        <CardTitle className="flex items-center justify-between text-blue-700 text-lg md:text-xl">
-          <div className="flex items-center">
-            <Ruler className="mr-2 h-5 w-5 text-blue-600" />
-            Visualização do Plano de Corte
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[700px]">
+      {/* Sidebar Lateral Esquerda: Seleção de Chapas */}
+      <Card className="lg:col-span-1 bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2 text-blue-400">
+            <LayoutGrid className="h-5 w-5" />
+            Chapas do Projeto
+          </CardTitle>
+          <CardDescription className="text-gray-400">
+            Selecione uma chapa para visualizar o plano de corte.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[500px]">
+            <div className="space-y-2 p-4">
+              {cutPlans.map((sheet, index) => (
+                <div
+                  key={index}
+                  onClick={() => setCurrentSheetIndex(index)}
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200
+                    ${index === currentSheetIndex
+                      ? "bg-blue-700/50 border border-blue-500 shadow-lg"
+                      : "bg-slate-700/30 hover:bg-slate-700/50 border border-transparent"
+                    }`}
+                >
+                  <div>
+                    <p className="font-medium text-white">Chapa {index + 1}</p>
+                    <p className="text-xs text-gray-300">{sheet.material} {sheet.thickness} {sheet.color}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-400">{sheet.utilization.toFixed(1)}%</p>
+                    <p className="text-xs text-gray-400">Aproveitamento</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Área Central: Canvas de Visualização */}
+      <Card className="lg:col-span-2 bg-slate-800/50 border-slate-700 backdrop-blur-sm flex flex-col">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl flex items-center gap-2 text-blue-400">
+                <Ruler className="h-5 w-5" />
+                Plano de Corte - Chapa {currentSheetIndex + 1} de {totalSheets}
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Material: {currentSheet.material} {currentSheet.thickness} {currentSheet.color}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <div className="text-2xl font-bold text-emerald-400">{currentSheet.utilization.toFixed(1)}%</div>
+                <div className="text-sm text-gray-400">Utilização</div>
+              </div>
+              <Progress value={currentSheet.utilization} className="w-32 h-2 bg-slate-700" indicatorColor="bg-emerald-500" />
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="p-1 h-8 w-8"
-              onClick={zoomOut}
-              title="Diminuir zoom"
-              disabled={scale <= 0.15}
-            >
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col p-4">
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <Button variant="outline" size="sm" onClick={zoomOut} className="border-slate-600 hover:bg-slate-700 text-gray-300">
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="p-1 h-8 w-8"
-              onClick={zoomIn}
-              title="Aumentar zoom"
-              disabled={scale >= 0.5}
-            >
+            <Button variant="outline" size="sm" onClick={zoomIn} className="border-slate-600 hover:bg-slate-700 text-gray-300">
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleDetails}
-              className="text-xs"
-            >
+            <Button variant="outline" size="sm" onClick={() => setShowDetails(!showDetails)} className="border-slate-600 hover:bg-slate-700 text-gray-300">
+              <Info className="h-4 w-4 mr-1" />
               {showDetails ? "Ocultar Detalhes" : "Mostrar Detalhes"}
             </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="border-slate-600 hover:bg-slate-700 text-gray-300">
+                    <Download className="h-4 w-4 mr-1" />
+                    Exportar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="bg-slate-700 text-white border-slate-600">
+                  <p className="text-sm">Funcionalidade de exportação em desenvolvimento.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm">
-              <span className="font-medium">Chapa {currentSheetIndex + 1} de {cutPlans.length}:</span> {currentSheet.material} {currentSheet.thickness} {currentSheet.color}
-            </div>
-            <div className="text-sm text-blue-600 font-medium">
-              Utilização: {calculateUsage(currentSheet)}%
-            </div>
+
+          <div
+            ref={containerRef}
+            className="relative flex-1 overflow-hidden rounded-lg border-2 border-slate-600 bg-slate-900/70 cursor-grab active:cursor-grabbing"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+          >
+            <svg
+              className="absolute top-0 left-0"
+              width={STANDARD_SHEET_WIDTH * scale}
+              height={STANDARD_SHEET_HEIGHT * scale}
+              style={{ transform: `translate(${offsetX}px, ${offsetY}px)` }}
+              viewBox={`0 0 ${STANDARD_SHEET_WIDTH} ${STANDARD_SHEET_HEIGHT}`}
+            >
+              {/* Fundo da chapa com textura sutil */}
+              <rect
+                x="0"
+                y="0"
+                width={STANDARD_SHEET_WIDTH}
+                height={STANDARD_SHEET_HEIGHT}
+                fill="#333" // Cor de fundo da chapa
+                stroke="#555"
+                strokeWidth="2"
+              />
+              {/* Padrão de textura de madeira (simulado com linhas) */}
+              <pattern id="woodTexture" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                <line x1="0" y1="0" x2="10" y2="10" stroke="#444" strokeWidth="0.5" />
+                <line x1="10" y1="0" x2="0" y2="10" stroke="#444" strokeWidth="0.5" />
+              </pattern>
+              <rect
+                x="0"
+                y="0"
+                width={STANDARD_SHEET_WIDTH}
+                height={STANDARD_SHEET_HEIGHT}
+                fill="url(#woodTexture)"
+                opacity="0.1"
+              />
+
+              {currentSheet.pieces.map((pieceItem, pieceIndex) => (
+                <TooltipProvider key={pieceIndex}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <rect
+                        x={pieceItem.x}
+                        y={pieceItem.y}
+                        width={pieceItem.width}
+                        height={pieceItem.depth}
+                        fill={pieceItem.color}
+                        stroke="#000" // Linhas de corte contrastantes
+                        strokeWidth="1"
+                        onMouseEnter={() => setHoveredPiece(pieceItem)}
+                        onMouseLeave={() => setHoveredPiece(null)}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-slate-700 text-white border-slate-600">
+                      {hoveredPiece && hoveredPiece.piece.id === pieceItem.piece.id && (
+                        <div className="text-sm">
+                          <p className="font-bold">{hoveredPiece.name}</p>
+                          <p>Dimensões: {hoveredPiece.width}x{hoveredPiece.depth} mm</p>
+                          <p>Material: {hoveredPiece.piece.material} {hoveredPiece.piece.thickness}</p>
+                          <p>Borda: {
+                            [
+                              hoveredPiece.piece.edgeTop === 'X' ? 'Superior' : null,
+                              hoveredPiece.piece.edgeBottom === 'X' ? 'Inferior' : null,
+                              hoveredPiece.piece.edgeLeft === 'X' ? 'Esquerda' : null,
+                              hoveredPiece.piece.edgeRight === 'X' ? 'Direita' : null,
+                            ].filter(Boolean).join(', ') || 'Nenhuma'
+                          }</p>
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
+            </svg>
           </div>
-          
-          <div className="mx-auto relative rounded-md border border-gray-300 overflow-hidden bg-gray-100" style={{
-            width: STANDARD_SHEET_WIDTH * scale,
-            height: STANDARD_SHEET_HEIGHT * scale,
-          }}>
-            {/* Desenhar as peças */}
-            {currentSheet.pieces.map((pieceItem, pieceIndex) => (
-              <div
-                key={pieceIndex}
-                className="absolute border border-gray-600 flex items-center justify-center text-xs text-white font-bold transition-all hover:z-10 hover:brightness-110 hover:shadow-md"
-                style={{
-                  left: pieceItem.x * scale,
-                  top: pieceItem.y * scale,
-                  width: pieceItem.width * scale,
-                  height: pieceItem.depth * scale,
-                  backgroundColor: pieceItem.color,
-                }}
-                title={`${pieceItem.name}: ${pieceItem.width}x${pieceItem.depth}mm`}
-              >
-                {pieceItem.width * scale > 80 && pieceItem.depth * scale > 30 ? (
-                  <div className="text-center p-1 overflow-hidden">
-                    <div className="truncate text-[10px] font-semibold">{pieceItem.name}</div>
-                    <div className="text-[9px]">{pieceItem.width}x{pieceItem.depth}</div>
-                  </div>
-                ) : (
-                  pieceItem.width * scale > 40 && pieceItem.depth * scale > 20 ? (
-                    <div className="text-[8px]">{pieceItem.width}x{pieceItem.depth}</div>
-                  ) : null
-                )}
-              </div>
-            ))}
-            
-            {/* Dimensões da chapa */}
-            <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs text-gray-600">
-              <span>0</span>
-              <span>{STANDARD_SHEET_WIDTH}mm</span>
-            </div>
-            <div className="absolute -right-6 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-600" style={{ writingMode: 'vertical-rl' }}>
-              <span>0</span>
-              <span>{STANDARD_SHEET_HEIGHT}mm</span>
-            </div>
-          </div>
-          
-          <div className="flex justify-center space-x-4 mt-8">
-            <Button 
-              variant="outline" 
-              size="sm"
+
+          <div className="flex items-center justify-between mt-4">
+            <Button
+              variant="outline"
               onClick={goToPreviousSheet}
               disabled={currentSheetIndex === 0}
-              className="flex items-center"
+              className="border-slate-600 hover:bg-slate-700 text-gray-300"
             >
-              <ArrowLeft className="mr-1 h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 mr-2" />
               Anterior
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
+            <div className="flex gap-2">
+              {Array.from({ length: totalSheets }).map((_, index) => (
+                <div
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    index === currentSheetIndex
+                      ? 'bg-blue-400 w-8'
+                      : 'bg-slate-600 hover:bg-slate-500'
+                  }`}
+                />
+              ))}
+            </div>
+            <Button
+              variant="outline"
               onClick={goToNextSheet}
-              disabled={currentSheetIndex === cutPlans.length - 1}
-              className="flex items-center"
+              disabled={currentSheetIndex === totalSheets - 1}
+              className="border-slate-600 hover:bg-slate-700 text-gray-300"
             >
               Próxima
-              <ArrowRight className="ml-1 h-4 w-4" />
+              <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
-          
-          {/* Tabela de detalhes das peças */}
-          {showDetails && (
-            <div className="mt-6 overflow-x-auto">
-              <h3 className="text-sm font-medium mb-2">Detalhes das Peças na Chapa Atual:</h3>
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensões (mm)</th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área (m²)</th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fitas</th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posição (x,y)</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {currentSheet.pieces.map((pieceItem, idx) => (
-                    <tr key={idx} style={{ backgroundColor: `${pieceItem.color}20` }}>
-                      <td className="px-4 py-2 whitespace-nowrap">{pieceItem.name}</td>
-                      <td className="px-4 py-2 whitespace-nowrap">{pieceItem.width} x {pieceItem.depth}</td>
-                      <td className="px-4 py-2 whitespace-nowrap">{((pieceItem.width * pieceItem.depth) / 1000000).toFixed(3)}</td>
-                      <td className="px-4 py-2 whitespace-nowrap">
-                        {[
-                          pieceItem.piece.edgeTop === 'X' ? 'Superior' : null,
-                          pieceItem.piece.edgeBottom === 'X' ? 'Inferior' : null,
-                          pieceItem.piece.edgeLeft === 'X' ? 'Esquerda' : null,
-                          pieceItem.piece.edgeRight === 'X' ? 'Direita' : null,
-                        ].filter(Boolean).join(', ') || 'Nenhuma'}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap">{pieceItem.x}, {pieceItem.y}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          
-          {/* Legenda de cores */}
-          <div className="mt-6">
-            <h3 className="text-sm font-medium mb-2">Legenda:</h3>
-            <div className="flex flex-wrap gap-2">
-              {currentSheet.pieces.map((pieceItem, idx) => (
-                <div 
-                  key={idx} 
-                  className="flex items-center text-xs"
-                >
-                  <div 
-                    className="w-4 h-4 mr-1 border border-gray-300" 
-                    style={{ backgroundColor: pieceItem.color }}
-                  ></div>
-                  <span>{pieceItem.name}</span>
+
+          {/* Legenda de Cores */}
+          <div className="mt-6 p-4 bg-slate-900/30 rounded-lg border border-slate-700">
+            <h4 className="text-sm font-medium mb-3 text-gray-400">Legenda de Materiais</h4>
+            <div className="flex flex-wrap gap-4">
+              {Object.entries(MATERIAL_COLORS).filter(([key]) => key !== "default").map(([materialName, color]) => (
+                <div key={materialName} className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: color }}></div>
+                  <span className="text-sm text-gray-300">{materialName}</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Painel Direito: Resumo Técnico */}
+      <Card className="lg:col-span-1 bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2 text-purple-400">
+            <BarChart3 className="h-5 w-5" />
+            Resumo Técnico
+          </CardTitle>
+          <CardDescription className="text-gray-400">
+            Estatísticas detalhadas do plano de corte.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-gray-300">
+              <span className="font-medium">Total de Chapas:</span>
+              <span className="font-bold text-white">{totalSheets}</span>
+            </div>
+            <div className="flex justify-between items-center text-gray-300">
+              <span className="font-medium">Aproveitamento Médio:</span>
+              <span className="font-bold text-emerald-400">{averageUtilization.toFixed(1)}%</span>
+            </div>
+            <Progress value={averageUtilization} className="h-2 bg-slate-700" indicatorColor="bg-emerald-500" />
+            <div className="flex justify-between items-center text-gray-300">
+              <span className="font-medium">Sobras Totais:</span>
+              <span className="font-bold text-orange-400">{totalWasteArea.toFixed(2)} m²</span>
+            </div>
+            <div className="flex justify-between items-center text-gray-300">
+              <span className="font-medium">Tempo Estimado de Corte:</span>
+              <span className="font-bold text-white">{estimatedCutTime.toFixed(0)} min</span>
+            </div>
+            <div className="flex justify-between items-center text-gray-300">
+              <span className="font-medium">Quantidade de Peças:</span>
+              <span className="font-bold text-white">{pieces.reduce((sum, p) => sum + p.quantity, 0)}</span>
+            </div>
+          </div>
+          
+          {showDetails && (
+            <div className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+              <h4 className="text-sm font-medium mb-3 text-gray-400">Detalhes das Peças na Chapa Atual:</h4>
+              <ScrollArea className="h-[200px]">
+                <table className="w-full text-sm text-gray-300">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2 px-2">Nome</th>
+                      <th className="text-right py-2 px-2">Dimensões</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentSheet.pieces.map((pieceItem, idx) => (
+                      <tr key={idx} className="border-b border-slate-800/50">
+                        <td className="py-2 px-2">{pieceItem.name}</td>
+                        <td className="text-right py-2 px-2">{pieceItem.width}x{pieceItem.depth}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

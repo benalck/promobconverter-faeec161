@@ -28,11 +28,16 @@ import {
   FileSpreadsheet,
   MessageSquare,
   Ruler,
-  Cube
+  Cube,
+  LineChart,
+  PieChart
 } from "lucide-react";
 import { MaterialSummary, PieceData } from "./OptimizationResults";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+import CutPlan2DVisualization from "./CutPlan2DVisualization"; // Importar o componente refatorado
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart, Pie, Cell } from 'recharts';
+
 
 interface DashboardProps {
   materials: MaterialSummary[];
@@ -118,6 +123,27 @@ const Dashboard: React.FC<DashboardProps> = ({
     setCurrentSheetIndex(prev => Math.min(prev + 1, totalSheets - 1));
   };
 
+  // Mock data for Analytics tab
+  const aproveitamentoData = [
+    { name: 'Chapa 1', aproveitamento: 92 },
+    { name: 'Chapa 2', aproveitamento: 87 },
+    { name: 'Chapa 3', aproveitamento: 90 },
+    { name: 'Chapa 4', aproveitamento: 85 },
+  ];
+
+  const custoPorM2Data = [
+    { name: 'Jan', custo: 120 },
+    { name: 'Fev', custo: 115 },
+    { name: 'Mar', custo: 118 },
+    { name: 'Abr', custo: 125 },
+    { name: 'Mai', custo: 122 },
+  ];
+
+  const desperdicioData = [
+    { name: 'Utilizado', value: efficiencyRate, color: '#10b981' },
+    { name: 'Desperdício', value: wastePercentage, color: '#ef4444' },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-8">
       {/* Header */}
@@ -160,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border border-slate-700 rounded-lg p-1">
+        <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border border-slate-700 rounded-lg p-1">
           <TabsTrigger 
             value="summary" 
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
@@ -181,6 +207,13 @@ const Dashboard: React.FC<DashboardProps> = ({
           >
             <Calculator className="h-4 w-4 mr-2" />
             Relatório de Custos
+          </TabsTrigger>
+          <TabsTrigger 
+            value="analytics" 
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
+          >
+            <LineChart className="h-4 w-4 mr-2" />
+            Análise de Projeto
           </TabsTrigger>
         </TabsList>
 
@@ -272,127 +305,11 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Cutting Plan Tab */}
         <TabsContent value="cutting" className="space-y-6">
-          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Ruler className="h-6 w-6 text-blue-400" />
-                    Visualização do Plano de Corte
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Chapa {currentSheetIndex + 1} de {totalSheets}
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-emerald-400">{efficiencyRate}%</div>
-                    <div className="text-sm text-gray-400">Utilização</div>
-                  </div>
-                  <Progress value={efficiencyRate} className="w-32 h-2" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Cutting Visualization */}
-              <div className="relative bg-slate-900/50 rounded-lg p-8 mb-6">
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleZoomOut} className="border-slate-600 hover:bg-slate-700">
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleZoomIn} className="border-slate-600 hover:bg-slate-700">
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" className="border-slate-600 hover:bg-slate-700">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {/* Simulated cutting plan visualization */}
-                <div 
-                  className="relative mx-auto border-2 border-slate-600 rounded-lg bg-slate-800/30"
-                  style={{ 
-                    width: `${600 * scale}px`, 
-                    height: `${400 * scale}px`,
-                    transform: `scale(${scale})`
-                  }}
-                >
-                  {/* Simulated pieces */}
-                  <div className="absolute top-4 left-4 w-32 h-24 bg-gradient-to-br from-blue-500/80 to-blue-600/80 border border-blue-400 rounded flex items-center justify-center text-xs font-medium">
-                    Peça 1<br/>670x320
-                  </div>
-                  <div className="absolute top-4 left-40 w-24 h-32 bg-gradient-to-br from-emerald-500/80 to-emerald-600/80 border border-emerald-400 rounded flex items-center justify-center text-xs font-medium">
-                    Peça 2<br/>450x520
-                  </div>
-                  <div className="absolute top-36 left-4 w-40 h-20 bg-gradient-to-br from-purple-500/80 to-purple-600/80 border border-purple-400 rounded flex items-center justify-center text-xs font-medium">
-                    Peça 3<br/>520x240
-                  </div>
-                  <div className="absolute top-36 left-48 w-28 h-28 bg-gradient-to-br from-orange-500/80 to-orange-600/80 border border-orange-400 rounded flex items-center justify-center text-xs font-medium">
-                    Peça 4<br/>380x380
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation */}
-              <div className="flex items-center justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={handlePreviousSheet}
-                  disabled={currentSheetIndex === 0}
-                  className="border-slate-600 hover:bg-slate-700"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Anterior
-                </Button>
-                
-                <div className="flex gap-2">
-                  {Array.from({ length: totalSheets }).map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentSheetIndex 
-                          ? 'bg-blue-400 w-8' 
-                          : 'bg-slate-600 hover:bg-slate-500'
-                      }`}
-                    />
-                  ))}
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={handleNextSheet}
-                  disabled={currentSheetIndex === totalSheets - 1}
-                  className="border-slate-600 hover:bg-slate-700"
-                >
-                  Próxima
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-
-              {/* Legend */}
-              <div className="mt-6 p-4 bg-slate-900/30 rounded-lg">
-                <h4 className="text-sm font-medium mb-3 text-gray-400">Legenda de Materiais</h4>
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded"></div>
-                    <span className="text-sm">MDF Branco</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded"></div>
-                    <span className="text-sm">MDF Carvalho</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded"></div>
-                    <span className="text-sm">MDP Cinza</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded"></div>
-                    <span className="text-sm">Compensado</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <CutPlan2DVisualization 
+            pieces={pieces} 
+            materialsSummary={materials} 
+            show={true} 
+          />
         </TabsContent>
 
         {/* Costs Tab */}
@@ -551,82 +468,153 @@ const Dashboard: React.FC<DashboardProps> = ({
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center gap-2 text-blue-400">
+                <LineChart className="h-6 w-6" />
+                Análise de Projeto
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Gráficos de desempenho e recomendações.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Aproveitamento por Chapa */}
+                <Card className="bg-slate-900/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-gray-300">Aproveitamento por Chapa</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={aproveitamentoData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                        <XAxis dataKey="name" stroke="#888" />
+                        <YAxis stroke="#888" unit="%" />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#334155', border: 'none', borderRadius: '8px' }} 
+                          itemStyle={{ color: '#fff' }} 
+                          formatter={(value: number) => `${value.toFixed(1)}%`}
+                        />
+                        <Bar dataKey="aproveitamento" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Custo por m² */}
+                <Card className="bg-slate-900/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-gray-300">Custo por m²</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={custoPorM2Data}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                        <XAxis dataKey="name" stroke="#888" />
+                        <YAxis stroke="#888" unit="R$" />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#334155', border: 'none', borderRadius: '8px' }} 
+                          itemStyle={{ color: '#fff' }} 
+                          formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+                        />
+                        <Line type="monotone" dataKey="custo" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Percentual de Desperdício */}
+                <Card className="bg-slate-900/50 border-slate-700 md:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-gray-300">Percentual de Desperdício</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-64 flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={desperdicioData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          paddingAngle={5}
+                          dataKey="value"
+                          label
+                        >
+                          {desperdicioData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#334155', border: 'none', borderRadius: '8px' }} 
+                          itemStyle={{ color: '#fff' }} 
+                          formatter={(value: number) => `${value.toFixed(1)}%`}
+                        />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recommendation Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <Card className="bg-slate-900/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-gray-300 flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-400" />
+                      Sugestão de Otimização
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-gray-400">
+                    <p>Utilizar **MDF Branco 15mm** em vez de 18mm para peças não estruturais pode reduzir o custo final em **9%**.</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-slate-900/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-gray-300 flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                      Melhor Aproveitamento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-gray-400">
+                    <p>Observamos maior aproveitamento em chapas de **2750x1830 mm**. Considere padronizar para este tamanho.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
-      {/* AI Insights Section */}
-      {showAIInsights && (
-        <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-700/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Bot className="h-6 w-6 text-purple-400" />
-              Transforme Dados em Resultados
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Insights inteligentes baseados na análise dos seus dados
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-400 mb-2">{efficiencyRate}%</div>
-                <div className="text-sm text-gray-400">Eficiência de Corte</div>
-                <div className="mt-2">
-                  <Progress value={efficiencyRate} className="h-2" />
-                </div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold text-orange-400 mb-2">{wastePercentage.toFixed(1)}%</div>
-                <div className="text-sm text-gray-400">Desperdício</div>
-                <AlertCircle className="h-5 w-5 text-orange-400 mx-auto mt-2" />
-              </div>
-              
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-400 mb-2">{formatCurrency(costPerSquareMeter)}</div>
-                <div className="text-sm text-gray-400">Custo por m²</div>
-                <TrendingUp className="h-5 w-5 text-blue-400 mx-auto mt-2" />
-              </div>
-              
-              <div className="text-center">
-                <div className="text-lg font-bold text-purple-400 mb-2">MDF Carvalho</div>
-                <div className="text-sm text-gray-400">Material mais caro</div>
-                <CheckCircle2 className="h-5 w-5 text-purple-400 mx-auto mt-2" />
-              </div>
-            </div>
-            
-            <div className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-purple-400 mt-1" />
-                <div>
-                  <p className="text-sm text-gray-300 mb-2">
-                    <strong>Sugestão de Otimização:</strong> Sua otimização economizou {wastePercentage.toFixed(1)}% de material em comparação com o corte tradicional. 
-                    Considere usar MDP em vez de MDF para reduzir custos em {((120 - 90) / 120 * 100).toFixed(0)}% mantendo a qualidade.
-                  </p>
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline" className="border-purple-600 hover:bg-purple-900/50">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Gerar Relatório PDF
-                    </Button>
-                    <Button size="sm" variant="outline" className="border-purple-600 hover:bg-purple-900/50">
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar Projeto
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Smart Summary at the bottom */}
+      <div className="mt-8 p-4 bg-slate-800/50 border border-slate-700 rounded-lg flex items-center justify-between text-sm text-gray-300">
+        <p>
+          Conversão concluída com sucesso.{" "}
+          <span className="font-bold text-white">{totalArea.toFixed(2)} m²</span> processados |{" "}
+          <span className="font-bold text-white">{totalSheets} chapas</span> |{" "}
+          <span className="font-bold text-white">{totalEdgeBanding.toFixed(2)}m</span> de fita |{" "}
+          Eficiência <span className="font-bold text-emerald-400">{efficiencyRate.toFixed(1)}%</span>
+        </p>
+        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Assistente IA
+        </Button>
+      </div>
 
-      {/* AI Assistant */}
+      {/* AI Assistant Floating Button */}
       <div className="fixed bottom-6 right-6">
         <Button 
           size="lg" 
           className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-full p-4 shadow-lg shadow-purple-500/25"
           onClick={() => setShowAIInsights(!showAIInsights)}
         >
-          <MessageSquare className="h-6 w-6" />
+          <Bot className="h-6 w-6" />
         </Button>
       </div>
     </div>
