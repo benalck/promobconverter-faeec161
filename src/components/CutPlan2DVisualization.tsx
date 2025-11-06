@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PieceData, MaterialSummary } from "./OptimizationResults";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Ruler, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, Download, Info, LayoutGrid, Layers, Percent, Clock, Cube } from "lucide-react";
+import { Ruler, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, Download, Info, LayoutGrid, Layers, Percent, Clock, Cube, ChevronLeft, ChevronRight, BarChart3 } from "lucide-react"; // Adicionado ChevronLeft, ChevronRight e BarChart3
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
