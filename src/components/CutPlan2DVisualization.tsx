@@ -70,6 +70,11 @@ const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces,
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Adicionado para depuração
+  useEffect(() => {
+    console.log("CutPlan2DVisualization - Props recebidas:", { pieces, materialsSummary, show });
+  }, [pieces, materialsSummary, show]);
+
   // Gerar um ID único para cada peça no layout
   const generatePieceId = useCallback((piece: PieceData, index: number) => {
     return `${piece.material}-${piece.thickness}-${piece.color}-${piece.width}x${piece.depth}-${index}`;
