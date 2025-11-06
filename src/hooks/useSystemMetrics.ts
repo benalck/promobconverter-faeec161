@@ -117,19 +117,23 @@ export function useSystemMetrics() {
       const data = result.data;
       console.log('Dados retornados:', data);
 
-      if (!data) {
+      if (!data || !Array.isArray(data) || data.length === 0) {
         throw new Error('Nenhum dado retornado das métricas do sistema');
       }
 
+      // O resultado da RPC retorna um array, pegamos o primeiro elemento
+      const metricsData = data[0];
+      console.log('Dados extraídos do array:', metricsData);
+
       // Mapear os dados da resposta SQL para nosso formato da interface
       const mappedData: SystemMetrics = {
-        totalUsers: data.total_users || 0,
-        activeUsers: data.active_users || 0,
-        totalConversions: data.total_conversions || 0,
+        totalUsers: metricsData.total_users || 0,
+        activeUsers: metricsData.active_users || 0,
+        totalConversions: metricsData.total_conversions || 0,
         successfulConversions: 0, // Calcular abaixo
         failedConversions: 0, // Calcular abaixo
-        successRate: data.success_rate || 0,
-        averageConversionTime: data.average_response_time || 0
+        successRate: metricsData.success_rate || 0,
+        averageConversionTime: metricsData.average_response_time || 0
       };
 
       // Calcular valores derivados
