@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PieceData, MaterialSummary } from "./OptimizationResults";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Adicionado CardDescription
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Ruler, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, Download, Info, LayoutGrid, Layers, Percent, Clock, Cube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast"; // Importar useToast
+import { Progress } from "@/components/ui/progress"; // Importar Progress
 
 // Dimensões padrão de chapas inteiras (em mm)
 const STANDARD_SHEET_WIDTH = 2750;
