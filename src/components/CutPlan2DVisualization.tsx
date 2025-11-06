@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PieceData, MaterialSummary } from "./OptimizationResults";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Ruler, ZoomIn, ZoomOut, Download, Info, LayoutGrid, ChevronLeft, ChevronRight, BarChart3, Maximize, Square, Layers, Cube, MessageSquare } from "lucide-react";
+import { Ruler, ZoomIn, ZoomOut, Download, Info, LayoutGrid, ChevronLeft, ChevronRight, BarChart3, Maximize, Square, Layers, Cube, MessageSquare, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { motion, AnimatePresence } from "framer-motion";
 import html2canvas from 'html2canvas'; // Para exportar como PNG
+import jsPDF from 'jspdf'; // Para exportar como PDF
 
 // Dimensões padrão de chapas inteiras (em mm)
 const STANDARD_SHEET_WIDTH = 2750;
@@ -355,6 +356,50 @@ const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces,
     });
   }, [currentSheetIndex, toast]);
 
+  // Função para exportar como PDF
+  const exportAsPDF = useCallback(() => {
+    if (!svgRef.current) {
+      toast({
+        title: "Erro na exportação",
+        description: "Não foi possível encontrar o elemento SVG para exportar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    html2canvas(svgRef.current, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+    }).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 280; // A4 landscape width in mm (approx)
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const xOffset = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
+      const yOffset = (pdf.internal.pageSize.getHeight() - imgHeight) / 2;
+
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
+      pdf.save(`plano_de_corte_chapa_${currentSheetIndex + 1}.pdf`);
+      toast({
+        title: "Exportação concluída",
+        description: "O plano de corte foi baixado como PDF.",
+      });
+    }).catch(error => {
+      console.error("Erro ao exportar SVG para PDF:", error);
+      toast({
+        title: "Erro na exportação",
+        description: `Falha ao baixar o plano de corte: ${error.message}`,
+        variant: "destructive",
+      });
+    });
+  }, [currentSheetIndex, toast]);
+
   // Gerar legenda de materiais
   const materialLegend = React.useMemo(() => {
     const legendMap = new Map<string, { color: string, pieces: Set<string>, dimensions: Set<string> }>();
@@ -463,9 +508,23 @@ const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces,
               <Info className="h-4 w-4 mr-1" />
               {showDetails ? "Ocultar Detalhes" : "Mostrar Detalhes"}
             </Button>
-            <Button variant="outline" size="sm" onClick={exportAsPNG} className="border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={exportAsPNG} 
+              className="border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
+            >
               <Download className="h-4 w-4 mr-1" />
-              Baixar Plano
+              Baixar PNG
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={exportAsPDF} 
+              className="border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              Baixar PDF
             </Button>
             <TooltipProvider>
               <Tooltip>
@@ -579,20 +638,79 @@ const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces,
                             onMouseLeave={() => setHoveredPiece(null)}
                             style={{ filter: 'drop-shadow(1px 1px 0.5px rgba(0,0,0,0.2))' }} // Sombra suave
                           />
-                          {/* Texto da peça */}
-                          {showDetails && pieceItem.width * scale > 50 && pieceItem.height * scale > 20 && ( // Mostrar texto apenas se a peça for grande o suficiente
+                          {/* Fitas de Borda */}
+                          {showDetails && pieceItem.originalPieceData.edgeBottom === 'X' && (
+                            <line x1={pieceItem.x} y1={pieceItem.y + pieceItem.height} x2={pieceItem.x + pieceItem.width} y2={pieceItem.y + pieceItem.height} stroke="red" strokeWidth="3" />
+                          )}
+                          {showDetails && pieceItem.originalPieceData.edgeTop === 'X' && (
+                            <line x1={pieceItem.x} y1={pieceItem.y} x2={pieceItem.x + pieceItem.width} y2={pieceItem.y} stroke="red" strokeWidth="3" />
+                          )}
+                          {showDetails && pieceItem.originalPieceData.edgeLeft === 'X' && (
+                            <line x1={pieceItem.x} y1={pieceItem.y} x2={pieceItem.x} y2={pieceItem.y + pieceItem.height} stroke="blue" strokeWidth="3" />
+                          )}
+                          {showDetails && pieceItem.originalPieceData.edgeRight === 'X' && (
+                            <line x1={pieceItem.x + pieceItem.width} y1={pieceItem.y} x2={pieceItem.x + pieceItem.width} y2={pieceItem.y + pieceItem.height} stroke="blue" strokeWidth="3" />
+                          )}
+
+                          {/* Texto da peça (Nome/ID e Medidas) */}
+                          {showDetails && pieceItem.width * scale > 50 && pieceItem.height * scale > 20 && (
+                            <>
+                              <text
+                                x={pieceItem.x + pieceItem.width / 2}
+                                y={pieceItem.y + pieceItem.height / 2 - (pieceItem.height * 0.05)}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                fontSize={Math.min(pieceItem.width * 0.08, pieceItem.height * 0.15, 14)}
+                                fill="#fff"
+                                fontWeight="bold"
+                                pointerEvents="none"
+                                fontFamily="Roboto Mono, monospace"
+                              >
+                                {pieceItem.name}
+                              </text>
+                              <text
+                                x={pieceItem.x + pieceItem.width / 2}
+                                y={pieceItem.y + pieceItem.height / 2 + (pieceItem.height * 0.1)}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                fontSize={Math.min(pieceItem.width * 0.06, pieceItem.height * 0.1, 10)}
+                                fill="#fff"
+                                pointerEvents="none"
+                                fontFamily="Roboto Mono, monospace"
+                              >
+                                {pieceItem.width}x{pieceItem.height} mm
+                              </text>
+                            </>
+                          )}
+
+                          {/* Dimensões nas Bordas (texto pequeno) */}
+                          {showDetails && pieceItem.width * scale > 30 && (
                             <text
                               x={pieceItem.x + pieceItem.width / 2}
-                              y={pieceItem.y + pieceItem.height / 2}
+                              y={pieceItem.y - 5}
                               textAnchor="middle"
-                              dominantBaseline="middle"
-                              fontSize={Math.min(pieceItem.width * 0.1, pieceItem.height * 0.2, 16)} // Tamanho da fonte adaptativo
-                              fill="#fff"
-                              fontWeight="bold"
-                              pointerEvents="none" // Não interfere com o hover da peça
-                              fontFamily="Roboto Mono, monospace" // Tipografia técnica
+                              dominantBaseline="auto"
+                              fontSize="8"
+                              fill="#333"
+                              pointerEvents="none"
+                              fontFamily="Arial, sans-serif"
                             >
-                              {pieceItem.name}
+                              {pieceItem.width}
+                            </text>
+                          )}
+                          {showDetails && pieceItem.height * scale > 30 && (
+                            <text
+                              x={pieceItem.x - 5}
+                              y={pieceItem.y + pieceItem.height / 2}
+                              textAnchor="end"
+                              dominantBaseline="middle"
+                              fontSize="8"
+                              fill="#333"
+                              pointerEvents="none"
+                              fontFamily="Arial, sans-serif"
+                              transform={`rotate(-90 ${pieceItem.x - 5},${pieceItem.y + pieceItem.height / 2})`}
+                            >
+                              {pieceItem.height}
                             </text>
                           )}
                         </g>
@@ -620,6 +738,18 @@ const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces,
                     </Tooltip>
                   </TooltipProvider>
                 ))}
+                {/* Etiqueta da Chapa */}
+                <text
+                  x={STANDARD_SHEET_WIDTH / 2}
+                  y={STANDARD_SHEET_HEIGHT + 20} // Posição abaixo da chapa
+                  textAnchor="middle"
+                  fontSize="16"
+                  fill="#333"
+                  fontWeight="bold"
+                  fontFamily="Arial, sans-serif"
+                >
+                  Chapa {STANDARD_SHEET_WIDTH} x {STANDARD_SHEET_HEIGHT} mm — Aproveitamento: {currentSheet.utilization.toFixed(1)}%
+                </text>
               </motion.svg>
             </AnimatePresence>
           </div>
