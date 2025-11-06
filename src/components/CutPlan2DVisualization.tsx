@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { PieceData, MaterialSummary } from "./OptimizationResults";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Adicionado CardDescription
 import { Ruler, ZoomIn, ZoomOut, ArrowLeft, ArrowRight, Download, Info, LayoutGrid, Layers, Percent, Clock, Cube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
