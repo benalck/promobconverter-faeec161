@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Table,
@@ -140,7 +139,7 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
         </TabsContent>
         
         <TabsContent value="cutplan">
-          <CutPlan2DVisualization pieces={pieces} show={true} />
+          <CutPlan2DVisualization pieces={pieces} materialsSummary={materials} show={true} />
         </TabsContent>
         
         <TabsContent value="costs">
