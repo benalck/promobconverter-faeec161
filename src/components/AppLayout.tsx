@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface AppLayoutProps {
   children: React.ReactNode;
   className?: string;
-  hideHeader?: boolean;
+  hideHeader?: boolean; // Nova prop
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children, className, hideHeader = false }) => {

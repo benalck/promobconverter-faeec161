@@ -93,7 +93,7 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <AppLayout>
+    <AppLayout hideHeader={true}> {/* Esconder o cabeçalho do AppLayout para o Dashboard */}
       <Dashboard
         materials={mockMaterials}
         pieces={mockPieces}
