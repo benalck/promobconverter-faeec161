@@ -8,10 +8,11 @@ import "./App.css";
 // Lazy loading dos componentes
 const Register = lazy(() => import("@/pages/Register"));
 const Admin = lazy(() => import("@/pages/Admin"));
+const Dashboard = lazy(() => import("@/pages/DashboardPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
-const ResetPasswordPage = lazy(() => import("@/pages/ResetPassword")); // Importando a nova página
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPassword"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -89,7 +90,8 @@ function App() {
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/register" element={<Register />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* Nova rota */}
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Rotas para verificação de email - consolidadas */}
               <Route path="/verify" element={<VerifyEmail />} />
