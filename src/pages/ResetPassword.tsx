@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -20,12 +18,18 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const setupSessionFromUrl = async () => {
+      console.log("🔍 Iniciando validação de link de redefinição de senha...");
+      console.log("URL completa:", window.location.href);
+      
       try {
         setIsValidating(true);
 
         // Extrai parâmetros do hash (#) e query (?)
         const hashString = window.location.hash.substring(1);
         const searchString = window.location.search.substring(1);
+        console.log("Hash string:", hashString);
+        console.log("Search string:", searchString);
+        
         const hashParams = new URLSearchParams(hashString);
         const searchParams = new URLSearchParams(searchString);
         
@@ -40,81 +44,97 @@ export default function ResetPasswordPage() {
         const access_token = getParam("access_token");
         const refresh_token = getParam("refresh_token");
 
-        console.log("Parâmetros detectados:", { type, code, token_hash, token, access_token, refresh_token });
+        console.log("📋 Parâmetros detectados:", { 
+          type, 
+          code: code ? "presente" : "ausente", 
+          token_hash: token_hash ? "presente" : "ausente", 
+          token: token ? "presente" : "ausente",
+          access_token: access_token ? "presente" : "ausente",
+          refresh_token: refresh_token ? "presente" : "ausente"
+        });
 
         let sessionEstablished = false;
 
         // Estratégia 1: PKCE flow com code (mais moderno)
         if (code) {
-          console.log("Tentando exchangeCodeForSession...");
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          if (!error && data.session) {
-            console.log("✅ Sessão criada via exchangeCodeForSession");
-            sessionEstablished = true;
-          } else {
-            console.warn("exchangeCodeForSession falhou:", error);
+          console.log("🔄 Tentando exchangeCodeForSession...");
+          try {
+            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+            if (!error && data.session) {
+              console.log("✅ Sessão criada via exchangeCodeForSession");
+              sessionEstablished = true;
+            } else {
+              console.warn("⚠️ exchangeCodeForSession falhou:", error?.message);
+            }
+          } catch (err) {
+            console.error("❌ Erro em exchangeCodeForSession:", err);
           }
         }
 
         // Estratégia 2: Token hash com type=recovery (OTP)
         if (!sessionEstablished && type === "recovery" && (token_hash || token)) {
-          console.log("Tentando verifyOtp...");
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash: token_hash || token || "",
-            type: "recovery",
-          });
-          if (!error && data.session) {
-            console.log("✅ Sessão criada via verifyOtp");
-            sessionEstablished = true;
-          } else {
-            console.warn("verifyOtp falhou:", error);
+          console.log("🔄 Tentando verifyOtp...");
+          try {
+            const { data, error } = await supabase.auth.verifyOtp({
+              token_hash: token_hash || token || "",
+              type: "recovery",
+            });
+            if (!error && data.session) {
+              console.log("✅ Sessão criada via verifyOtp");
+              sessionEstablished = true;
+            } else {
+              console.warn("⚠️ verifyOtp falhou:", error?.message);
+            }
+          } catch (err) {
+            console.error("❌ Erro em verifyOtp:", err);
           }
         }
 
         // Estratégia 3: Access/refresh tokens (fluxo legado)
         if (!sessionEstablished && access_token && refresh_token) {
-          console.log("Tentando setSession...");
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-          if (!error && data.session) {
-            console.log("✅ Sessão criada via setSession");
-            sessionEstablished = true;
-          } else {
-            console.warn("setSession falhou:", error);
+          console.log("🔄 Tentando setSession...");
+          try {
+            const { data, error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            if (!error && data.session) {
+              console.log("✅ Sessão criada via setSession");
+              sessionEstablished = true;
+            } else {
+              console.warn("⚠️ setSession falhou:", error?.message);
+            }
+          } catch (err) {
+            console.error("❌ Erro em setSession:", err);
           }
         }
 
         if (sessionEstablished) {
+          console.log("🎉 Sessão estabelecida com sucesso!");
           setIsSessionValid(true);
           setMessage("");
-          sonnerToast.success("Link validado", {
+          sonnerToast.success("Link validado com sucesso!", {
             description: "Agora você pode redefinir sua senha.",
+            duration: 4000,
           });
 
-          // Converte hash em query string e limpa a URL
-          if (hashString) {
-            const cleanUrl = `${window.location.pathname}?${hashString}`;
-            window.history.replaceState(null, "", cleanUrl);
-            
-            // Remove query string após processamento
-            setTimeout(() => {
-              window.history.replaceState(null, "", window.location.pathname);
-            }, 500);
-          }
+          // Limpa a URL
+          window.history.replaceState(null, "", window.location.pathname);
         } else {
-          throw new Error("Nenhuma estratégia de autenticação funcionou");
+          console.error("❌ Nenhuma estratégia de autenticação funcionou");
+          throw new Error("Não foi possível validar o link de redefinição");
         }
       } catch (error) {
         console.error("❌ Erro ao validar link de redefinição:", error);
         sonnerToast.error("Link inválido ou expirado", {
-          description: "Por favor, solicite um novo link de redefinição.",
+          description: "Por favor, solicite um novo link de redefinição de senha.",
+          duration: 5000,
         });
         setMessage("Link de redefinição inválido ou expirado.");
         setIsSessionValid(false);
       } finally {
         setIsValidating(false);
+        console.log("✔️ Validação finalizada");
       }
     };
 
