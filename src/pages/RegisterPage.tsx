@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { 
   FileSpreadsheet, 
@@ -24,6 +24,7 @@ import { formatPhoneNumber } from "@/lib/utils";
 import { sendConfirmationEmail } from "@/lib/email";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext"; // Importar useAuth
 
 export default function RegisterPage() {
   const [isLoginMode, setIsLoginMode] = useState(false);
@@ -37,7 +38,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [searchParams] = useSearchParams();
   const [hasEmailError, setHasEmailError] = useState(false);
-  const { register, login } = useAuth();
+  const { register, login } = useAuth(); // Usar o hook useAuth
   const navigate = useNavigate();
   const { toast } = useToast();
 

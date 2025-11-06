@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import "./App.css";
 
 // Lazy loading dos componentes
-const Register = lazy(() => import("@/pages/Register"));
+const RegisterPage = lazy(() => import("@/pages/RegisterPage")); // Usar RegisterPage
 const Admin = lazy(() => import("@/pages/Admin"));
 const Dashboard = lazy(() => import("@/pages/DashboardPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -88,7 +88,7 @@ function App() {
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/register" element={<RegisterPage />} /> {/* Usar RegisterPage */}
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
