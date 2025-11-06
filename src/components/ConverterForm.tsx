@@ -61,10 +61,14 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     return <BannedMessage />;
   }
 
-  const handleFileSelect = useCallback((file: File) => {
+  const handleFileSelect = useCallback((file: File | null) => { // Alterado para aceitar File | null
     setXmlFile(file);
-    const fileName = file.name.replace(/\.[^/.]+$/, "");
-    setOutputFileName(fileName);
+    if (file) { // Adicionada verificação para garantir que 'file' não é nulo
+      const fileName = file.name.replace(/\.[^/.]+$/, "");
+      setOutputFileName(fileName);
+    } else {
+      setOutputFileName("plano_de_corte_promob"); // Resetar nome do arquivo se nenhum arquivo for selecionado
+    }
     setConversionSuccess(false);
     setShowOptimizationResults(false);
   }, []);
