@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast"; // Importar useToast
 
 // Dimensões padrão de chapas inteiras (em mm)
 const STANDARD_SHEET_WIDTH = 2750;
@@ -43,6 +44,7 @@ const CutPlan2DVisualization: React.FC<CutPlan2DVisualizationProps> = ({ pieces,
   const [hoveredPiece, setHoveredPiece] = useState<any | null>(null);
   const [showDetails, setShowDetails] = useState(false); // Para o toggle de detalhes das peças
   const containerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast(); // Inicializar useToast
 
   if (!show || !pieces.length) {
     return null;
