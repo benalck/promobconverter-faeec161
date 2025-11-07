@@ -28,7 +28,7 @@ import {
   FileSpreadsheet,
   MessageSquare,
   Ruler,
-  Cube,
+  Box,
   LineChart,
   PieChart
 } from "lucide-react";
@@ -236,7 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm hover:bg-slate-800/70 transition-all hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/20">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-400">Área Total</CardTitle>
-                <Cube className="h-5 w-5 text-emerald-400" /> {/* Changed to Cube icon */}
+                <Box className="h-5 w-5 text-emerald-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-emerald-400">{totalArea.toFixed(2)}</div>
