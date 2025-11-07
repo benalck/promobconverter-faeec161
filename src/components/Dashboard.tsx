@@ -29,14 +29,13 @@ import {
   MessageSquare,
   Ruler,
   Box,
-  LineChart,
-  PieChart
+  TrendingUpIcon
 } from "lucide-react";
 import { MaterialSummary, PieceData } from "./OptimizationResults";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 // import CutPlan2DVisualization from "./CutPlan2DVisualization"; // Removido
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, LineChart, ComposedChart, Pie, PieChart, Cell } from 'recharts';
 
 
 interface DashboardProps {
@@ -213,7 +212,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             value="analytics" 
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
           >
-            <LineChart className="h-4 w-4 mr-2" />
+            <TrendingUpIcon className="h-4 w-4 mr-2" />
             Análise de Projeto
           </TabsTrigger>
         </TabsList>

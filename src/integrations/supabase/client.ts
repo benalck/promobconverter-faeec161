@@ -31,22 +31,5 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
-// Admin client for operations that require service_role
-// Important: Only use this on the server side or in protected admin routes
-export const getAdminAuthClient = () => {
-  // In production, the service role key would be loaded from environment variables
-  // This is just for development purposes
-  const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SUPABASE_SERVICE_ROLE) {
-    console.warn('No service role key available, falling back to standard client');
-    return supabase;
-  }
-  
-  // Create a separate client with service_role permissions
-  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
-  });
-};
+// NOTE: Service role operations should ONLY be performed in Edge Functions
+// Never expose service role keys to client-side code

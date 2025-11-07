@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions_log: {
+        Row: {
+          action_type: string
+          admin_id: string | null
+          details: Json | null
+          id: string
+          target_user_id: string | null
+          timestamp: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_id?: string | null
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+          timestamp?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string | null
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+          timestamp?: string | null
+        }
+        Relationships: []
+      }
       conversions: {
         Row: {
           conversion_time: number | null
@@ -763,9 +790,9 @@ export type Database = {
           is_banned: boolean | null
           last_login: string | null
           name: string | null
+          phone: string | null
           plan_expiry_date: string | null
           role: string | null
-          phone: string | null
         }
         Insert: {
           active_plan?: string | null
@@ -777,9 +804,9 @@ export type Database = {
           is_banned?: boolean | null
           last_login?: string | null
           name?: string | null
+          phone?: string | null
           plan_expiry_date?: string | null
           role?: string | null
-          phone?: string | null
         }
         Update: {
           active_plan?: string | null
@@ -791,9 +818,9 @@ export type Database = {
           is_banned?: boolean | null
           last_login?: string | null
           name?: string | null
+          phone?: string | null
           plan_expiry_date?: string | null
           role?: string | null
-          phone?: string | null
         }
         Relationships: [
           {
@@ -913,6 +940,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       verification_codes: {
         Row: {
           code: string
@@ -937,48 +985,6 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_actions_log: {
-        Row: {
-          admin_id: string | null
-          action_type: string
-          details: Json | null
-          id: string
-          target_user_id: string | null
-          timestamp: string
-        }
-        Insert: {
-          admin_id?: string | null
-          action_type: string
-          details?: Json | null
-          id?: string
-          target_user_id?: string | null
-          timestamp?: string
-        }
-        Update: {
-          admin_id?: string | null
-          action_type?: string
-          details?: Json | null
-          id?: string
-          target_user_id?: string | null
-          timestamp?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "admin_actions_log_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_actions_log_target_user_id_fkey"
-            columns: ["target_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -998,8 +1004,6 @@ export type Database = {
         Args: { user_id: string }
         Returns: undefined
       }
-      auto_verify_email: { Args: never; Returns: unknown }
-      auto_verify_email_backup: { Args: never; Returns: unknown }
       create_user_profile: {
         Args: {
           user_email: string
@@ -1009,7 +1013,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      debug_registration: { Args: never; Returns: unknown }
       diagnose_registration_issues: {
         Args: never
         Returns: {
@@ -1054,16 +1057,27 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
-      get_system_metrics_secure: {
-        Args: { p_end_date?: string; p_start_date?: string }
-        Returns: {
-          active_users: number
-          average_response_time: number
-          success_rate: number
-          total_conversions: number
-          total_users: number
-        }[]
-      }
+      get_system_metrics_secure:
+        | {
+            Args: never
+            Returns: {
+              active_users: number
+              average_response_time: number
+              success_rate: number
+              total_conversions: number
+              total_users: number
+            }[]
+          }
+        | {
+            Args: { p_end_date?: string; p_start_date?: string }
+            Returns: {
+              active_users: number
+              average_response_time: number
+              success_rate: number
+              total_conversions: number
+              total_users: number
+            }[]
+          }
       get_user_metrics: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
@@ -1100,7 +1114,6 @@ export type Database = {
           user_count: number
         }[]
       }
-      handle_new_user: { Args: never; Returns: unknown }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1154,8 +1167,6 @@ export type Database = {
         }
         Returns: string
       }
-      update_cutting_plans_updated_at: { Args: never; Returns: unknown }
-      update_updated_at_column: { Args: never; Returns: unknown }
       user_metrics_calc: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
