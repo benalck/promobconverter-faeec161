@@ -20,8 +20,8 @@ import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { useTrackConversion } from "@/hooks/useTrackConversion";
 import { useIsMobile } from "@/hooks/use-mobile";
-import OptimizationResults, { MaterialSummary } from "./OptimizationResults"; // Removido PieceData
-import { calculateMaterialSummary } from "@/utils/cutOptimizer"; // Removido extractPiecesFromXML
+import OptimizationResults, { MaterialSummary, PieceData } from "./OptimizationResults";
+import { calculateMaterialSummary, extractPiecesFromXML } from "@/utils/cutOptimizer";
 
 interface ConverterFormProps {
   className?: string;
@@ -34,7 +34,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [isConverting, setIsConverting] = useState(false);
   const [conversionSuccess, setConversionSuccess] = useState(false);
   const [materialSummary, setMaterialSummary] = useState<MaterialSummary[]>([]);
-  // const [pieces, setPieces] = useState<PieceData[]>([]); // Removido
+  const [pieces, setPieces] = useState<PieceData[]>([]);
   const [showOptimizationResults, setShowOptimizationResults] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -137,13 +137,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       // mas ela precisará de 'extractedPieces' que não está mais sendo gerado.
       // Vou reintroduzir 'extractPiecesFromXML' e 'pieces' state, mas apenas para o cálculo do resumo.
       
-      // Reintroduzindo a extração de peças para o cálculo do resumo de materiais
-      const { extractPiecesFromXML } = await import("@/utils/cutOptimizer");
       const extractedPieces = extractPiecesFromXML(xmlContent);
+      console.log("Peças extraídas:", extractedPieces);
       
       const summary = calculateMaterialSummary(extractedPieces);
       console.log("Resumo de materiais calculado:", summary);
       
+      setPieces(extractedPieces);
       setMaterialSummary(summary);
       setShowOptimizationResults(true);
 

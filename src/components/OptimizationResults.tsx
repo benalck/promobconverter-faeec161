@@ -11,6 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layers, Package, Scissors } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CostReport from "./CostReport";
+import { CutPlanVisualization } from "./cutplan/CutPlanVisualization";
+import { generateCutLayout } from "@/utils/cutLayoutOptimizer";
+import { PieceData as CutPlanPieceData } from "@/types/cutPlan";
 
 export interface PieceData {
   width: number;
@@ -38,15 +41,23 @@ export interface MaterialSummary {
 interface OptimizationResultsProps {
   show: boolean;
   materials: MaterialSummary[];
-  // pieces?: PieceData[]; // Removido, não é mais necessário
+  pieces?: PieceData[];
 }
 
 const OptimizationResults: React.FC<OptimizationResultsProps> = ({
   show,
   materials,
-  // pieces = [] // Removido, não é mais necessário
+  pieces = []
 }) => {
   const [activeTab, setActiveTab] = useState("summary");
+
+  // Gerar layout de corte se houver peças
+  const cutPlanData = pieces.length > 0 ? generateCutLayout(
+    pieces.map(p => ({
+      ...p,
+      id: `${p.family}-${p.width}x${p.depth}`
+    } as CutPlanPieceData))
+  ) : null;
 
   // Garanta que o componente seja renderizado apenas quando show for true e houver materiais
   if (!show || !materials || materials.length === 0) {
@@ -68,9 +79,9 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
   return (
     <div className="space-y-6 mt-6 animate-fade-in">
       <Tabs defaultValue="summary" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2"> {/* Alterado para 2 colunas */}
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="summary">Resumo de Materiais</TabsTrigger>
-          {/* <TabsTrigger value="cutplan">Plano de Corte</TabsTrigger> Removido */}
+          <TabsTrigger value="cutplan" disabled={!cutPlanData}>Plano de Corte</TabsTrigger>
           <TabsTrigger value="costs">Custos</TabsTrigger>
         </TabsList>
         
@@ -137,9 +148,9 @@ const OptimizationResults: React.FC<OptimizationResultsProps> = ({
           </Card>
         </TabsContent>
         
-        {/* <TabsContent value="cutplan"> Removido
-          <CutPlan2DVisualization pieces={pieces} materialsSummary={materials} show={true} />
-        </TabsContent> */}
+        <TabsContent value="cutplan">
+          {cutPlanData && <CutPlanVisualization cutPlanData={cutPlanData} />}
+        </TabsContent>
         
         <TabsContent value="costs">
           <CostReport materials={materials} show={true} />
