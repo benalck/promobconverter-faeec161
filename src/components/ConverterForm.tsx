@@ -20,8 +20,8 @@ import { useNavigate } from "react-router-dom";
 import BannedMessage from "./BannedMessage";
 import { useTrackConversion } from "@/hooks/useTrackConversion";
 import { useIsMobile } from "@/hooks/use-mobile";
-import OptimizationResults, { MaterialSummary, PieceData } from "./OptimizationResults";
-import { extractPiecesFromXML, calculateMaterialSummary } from "@/utils/cutOptimizer";
+import OptimizationResults, { MaterialSummary } from "./OptimizationResults"; // Removido PieceData
+import { calculateMaterialSummary } from "@/utils/cutOptimizer"; // Removido extractPiecesFromXML
 
 interface ConverterFormProps {
   className?: string;
@@ -34,7 +34,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [isConverting, setIsConverting] = useState(false);
   const [conversionSuccess, setConversionSuccess] = useState(false);
   const [materialSummary, setMaterialSummary] = useState<MaterialSummary[]>([]);
-  const [pieces, setPieces] = useState<PieceData[]>([]);
+  // const [pieces, setPieces] = useState<PieceData[]>([]); // Removido
   const [showOptimizationResults, setShowOptimizationResults] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -121,13 +121,26 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       link.click();
       document.body.removeChild(link);
 
-      console.log("Extraindo peças do XML...");
-      const extractedPieces = extractPiecesFromXML(xmlContent);
-      console.log("Peças extraídas:", extractedPieces);
+      // console.log("Extraindo peças do XML..."); // Removido
+      // const extractedPieces = extractPiecesFromXML(xmlContent); // Removido
+      // console.log("Peças extraídas:", extractedPieces); // Removido
       
-      setPieces(extractedPieces);
+      // setPieces(extractedPieces); // Removido
       
       console.log("Calculando resumo de materiais...");
+      // A função calculateMaterialSummary ainda pode ser usada para o resumo de materiais
+      // mesmo sem a visualização 2D das peças.
+      // No entanto, ela depende de 'extractPiecesFromXML', que foi removida.
+      // Para manter a funcionalidade de resumo de materiais, precisamos reintroduzir
+      // a extração de peças, mas apenas para o cálculo do resumo, não para a visualização 2D.
+      // Por simplicidade, vou manter a chamada a calculateMaterialSummary,
+      // mas ela precisará de 'extractedPieces' que não está mais sendo gerado.
+      // Vou reintroduzir 'extractPiecesFromXML' e 'pieces' state, mas apenas para o cálculo do resumo.
+      
+      // Reintroduzindo a extração de peças para o cálculo do resumo de materiais
+      const { extractPiecesFromXML } = await import("@/utils/cutOptimizer");
+      const extractedPieces = extractPiecesFromXML(xmlContent);
+      
       const summary = calculateMaterialSummary(extractedPieces);
       console.log("Resumo de materiais calculado:", summary);
       
@@ -277,7 +290,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       <OptimizationResults 
         show={showOptimizationResults} 
         materials={materialSummary}
-        pieces={pieces}
+        // pieces={pieces} // Removido
       />
     </>
   );

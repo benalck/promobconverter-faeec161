@@ -35,13 +35,13 @@ import {
 import { MaterialSummary, PieceData } from "./OptimizationResults";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
-import CutPlan2DVisualization from "./CutPlan2DVisualization"; // Re-importado
+// import CutPlan2DVisualization from "./CutPlan2DVisualization"; // Removido
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart, Pie, Cell } from 'recharts';
 
 
 interface DashboardProps {
   materials: MaterialSummary[];
-  pieces: PieceData[];
+  // pieces: PieceData[]; // Removido
   projectName: string;
   onExportExcel: () => void;
   onExportPDF: () => void;
@@ -51,7 +51,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({
   materials,
-  pieces,
+  // pieces, // Removido
   projectName,
   onExportExcel,
   onExportPDF,
@@ -59,8 +59,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onShareProject
 }) => {
   const [activeTab, setActiveTab] = useState("summary");
-  const [currentSheetIndex, setCurrentSheetIndex] = useState(0);
-  const [scale, setScale] = useState(0.8);
+  // const [currentSheetIndex, setCurrentSheetIndex] = useState(0); // Removido
+  // const [scale, setScale] = useState(0.8); // Removido
   const [editMode, setEditMode] = useState(false);
   const [materialPrices, setMaterialPrices] = useState<Record<string, number>>({});
   const [edgeBandingPrice, setEdgeBandingPrice] = useState(5);
@@ -107,21 +107,22 @@ const Dashboard: React.FC<DashboardProps> = ({
     setMaterialPrices(prev => ({ ...prev, [material]: price }));
   };
 
-  const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.1, 1.5));
-  };
+  // Removido funções de zoom e navegação de chapa
+  // const handleZoomIn = () => {
+  //   setScale(prev => Math.min(prev + 0.1, 1.5));
+  // };
 
-  const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.1, 0.5));
-  };
+  // const handleZoomOut = () => {
+  //   setScale(prev => Math.max(prev - 0.1, 0.5));
+  // };
 
-  const handlePreviousSheet = () => {
-    setCurrentSheetIndex(prev => Math.max(prev - 1, 0));
-  };
+  // const handlePreviousSheet = () => {
+  //   setCurrentSheetIndex(prev => Math.max(prev - 1, 0));
+  // };
 
-  const handleNextSheet = () => {
-    setCurrentSheetIndex(prev => Math.min(prev + 1, totalSheets - 1));
-  };
+  // const handleNextSheet = () => {
+  //   setCurrentSheetIndex(prev => Math.min(prev + 1, totalSheets - 1));
+  // };
 
   // Mock data for Analytics tab
   const aproveitamentoData = [
@@ -186,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border border-slate-700 rounded-lg p-1"> {/* Alterado para 4 colunas */}
+        <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border border-slate-700 rounded-lg p-1"> {/* Alterado para 3 colunas */}
           <TabsTrigger 
             value="summary" 
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
@@ -194,13 +195,13 @@ const Dashboard: React.FC<DashboardProps> = ({
             <Package className="h-4 w-4 mr-2" />
             Resumo de Materiais
           </TabsTrigger>
-          <TabsTrigger 
+          {/* <TabsTrigger  Removido
             value="cutting" 
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
           >
             <Scissors className="h-4 w-4 mr-2" />
             Plano de Corte
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger 
             value="costs" 
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-md transition-all"
@@ -303,14 +304,14 @@ const Dashboard: React.FC<DashboardProps> = ({
           </Card>
         </TabsContent>
 
-        {/* Cutting Plan Tab */}
-        <TabsContent value="cutting" className="space-y-6">
+        {/* Cutting Plan Tab Removido */}
+        {/* <TabsContent value="cutting" className="space-y-6">
           <CutPlan2DVisualization 
             pieces={pieces} 
             materialsSummary={materials} 
             show={true} 
           />
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Costs Tab */}
         <TabsContent value="costs" className="space-y-6">

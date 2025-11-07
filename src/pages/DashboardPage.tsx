@@ -1,7 +1,7 @@
 import React from "react";
 import Dashboard from "@/components/Dashboard";
 import AppLayout from "@/components/AppLayout";
-import { MaterialSummary, PieceData } from "@/components/OptimizationResults";
+import { MaterialSummary } from "@/components/OptimizationResults"; // Removido PieceData
 import { useToast } from "@/hooks/use-toast";
 
 const DashboardPage: React.FC = () => {
@@ -35,34 +35,34 @@ const DashboardPage: React.FC = () => {
     }
   ];
 
-  const mockPieces: PieceData[] = [
-    {
-      width: 670,
-      depth: 320,
-      quantity: 2,
-      material: "MDF",
-      thickness: "15mm",
-      color: "Branco",
-      edgeBottom: "X",
-      edgeTop: "X",
-      edgeRight: "",
-      edgeLeft: "",
-      family: "Armário"
-    },
-    {
-      width: 450,
-      depth: 520,
-      quantity: 1,
-      material: "MDF",
-      thickness: "18mm",
-      color: "Carvalho",
-      edgeBottom: "X",
-      edgeTop: "",
-      edgeRight: "X",
-      edgeLeft: "",
-      family: "Gaveteiro"
-    }
-  ];
+  // const mockPieces: PieceData[] = [ // Removido
+  //   {
+  //     width: 670,
+  //     depth: 320,
+  //     quantity: 2,
+  //     material: "MDF",
+  //     thickness: "15mm",
+  //     color: "Branco",
+  //     edgeBottom: "X",
+  //     edgeTop: "X",
+  //     edgeRight: "",
+  //     edgeLeft: "",
+  //     family: "Armário"
+  //   },
+  //   {
+  //     width: 450,
+  //     depth: 520,
+  //     quantity: 1,
+  //     material: "MDF",
+  //     thickness: "18mm",
+  //     color: "Carvalho",
+  //     edgeBottom: "X",
+  //     edgeTop: "",
+  //     edgeRight: "X",
+  //     edgeLeft: "",
+  //     family: "Gaveteiro"
+  //   }
+  // ];
 
   const handleExportExcel = () => {
     toast({
@@ -96,7 +96,7 @@ const DashboardPage: React.FC = () => {
     <AppLayout hideHeader={true}> {/* Esconder o cabeçalho do AppLayout para o Dashboard */}
       <Dashboard
         materials={mockMaterials}
-        pieces={mockPieces}
+        // pieces={mockPieces} // Removido
         projectName="Projeto Cozinha Moderna"
         onExportExcel={handleExportExcel}
         onExportPDF={handleExportPDF}
