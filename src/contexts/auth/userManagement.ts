@@ -36,14 +36,33 @@ export const useUserManagement = (
         return;
       }
 
+      // Fetch all user roles
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      // Create a map of user_id to role
+      const userRolesMap = new Map<string, 'admin' | 'user' | 'ceo'>();
+      if (rolesData) {
+        rolesData.forEach(({ user_id, role }) => {
+          // Priority: ceo > admin > user
+          const currentRole = userRolesMap.get(user_id);
+          if (!currentRole || 
+              (role === 'ceo') || 
+              (role === 'admin' && currentRole === 'user')) {
+            userRolesMap.set(user_id, role as 'admin' | 'user' | 'ceo');
+          }
+        });
+      }
+
       // Map the profile data to User objects
       const formattedUsers: User[] = profilesData.map(profile => {
         return {
           id: profile.id,
           name: profile.name || '',
           email: profile.email || '',
-          phone: profile.phone || '', // Now fetching phone from profiles table
-          role: profile.role as 'admin' | 'user' | 'ceo',
+          phone: profile.phone || '',
+          role: userRolesMap.get(profile.id) || 'user',
           createdAt: profile.created_at,
           lastLogin: profile.last_login || undefined,
           isBanned: profile.is_banned,
@@ -97,10 +116,17 @@ export const useUserManagement = (
       if (data.credits !== undefined) profileData.credits = data.credits;
       if (data.phone !== undefined) profileData.phone = data.phone;
       
-      // SECURITY: Role updates are no longer allowed through profiles table
-      // Roles must be managed through user_roles table only
+      // Handle role updates through secure RPC function
       if (data.role !== undefined) {
-        console.warn('Role updates through updateUser are not allowed. Use user_roles table instead.');
+        const { error: roleError } = await supabase.rpc('set_user_role', {
+          p_target_user_id: id,
+          p_role: data.role
+        });
+        
+        if (roleError) {
+          console.error('Error updating role:', roleError);
+          throw new Error(roleError.message || 'Failed to update user role');
+        }
       }
       
       if (Object.keys(profileData).length > 0) {
@@ -160,11 +186,27 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     return null;
   }
 
+  // Fetch user roles from user_roles table
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId);
+
+  let userRole: 'admin' | 'user' | 'ceo' = 'user';
+  if (userRoles && userRoles.length > 0) {
+    const roles = userRoles.map(r => r.role);
+    if (roles.includes('ceo')) {
+      userRole = 'ceo';
+    } else if (roles.includes('admin')) {
+      userRole = 'admin';
+    }
+  }
+
   return {
     id: profile.id,
     name: profile.name || '',
     email: profile.email || '',
-    role: profile.role as 'admin' | 'user' | 'ceo' || 'user',
+    role: userRole,
     created_at: profile.created_at,
     phone: profile.phone || ''
   };
@@ -178,7 +220,6 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
         id: user.id,
         name,
         email: user.email,
-        role: 'user',
         phone: user.phone || ''
       }
     ])
@@ -190,11 +231,12 @@ export async function createUserProfile(user: User, name: string): Promise<UserP
     return null;
   }
 
+  // User role is 'user' by default (managed in user_roles table by trigger)
   return {
     id: profile.id,
     name: profile.name,
     email: user.email,
-    role: profile.role as 'admin' | 'user' | 'ceo',
+    role: 'user',
     created_at: profile.created_at,
     phone: profile.phone || ''
   };
@@ -216,11 +258,27 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
     return null;
   }
 
+  // Fetch the user's current role from user_roles table
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId);
+
+  let userRole: 'admin' | 'user' | 'ceo' = 'user';
+  if (userRoles && userRoles.length > 0) {
+    const roles = userRoles.map(r => r.role);
+    if (roles.includes('ceo')) {
+      userRole = 'ceo';
+    } else if (roles.includes('admin')) {
+      userRole = 'admin';
+    }
+  }
+
   return {
     id: profile.id,
     name: profile.name,
     email: profile.email || '',
-    role: profile.role as 'admin' | 'user' | 'ceo',
+    role: userRole,
     created_at: profile.created_at,
     phone: profile.phone || ''
   };

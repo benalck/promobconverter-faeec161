@@ -23,16 +23,21 @@ export async function convertSupabaseUser(supabaseUser: SupabaseUser): Promise<U
       throw error;
     }
 
+    // Fetch user roles from user_roles table (secure approach)
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', supabaseUser.id);
+
+    // Determine the primary role (CEO > admin > user)
     let userRole: 'admin' | 'user' | 'ceo' = 'user';
-    
-    if (profile?.role === 'admin') {
-      userRole = 'admin';
-    } else if (profile?.role === 'ceo') { // Check for 'ceo' role
-      userRole = 'ceo';
-    } else if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'admin') {
-      userRole = 'admin';
-    } else if (supabaseUser.user_metadata && supabaseUser.user_metadata.role === 'ceo') {
-      userRole = 'ceo';
+    if (userRoles && userRoles.length > 0) {
+      const roles = userRoles.map(r => r.role);
+      if (roles.includes('ceo')) {
+        userRole = 'ceo';
+      } else if (roles.includes('admin')) {
+        userRole = 'admin';
+      }
     }
 
     return {
@@ -82,11 +87,27 @@ export async function fetchUserProfile(user: User): Promise<UserProfile | null> 
       return null;
     }
 
+    // Fetch user roles from user_roles table
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', profile.id);
+
+    let userRole: 'admin' | 'user' | 'ceo' = 'user';
+    if (userRoles && userRoles.length > 0) {
+      const roles = userRoles.map(r => r.role);
+      if (roles.includes('ceo')) {
+        userRole = 'ceo';
+      } else if (roles.includes('admin')) {
+        userRole = 'admin';
+      }
+    }
+
     return {
       id: profile.id,
       name: profile.name || '',
       email: user.email, // Use the email from the User object
-      role: profile.role as 'admin' | 'user' | 'ceo' || 'user',
+      role: userRole,
       created_at: profile.created_at || new Date().toISOString(),
       phone: profile.phone || user.phone // Use phone from profile first
     };
@@ -113,11 +134,27 @@ export async function updateUserProfile(userId: string, updates: Partial<UserPro
       return null;
     }
 
+    // Fetch the user's current role from user_roles table
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    let userRole: 'admin' | 'user' | 'ceo' = 'user';
+    if (userRoles && userRoles.length > 0) {
+      const roles = userRoles.map(r => r.role);
+      if (roles.includes('ceo')) {
+        userRole = 'ceo';
+      } else if (roles.includes('admin')) {
+        userRole = 'admin';
+      }
+    }
+
     return {
       id: profile.id,
       name: profile.name || '',
       email: updates.email || '',
-      role: profile.role as 'admin' | 'user' | 'ceo' || 'user',
+      role: userRole,
       created_at: profile.created_at || new Date().toISOString(),
       phone: profile.phone || ''
     };
