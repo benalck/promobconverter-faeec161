@@ -1078,6 +1078,17 @@ export type Database = {
               total_users: number
             }[]
           }
+      get_user_credit_history: {
+        Args: { target_user_id: string }
+        Returns: {
+          admin_id: string
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          transaction_type: string
+        }[]
+      }
       get_user_metrics: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
