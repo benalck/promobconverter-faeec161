@@ -88,7 +88,6 @@ export const useUserManagement = (
       const profileData: { 
         name?: string; 
         is_banned?: boolean;
-        role?: 'admin' | 'user' | 'ceo';
         credits?: number;
         phone?: string;
       } = {};
@@ -98,13 +97,10 @@ export const useUserManagement = (
       if (data.credits !== undefined) profileData.credits = data.credits;
       if (data.phone !== undefined) profileData.phone = data.phone;
       
+      // SECURITY: Role updates are no longer allowed through profiles table
+      // Roles must be managed through user_roles table only
       if (data.role !== undefined) {
-        if (data.role === 'admin' || data.role === 'user' || data.role === 'ceo') {
-          profileData.role = data.role;
-        } else {
-          profileData.role = 'user';
-          console.warn('Invalid role provided, defaulting to "user"');
-        }
+        console.warn('Role updates through updateUser are not allowed. Use user_roles table instead.');
       }
       
       if (Object.keys(profileData).length > 0) {
