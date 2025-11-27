@@ -165,12 +165,13 @@ export function UserTable({
           />
         </div>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[calc(100vh-400px)] min-h-[500px]">
-          <div className="w-full overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
+      <CardContent className="p-0">
+        <div className="relative">
+          <ScrollArea className="h-[calc(100vh-400px)] min-h-[500px]">
+            <div className="w-full overflow-x-auto">
+              <Table className="min-w-max">
+                <TableHeader className="sticky top-0 bg-background z-10">
+                 <TableRow>
                   {visibleColumns.includes('select') && (
                     <TableHead className="w-12">
                       <Checkbox 
@@ -359,9 +360,10 @@ export function UserTable({
                   })
                 )}
               </TableBody>
-            </Table>
-          </div>
-        </ScrollArea>
+              </Table>
+            </div>
+          </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );
