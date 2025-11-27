@@ -83,6 +83,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Update user activity every 2 minutes when logged in
+  useEffect(() => {
+    if (!user) return;
+
+    const updateActivity = async () => {
+      try {
+        await supabase.rpc('update_user_activity');
+      } catch (error) {
+        console.error('Error updating user activity:', error);
+      }
+    };
+
+    // Update immediately on login
+    updateActivity();
+
+    // Then update every 2 minutes
+    const interval = setInterval(updateActivity, 2 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{

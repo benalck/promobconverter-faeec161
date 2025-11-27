@@ -788,6 +788,7 @@ export type Database = {
           email_verified: boolean | null
           id: string
           is_banned: boolean | null
+          last_activity: string | null
           last_login: string | null
           name: string | null
           phone: string | null
@@ -802,6 +803,7 @@ export type Database = {
           email_verified?: boolean | null
           id: string
           is_banned?: boolean | null
+          last_activity?: string | null
           last_login?: string | null
           name?: string | null
           phone?: string | null
@@ -816,6 +818,7 @@ export type Database = {
           email_verified?: boolean | null
           id?: string
           is_banned?: boolean | null
+          last_activity?: string | null
           last_login?: string | null
           name?: string | null
           phone?: string | null
@@ -1178,6 +1181,7 @@ export type Database = {
         }
         Returns: string
       }
+      update_user_activity: { Args: never; Returns: undefined }
       user_metrics_calc: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
