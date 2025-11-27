@@ -45,11 +45,13 @@ export function UserTable({
   const [selectedUsers, setSelectedUsers] = useState<Record<string, boolean>>({});
   const [selectAllUsers, setSelectAllUsers] = useState(false);
 
-  const filteredUsers = users.filter((user) =>
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = users
+    .filter((user) =>
+      user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
 
   const handleToggleSelectAll = () => {
     const newValue = !selectAllUsers;
