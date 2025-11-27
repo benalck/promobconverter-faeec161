@@ -508,7 +508,7 @@ export default function Admin() {
 
   return (
     <AppLayout>
-      <div className={`container mx-auto ${isMobile ? 'px-2 py-4' : 'py-8'}`}>
+      <div className={`mx-auto w-full ${isMobile ? 'px-2 py-4' : 'px-4 py-8'} max-w-[1920px]`}>
         <div className="grid grid-cols-1 gap-4">
           <Card>
             <CardHeader className={isMobile ? "px-4 py-3" : ""}>
