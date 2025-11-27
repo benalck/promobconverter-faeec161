@@ -199,43 +199,45 @@ export default function Admin() {
 
   // Removed automatic error retry - user can manually refresh if needed
   
-  // Initial data load - removed aggressive polling
+  // Single unified initial data load
   useEffect(() => {
     if (currentUser?.role === 'admin' || currentUser?.role === 'ceo') {
       refreshData();
     }
-  }, [currentUser?.role]); // Only run once on mount
+  }, []); // Empty deps - only run once on mount
 
-  // Fetch daily stats when timeFilter changes - debounced to avoid excessive calls
+  // Only refetch when timeFilter changes (not on initial mount)
   useEffect(() => {
-    if (currentUser?.role === 'admin' || currentUser?.role === 'ceo') {
-      const now = new Date();
-      let startDate: Date;
-      let endDate: Date = now;
+    if (!currentUser?.role) return;
+    if (currentUser.role !== 'admin' && currentUser.role !== 'ceo') return;
+    
+    // Skip on initial render
+    if (timeFilter === 'all') return;
+    
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now;
 
-      switch (timeFilter) {
-        case 'today':
-          startDate = new Date(now.setHours(0, 0, 0, 0));
-          break;
-        case 'week':
-          startDate = new Date(now.setDate(now.getDate() - 7));
-          break;
-        case 'month':
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          break;
-        case 'all':
-        default:
-          startDate = new Date(0);
-          break;
-      }
-      
-      // Execute both in parallel
-      Promise.all([
-        fetchConversionsByDateRange(startDate.toISOString(), endDate.toISOString()),
-        fetchSystemMetrics(timeFilter)
-      ]);
+    switch (timeFilter) {
+      case 'today':
+        startDate = new Date(now.setHours(0, 0, 0, 0));
+        break;
+      case 'week':
+        startDate = new Date(now.setDate(now.getDate() - 7));
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      default:
+        return;
     }
-  }, [timeFilter, currentUser?.role]);
+    
+    // Execute both in parallel
+    Promise.all([
+      fetchConversionsByDateRange(startDate.toISOString(), endDate.toISOString()),
+      fetchSystemMetrics(timeFilter)
+    ]);
+  }, [timeFilter]);
   
   // Função para marcar contato como visualizado
   const markAsViewed = (contactId: string) => {

@@ -188,19 +188,12 @@ export function useSystemMetrics() {
     }
   }, []);
 
+  // Removed automatic fetch - let parent component control when to fetch
+  
+  // Refetch function for manual refresh
   const refetch = useCallback(async (timeFilter?: string) => {
     return fetchSystemMetrics(timeFilter);
   }, [fetchSystemMetrics]);
-
-  // Add effect to fetch metrics automatically
-  useEffect(() => {
-    // Only attempt to fetch metrics if user is admin
-    if (isAdmin) {
-      fetchSystemMetrics().catch((error) => {
-        console.error('Error loading initial metrics:', error);
-      });
-    }
-  }, [fetchSystemMetrics, isAdmin]);
 
   return {
     metrics,

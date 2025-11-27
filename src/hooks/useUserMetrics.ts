@@ -138,14 +138,7 @@ export function useUserMetrics() {
     }
   }, [user, users, fetchUserMetric, isAdmin, metrics]);
 
-  // Efeito para buscar métricas automaticamente quando o componente montar
-  useEffect(() => {
-    if (isAdmin && users && users.length > 0) { // Only fetch if current user is admin/CEO
-      fetchUserMetrics().catch(error => {
-        console.error('Erro ao carregar métricas de usuários:', error);
-      });
-    }
-  }, [users, fetchUserMetrics, isAdmin]);
+  // Removed automatic fetch - let parent component control when to fetch
 
   return {
     metrics,
