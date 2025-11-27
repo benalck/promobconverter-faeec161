@@ -39,15 +39,15 @@ export default function ConversionMetricsChart({ data, timeFilter }: ConversionM
   });
 
   return (
-    <Card className="p-6">
+    <Card>
       <CardHeader>
-        <CardTitle className={isMobile ? "text-xl" : "text-2xl"}>Métricas de Conversão</CardTitle>
-        <CardDescription className={isMobile ? "text-xs" : "text-sm"}>
+        <CardTitle className={isMobile ? "text-lg" : "text-xl"}>Métricas de Conversão</CardTitle>
+        <CardDescription>
           Estatísticas de conversão ao longo do tempo
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className={isMobile ? "h-[350px]" : "h-[500px]"}>
+        <div className={isMobile ? "h-[300px]" : "h-[400px]"}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={formattedData}>
               <CartesianGrid strokeDasharray="3 3" />
