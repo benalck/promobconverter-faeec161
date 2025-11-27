@@ -793,7 +793,6 @@ export type Database = {
           name: string | null
           phone: string | null
           plan_expiry_date: string | null
-          role: string | null
         }
         Insert: {
           active_plan?: string | null
@@ -808,7 +807,6 @@ export type Database = {
           name?: string | null
           phone?: string | null
           plan_expiry_date?: string | null
-          role?: string | null
         }
         Update: {
           active_plan?: string | null
@@ -823,7 +821,6 @@ export type Database = {
           name?: string | null
           phone?: string | null
           plan_expiry_date?: string | null
-          role?: string | null
         }
         Relationships: [
           {
@@ -1147,6 +1144,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      manage_user_role: {
+        Args: {
+          p_action: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_target_user_id: string
+        }
+        Returns: Json
+      }
       register_user: {
         Args: {
           user_email: string
@@ -1162,6 +1167,13 @@ export type Database = {
           user_id: string
           user_name: string
           user_role?: string
+        }
+        Returns: Json
+      }
+      set_user_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_target_user_id: string
         }
         Returns: Json
       }
