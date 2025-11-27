@@ -37,53 +37,53 @@ export function AdminDashboard({
         </Select>
       </div>
 
-      <div className={`grid grid-cols-1 ${isMobile ? 'gap-2' : 'md:grid-cols-3 gap-4'} mb-6`}>
-        <Card>
-          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'pb-1' : 'pb-2'}`}>
-            <CardTitle className="text-sm font-medium">
+      <div className={`grid grid-cols-1 ${isMobile ? 'gap-3' : 'md:grid-cols-3 gap-6'} mb-8`}>
+        <Card className="p-6">
+          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'pb-2' : 'pb-4'}`}>
+            <CardTitle className={isMobile ? "text-base font-medium" : "text-lg font-medium"}>
               Usuários Ativos
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className={isMobile ? "h-5 w-5 text-muted-foreground" : "h-6 w-6 text-muted-foreground"} />
           </CardHeader>
           <CardContent>
-            <div className={isMobile ? "text-xl font-bold" : "text-2xl font-bold"}>
+            <div className={isMobile ? "text-2xl font-bold" : "text-4xl font-bold"}>
               {systemMetrics?.activeUsers || 0}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className={isMobile ? "text-xs text-muted-foreground mt-1" : "text-sm text-muted-foreground mt-2"}>
               de {systemMetrics?.totalUsers || 0} usuários totais
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'pb-1' : 'pb-2'}`}>
-            <CardTitle className="text-sm font-medium">
+        <Card className="p-6">
+          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'pb-2' : 'pb-4'}`}>
+            <CardTitle className={isMobile ? "text-base font-medium" : "text-lg font-medium"}>
               Taxa de Sucesso
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className={isMobile ? "h-5 w-5 text-muted-foreground" : "h-6 w-6 text-muted-foreground"} />
           </CardHeader>
           <CardContent>
-            <div className={isMobile ? "text-xl font-bold" : "text-2xl font-bold"}>
+            <div className={isMobile ? "text-2xl font-bold" : "text-4xl font-bold"}>
               {(systemMetrics?.successRate || 0).toFixed(1)}%
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className={isMobile ? "text-xs text-muted-foreground mt-1" : "text-sm text-muted-foreground mt-2"}>
               em {systemMetrics?.totalConversions || 0} conversões
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'pb-1' : 'pb-2'}`}>
-            <CardTitle className="text-sm font-medium">
+        <Card className="p-6">
+          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'pb-2' : 'pb-4'}`}>
+            <CardTitle className={isMobile ? "text-base font-medium" : "text-lg font-medium"}>
               Tempo Médio
             </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className={isMobile ? "h-5 w-5 text-muted-foreground" : "h-6 w-6 text-muted-foreground"} />
           </CardHeader>
           <CardContent>
-            <div className={isMobile ? "text-xl font-bold" : "text-2xl font-bold"}>
+            <div className={isMobile ? "text-2xl font-bold" : "text-4xl font-bold"}>
               {((systemMetrics?.averageConversionTime || 0) / 1000).toFixed(2)}s
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className={isMobile ? "text-xs text-muted-foreground mt-1" : "text-sm text-muted-foreground mt-2"}>
               por conversão
             </p>
           </CardContent>
