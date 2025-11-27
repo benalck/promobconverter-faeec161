@@ -127,7 +127,12 @@ export function UserTable({
     <Card>
       <CardHeader>
         <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'justify-between items-center'}`}>
-          <CardTitle>Usuários do Sistema</CardTitle>
+          <div>
+            <CardTitle>Usuários do Sistema</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Mostrando {filteredUsers.length} de {users.length} usuários
+            </p>
+          </div>
           <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'space-x-2'}`}>
             <Button 
               onClick={exportSelectedUsers} 
@@ -159,7 +164,7 @@ export function UserTable({
         </div>
       </CardHeader>
       <CardContent>
-        <ScrollArea className={isMobile ? "h-[400px]" : "max-h-[600px]"}>
+        <ScrollArea className="h-[calc(100vh-400px)] min-h-[500px]">
           <div className="w-full overflow-auto">
             <Table>
               <TableHeader>
