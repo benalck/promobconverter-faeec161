@@ -98,34 +98,32 @@ export function useUserMetrics() {
     // Only fetch if current user is admin/CEO
     if (!isAdmin || !user || !users || users.length === 0) return {};
     
-    setIsLoading(true);
+    // Only show loading on first call
+    if (Object.keys(metrics).length === 0) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
-      // Buscar métricas para todos os usuários
-      const userMetricsPromises = users.map(async (u) => {
-        const userData = await fetchUserMetric(u.id);
-        return { userId: u.id, data: userData };
-      });
-
-      const results = await Promise.all(userMetricsPromises);
+      // Fetch all user metrics in parallel for better performance
+      const results = await Promise.all(
+        users.map(async (u) => {
+          const userData = await fetchUserMetric(u.id);
+          return { userId: u.id, data: userData };
+        })
+      );
       
-      // Montar o objeto de métricas
+      // Build metrics collection
       const metricsCollection: UserMetricsCollection = {};
       
       results.forEach(result => {
-        if (result.data) {
-          metricsCollection[result.userId] = result.data;
-        } else {
-          // Adicionar valores vazios para evitar erros de renderização
-          metricsCollection[result.userId] = {
-            totalConversions: 0,
-            successfulConversions: 0,
-            failedConversions: 0,
-            averageConversionTime: 0,
-            lastConversion: '-'
-          };
-        }
+        metricsCollection[result.userId] = result.data || {
+          totalConversions: 0,
+          successfulConversions: 0,
+          failedConversions: 0,
+          averageConversionTime: 0,
+          lastConversion: '-'
+        };
       });
 
       setMetrics(metricsCollection);
@@ -138,7 +136,7 @@ export function useUserMetrics() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, users, fetchUserMetric, isAdmin]);
+  }, [user, users, fetchUserMetric, isAdmin, metrics]);
 
   // Efeito para buscar métricas automaticamente quando o componente montar
   useEffect(() => {

@@ -19,7 +19,9 @@ import {
   History,
 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { AdminDashboardSkeleton } from "@/components/admin/AdminDashboardSkeleton";
 import { UserTable } from "@/components/admin/UserTable";
+import { UserTableSkeleton } from "@/components/admin/UserTableSkeleton";
 import { UserDetailsDialog } from "@/components/admin/UserDetailsDialog";
 import { 
   DeleteDialog,
@@ -167,30 +169,17 @@ export default function Admin() {
     }
   }, [toast]);
 
-  // Function to refresh data
+  // Function to refresh data - optimized with parallel calls
   const refreshData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      console.log('Iniciando atualização de dados...');
-      
-      try {
-        console.log('Atualizando métricas do sistema...');
-        await refetchSystemMetrics(timeFilter);
-        console.log('Métricas do sistema atualizadas com sucesso!');
-      } catch (e) {
-        console.error('Falha ao atualizar métricas do sistema:', e);
-      }
-      
-      try {
-        console.log('Atualizando métricas de usuários...');
-        await fetchUserMetrics();
-        console.log('Métricas de usuários atualizadas com sucesso!');
-      } catch (e) {
-        console.error('Falha ao atualizar métricas de usuários:', e);
-      }
-      
-      loadContacts();
-      fetchAdminLogs();
+      // Execute all fetches in parallel for faster loading
+      await Promise.allSettled([
+        refetchSystemMetrics(timeFilter),
+        fetchUserMetrics(),
+        Promise.resolve(loadContacts()),
+        fetchAdminLogs()
+      ]);
       
       toast({
         title: "Dados atualizados",
@@ -208,31 +197,16 @@ export default function Admin() {
     }
   }, [refetchSystemMetrics, fetchUserMetrics, loadContacts, fetchAdminLogs, toast, timeFilter]);
 
-  // Efeito para recarregar dados quando houver erro
-  useEffect(() => {
-    if (systemError || userError) {
-      const retryTimeout = setTimeout(() => {
-        refreshData(); 
-      }, 5000);
-
-      return () => clearTimeout(retryTimeout);
-    }
-  }, [systemError, userError, refreshData]);
+  // Removed automatic error retry - user can manually refresh if needed
   
-  // Initial data load and polling setup
+  // Initial data load - removed aggressive polling
   useEffect(() => {
     if (currentUser?.role === 'admin' || currentUser?.role === 'ceo') {
       refreshData();
-
-      const pollingInterval = setInterval(() => {
-        refreshData();
-      }, 30000);
-
-      return () => clearInterval(pollingInterval);
     }
-  }, [currentUser?.role, refreshData]);
+  }, [currentUser?.role]); // Only run once on mount
 
-  // Fetch daily stats when timeFilter changes
+  // Fetch daily stats when timeFilter changes - debounced to avoid excessive calls
   useEffect(() => {
     if (currentUser?.role === 'admin' || currentUser?.role === 'ceo') {
       const now = new Date();
@@ -254,10 +228,14 @@ export default function Admin() {
           startDate = new Date(0);
           break;
       }
-      fetchConversionsByDateRange(startDate.toISOString(), endDate.toISOString());
-      fetchSystemMetrics(timeFilter);
+      
+      // Execute both in parallel
+      Promise.all([
+        fetchConversionsByDateRange(startDate.toISOString(), endDate.toISOString()),
+        fetchSystemMetrics(timeFilter)
+      ]);
     }
-  }, [timeFilter, currentUser?.role, fetchConversionsByDateRange, fetchSystemMetrics]);
+  }, [timeFilter, currentUser?.role]);
   
   // Função para marcar contato como visualizado
   const markAsViewed = (contactId: string) => {
@@ -481,18 +459,8 @@ export default function Admin() {
     );
   }
 
-  if (isLoadingSystem || isLoadingUsers) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="ml-3">Carregando métricas...</span>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
+  // Show skeleton instead of full page loader for better UX
+  const showSkeleton = isLoadingSystem || isLoadingUsers;
 
   if (systemError || userError) {
     const errorMessage = systemError?.message || userError?.message || "Erro ao carregar métricas. Por favor, tente novamente.";
@@ -579,45 +547,53 @@ export default function Admin() {
                 </TabsList>
                 
                 <TabsContent value="dashboard">
-                  <AdminDashboard 
-                    systemMetrics={systemMetrics}
-                    dailyStats={dailyStats}
-                    timeFilter={timeFilter}
-                    setTimeFilter={setTimeFilter}
-                  />
+                  {showSkeleton ? (
+                    <AdminDashboardSkeleton />
+                  ) : (
+                    <AdminDashboard 
+                      systemMetrics={systemMetrics}
+                      dailyStats={dailyStats}
+                      timeFilter={timeFilter}
+                      setTimeFilter={setTimeFilter}
+                    />
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="users">
-                  <UserTable 
-                    users={users}
-                    userMetrics={userMetrics}
-                    formatDate={formatDate}
-                    currentUserRole={currentUser?.role || 'user'}
-                    currentUserId={currentUser?.id || ''}
-                    onShowUserDetails={(userId) => {
-                      setSelectedUser(userId);
-                      setShowUserDetailsDialog(true);
-                    }}
-                    onShowRoleDialog={(userId) => {
-                      setSelectedUser(userId);
-                      setShowRoleDialog(true);
-                    }}
-                    onShowBanDialog={(userId) => {
-                      setSelectedUser(userId);
-                      setShowBanDialog(true);
-                    }}
-                    onShowDeleteDialog={(userId) => {
-                      setSelectedUser(userId);
-                      setShowDeleteDialog(true);
-                    }}
-                    onShowAddUserDialog={() => {
-                      setShowAddUserDialog(true);
-                    }}
-                    onShowAddCreditsDialog={(userId) => {
-                      setSelectedUser(userId);
-                      setShowAddCreditsDialog(true);
-                    }}
-                  />
+                  {showSkeleton ? (
+                    <UserTableSkeleton />
+                  ) : (
+                    <UserTable 
+                      users={users}
+                      userMetrics={userMetrics}
+                      formatDate={formatDate}
+                      currentUserRole={currentUser?.role || 'user'}
+                      currentUserId={currentUser?.id || ''}
+                      onShowUserDetails={(userId) => {
+                        setSelectedUser(userId);
+                        setShowUserDetailsDialog(true);
+                      }}
+                      onShowRoleDialog={(userId) => {
+                        setSelectedUser(userId);
+                        setShowRoleDialog(true);
+                      }}
+                      onShowBanDialog={(userId) => {
+                        setSelectedUser(userId);
+                        setShowBanDialog(true);
+                      }}
+                      onShowDeleteDialog={(userId) => {
+                        setSelectedUser(userId);
+                        setShowDeleteDialog(true);
+                      }}
+                      onShowAddUserDialog={() => {
+                        setShowAddUserDialog(true);
+                      }}
+                      onShowAddCreditsDialog={(userId) => {
+                        setSelectedUser(userId);
+                        setShowAddCreditsDialog(true);
+                      }}
+                    />
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="contacts">

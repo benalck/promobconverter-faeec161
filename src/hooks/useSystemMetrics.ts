@@ -45,17 +45,14 @@ export function useSystemMetrics() {
   const [error, setError] = useState<Error | null>(null);
 
   const fetchSystemMetrics = useCallback(async (timeFilter: string = 'all'): Promise<SystemMetrics> => {
-    setIsLoading(true);
+    // Only set loading on first call
+    if (!metrics) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
-      // Verificar se o usuário está autenticado
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session) {
-        throw new Error('Usuário não autenticado');
-      }
-      
-      // Verificar se o usuário é admin ou CEO
+      // Check auth - optimized to avoid unnecessary calls
       if (!isAdmin) {
         throw new Error('Somente administradores podem acessar métricas do sistema');
       }
@@ -84,10 +81,7 @@ export function useSystemMetrics() {
           break;
       }
 
-      // Console log para debug
-      console.log('Buscando métricas do sistema com filtro:', timeFilter, 'Start:', startDate, 'End:', endDate);
-
-      // Use the secure RPC call
+      // Use the secure RPC call with optimized params
       const result = await supabase.rpc<'get_system_metrics_secure', SystemMetricsResponse>(
         'get_system_metrics_secure',
         { 
@@ -96,51 +90,31 @@ export function useSystemMetrics() {
         }
       );
 
-      console.log('Resultado da função get_system_metrics_secure:', result);
-
       if (result.error) {
-        console.error('Erro na função RPC:', result.error);
-        
-        // Verificar mensagens específicas do erro para dar feedback útil
-        if (result.error.message.includes("Could not find the function") || 
-            result.error.message.includes("function does not exist")) {
-          throw new Error('Função de métricas não encontrada no banco de dados. Verifique se as migrações foram aplicadas.');
-        }
-        
-        if (result.error.message.includes("Access denied")) {
-          throw new Error('Permissão negada para acessar métricas. Verifique suas permissões.');
-        }
-
         throw new Error(result.error.message);
       }
 
       const data = result.data;
-      console.log('Dados retornados:', data);
 
       if (!data || !Array.isArray(data) || data.length === 0) {
         throw new Error('Nenhum dado retornado das métricas do sistema');
       }
 
-      // O resultado da RPC retorna um array, pegamos o primeiro elemento
       const metricsData = data[0];
-      console.log('Dados extraídos do array:', metricsData);
 
-      // Mapear os dados da resposta SQL para nosso formato da interface
+      // Map to interface format
       const mappedData: SystemMetrics = {
         totalUsers: metricsData.total_users || 0,
         activeUsers: metricsData.active_users || 0,
         totalConversions: metricsData.total_conversions || 0,
-        successfulConversions: 0, // Calcular abaixo
-        failedConversions: 0, // Calcular abaixo
+        successfulConversions: Math.round((metricsData.total_conversions || 0) * ((metricsData.success_rate || 0) / 100)),
+        failedConversions: 0,
         successRate: metricsData.success_rate || 0,
         averageConversionTime: metricsData.average_response_time || 0
       };
 
-      // Calcular valores derivados
-      mappedData.successfulConversions = Math.round(mappedData.totalConversions * (mappedData.successRate / 100));
       mappedData.failedConversions = mappedData.totalConversions - mappedData.successfulConversions;
 
-      console.log('Métricas mapeadas:', mappedData);
       setMetrics(mappedData);
       return mappedData;
     } catch (err) {
@@ -151,7 +125,7 @@ export function useSystemMetrics() {
     } finally {
       setIsLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, metrics]);
 
   const fetchConversionsByDateRange = useCallback(async (startDate: string, endDate: string): Promise<ConversionsByDate[]> => {
     setIsLoading(true);
