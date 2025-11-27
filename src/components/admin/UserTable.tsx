@@ -126,7 +126,7 @@ export function UserTable({
   const visibleColumns = getColumns();
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
         <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'justify-between items-center'}`}>
           <div>
@@ -165,10 +165,9 @@ export function UserTable({
           />
         </div>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[calc(100vh-400px)] min-h-[500px]">
-          <div className="w-full overflow-x-auto">
-            <Table className="min-w-[1600px]">
+      <CardContent className="overflow-hidden">
+        <div className="w-full overflow-x-auto">
+          <Table className="min-w-[1600px] w-full">
               <TableHeader>
                 <TableRow>
                   {visibleColumns.includes('select') && (
@@ -361,7 +360,6 @@ export function UserTable({
               </TableBody>
             </Table>
           </div>
-        </ScrollArea>
       </CardContent>
     </Card>
   );
