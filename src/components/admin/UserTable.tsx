@@ -167,8 +167,8 @@ export function UserTable({
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[calc(100vh-400px)] min-h-[500px]">
-          <div className="w-full overflow-auto">
-            <Table>
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[1600px]">
               <TableHeader>
                 <TableRow>
                   {visibleColumns.includes('select') && (
