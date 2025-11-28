@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, LogOut, Menu, User, Home, Sparkles, Wand2 } from "lucide-react";
+import { ChevronDown, LogOut, Menu, User, Home, Sparkles, Wand2, History } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -52,15 +52,26 @@ export default function Navbar() {
             </Link>
             
             {user && (
-              <Link to="/render-ia">
-                <Button 
-                  variant="ghost" 
-                  className="rounded-full hover:bg-primary/10"
-                >
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Render IA
-                </Button>
-              </Link>
+              <>
+                <Link to="/render-ia">
+                  <Button 
+                    variant="ghost" 
+                    className="rounded-full hover:bg-primary/10"
+                  >
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    Render IA
+                  </Button>
+                </Link>
+                <Link to="/render-ia/historico">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="rounded-full hover:bg-primary/10 text-xs"
+                  >
+                    Histórico
+                  </Button>
+                </Link>
+              </>
             )}
             
             {user && (
@@ -158,6 +169,12 @@ export default function Navbar() {
               <Button variant="ghost" className="w-full justify-start rounded-lg">
                 <Wand2 className="h-4 w-4 mr-2" />
                 Render IA
+              </Button>
+            </Link>
+            
+            <Link to="/render-ia/historico" onClick={() => setMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start rounded-lg pl-10">
+                <span className="text-sm">↳ Histórico</span>
               </Button>
             </Link>
             
