@@ -14,11 +14,11 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children, className, hideHeader = false }) => {
   const isMobile = useIsMobile();
   
-  // Memoizando elementos que não mudam frequentemente para evitar re-renderizações desnecessárias
   const backgroundElements = useMemo(() => (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-primary/5 rounded-full blur-[120px] -translate-y-1/2"></div>
-      <div className="absolute bottom-0 right-1/4 w-1/2 h-1/2 bg-primary/5 rounded-full blur-[120px] translate-y-1/2"></div>
+    <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px]"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-[120px]"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-b from-accent/5 to-transparent"></div>
     </div>
   ), []);
   
@@ -52,30 +52,40 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, className, hideHeader =
   ), [currentYear]);
   
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-background/80">
-      {/* Navbar fixo no topo */}
-      <div className="w-full sticky top-0 z-50">
-        <Navbar />
-      </div>
+    <div className="min-h-screen flex flex-col relative">
+      {/* Navbar */}
+      <Navbar />
       
-      {/* Elementos de fundo */}
+      {/* Background elements */}
       {backgroundElements}
       
-      {/* Container principal centralizado */}
-      <div className="flex-1 flex flex-col px-4 py-6 md:py-8">
-        {/* Conteúdo principal */}
-        <div className="w-full max-w-4xl mx-auto relative z-10 animate-fade-in">
-          {header}
-          
-          <main className={cn("w-full", className)}>
-            {children}
-          </main>
-          
-          {footer}
-        </div>
+      {/* Main content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header (optional) */}
+        {!hideHeader && (
+          <header className="text-center py-8 md:py-12 px-4">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              PromobConverter Pro
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
+              Transforme arquivos XML Promob em planos de corte Excel profissionais
+            </p>
+            <UserCredits />
+          </header>
+        )}
+        
+        {/* Page content */}
+        <main className={cn("flex-1 w-full", className)}>
+          {children}
+        </main>
+        
+        {/* Footer */}
+        <footer className="py-8 text-center text-sm text-muted-foreground border-t mt-auto">
+          <p>© {new Date().getFullYear()} PromobConverter Pro. Todos os direitos reservados.</p>
+        </footer>
       </div>
       
-      {/* Atendimento humanizado para suporte */}
+      {/* Support chat */}
       <HumanizedChat />
     </div>
   );

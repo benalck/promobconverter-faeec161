@@ -1,145 +1,188 @@
-import React, { memo, useMemo } from "react";
+import { memo } from "react";
+import { motion } from "framer-motion";
 import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
-import { FileText, Download, Upload, Layers, Check, LayoutDashboard, MousePointerClick, FileSpreadsheet, Scissors, Package } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
-
-const FeatureCard = memo(({
-  icon: Icon,
-  title,
-  description,
-  iconBgColor,
-  iconColor,
-  size = "large"
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  iconBgColor: string;
-  iconColor: string;
-  size?: "small" | "large";
-}) => (
-  <div className={`p-${size === "large" ? "3 md:p-5" : "2 sm:p-3 md:p-4"} bg-white/60 backdrop-blur-sm rounded-lg border border-gray-100 shadow-glass-sm transition-all duration-300 hover:shadow-glass hover:translate-y-[-2px]`}>
-    <div className={`w-${size === "large" ? "8 h-8 md:w-10 md:h-10" : "7 h-7 md:w-8 md:h-8"} flex items-center justify-center rounded-full ${iconBgColor} ${iconColor} mx-auto mb-2 ${size === "large" ? "md:mb-3" : ""}`}>
-      <Icon className={`w-${size === "large" ? "4 h-4 md:w-5 md:h-5" : "3 h-3 md:w-4 md:h-4"}`} />
-    </div>
-    <h3 className={`font-medium mb-1 ${size === "large" ? "md:mb-2 text-sm" : "text-xs sm:text-sm"}`}>{title}</h3>
-    <p className={`text-xs text-gray-600 ${size === "small" ? "line-clamp-2" : ""}`}>{description}</p>
-  </div>
-));
-
-FeatureCard.displayName = "FeatureCard";
-
-const FeatureSection = memo(({ title, subtitle, children }: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) => (
-  <section className="text-center max-w-3xl mx-auto">
-    <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight mb-2 md:mb-3 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-      {title}
-    </h2>
-    {subtitle && (
-      <p className="text-sm sm:text-base text-muted-foreground mb-4 md:mb-6 px-2">
-        {subtitle}
-      </p>
-    )}
-    {children}
-  </section>
-));
-
-FeatureSection.displayName = "FeatureSection";
+import HeroSection from "@/components/premium/HeroSection";
+import FeatureCard3D from "@/components/premium/FeatureCard3D";
+import AIAssistant from "@/components/premium/AIAssistant";
+import {
+  Upload,
+  FileSpreadsheet,
+  Download,
+  Package,
+  Scissors,
+  Layers,
+  Zap,
+  Shield,
+  TrendingUp,
+} from "lucide-react";
 
 const Index = () => {
-  const isMobile = useIsMobile();
-  
-  const mainFeatures = useMemo(() => (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-6 md:mt-8">
-      <FeatureCard
-        icon={Upload}
-        title="Arraste e Solte"
-        description="Selecione ou arraste seu arquivo XML para conversão instantânea."
-        iconBgColor="bg-blue-50"
-        iconColor="text-blue-600"
-      />
-      
-      <FeatureCard
-        icon={FileSpreadsheet}
-        title="Processamento Preciso"
-        description="Extração e organização automática de todos os elementos essenciais."
-        iconBgColor="bg-indigo-50"
-        iconColor="text-indigo-600"
-      />
-      
-      <FeatureCard
-        icon={Download}
-        title="Download Imediato"
-        description="Obtenha seus planos de corte Excel prontos para uso em segundos."
-        iconBgColor="bg-blue-50"
-        iconColor="text-blue-600"
-      />
-    </div>
-  ), []);
-  
-  const additionalFeatures = useMemo(() => (
-    <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-4'} gap-2 sm:gap-3 mt-4 md:mt-6`}>
-      <FeatureCard
-        icon={Package}
-        title="Otimização de Corte"
-        description="Cálculo automático de chapas necessárias."
-        iconBgColor="bg-blue-50"
-        iconColor="text-blue-600"
-        size="small"
-      />
-      
-      <FeatureCard
-        icon={Scissors}
-        title="Fitas de Borda"
-        description="Cálculo preciso de fitas necessárias."
-        iconBgColor="bg-green-50"
-        iconColor="text-green-600"
-        size="small"
-      />
-      
-      <FeatureCard
-        icon={Layers}
-        title="Resumo de Materiais"
-        description="Visualização completa dos recursos."
-        iconBgColor="bg-indigo-50"
-        iconColor="text-indigo-600"
-        size="small"
-      />
-      
-      <FeatureCard
-        icon={MousePointerClick}
-        title="Simplicidade"
-        description="Interface intuitiva e fácil."
-        iconBgColor="bg-indigo-50"
-        iconColor="text-indigo-600"
-        size="small"
-      />
-    </div>
-  ), [isMobile]);
-  
+  const mainFeatures = [
+    {
+      icon: Upload,
+      title: "Upload Inteligente",
+      description: "Arraste e solte seus arquivos XML Promob. Processamento instantâneo com validação automática.",
+      gradient: "bg-gradient-to-br from-blue-500 to-blue-600",
+    },
+    {
+      icon: FileSpreadsheet,
+      title: "Conversão Premium",
+      description: "Transformação precisa de XML em Excel formatado com otimização de layout profissional.",
+      gradient: "bg-gradient-to-br from-purple-500 to-purple-600",
+    },
+    {
+      icon: Download,
+      title: "Exportação Rápida",
+      description: "Baixe planos de corte prontos em Excel com todos os detalhes organizados em segundos.",
+      gradient: "bg-gradient-to-br from-cyan-500 to-cyan-600",
+    },
+  ];
+
+  const powerfulFeatures = [
+    {
+      icon: Package,
+      title: "Otimização de Corte",
+      description: "Algoritmo inteligente calcula o número ideal de chapas minimizando desperdício.",
+      gradient: "bg-gradient-to-br from-emerald-500 to-emerald-600",
+    },
+    {
+      icon: Scissors,
+      title: "Cálculo de Fitas",
+      description: "Medição precisa de fitas de borda necessárias com detalhamento por material.",
+      gradient: "bg-gradient-to-br from-orange-500 to-orange-600",
+    },
+    {
+      icon: Layers,
+      title: "Resumo Completo",
+      description: "Dashboard interativo com visualização detalhada de materiais e custos.",
+      gradient: "bg-gradient-to-br from-pink-500 to-pink-600",
+    },
+    {
+      icon: Zap,
+      title: "Ultra Rápido",
+      description: "Processamento em menos de 2 segundos para arquivos de qualquer tamanho.",
+      gradient: "bg-gradient-to-br from-yellow-500 to-yellow-600",
+    },
+    {
+      icon: Shield,
+      title: "100% Seguro",
+      description: "Seus dados são processados com criptografia e nunca são armazenados.",
+      gradient: "bg-gradient-to-br from-indigo-500 to-indigo-600",
+    },
+    {
+      icon: TrendingUp,
+      title: "Analytics Avançado",
+      description: "Gráficos e métricas de desempenho para otimizar seus projetos.",
+      gradient: "bg-gradient-to-br from-rose-500 to-rose-600",
+    },
+  ];
+
   return (
-    <AppLayout>
-      <div className="flex flex-col items-center justify-center w-full">
-        <div className="w-full max-w-3xl mx-auto">
+    <AppLayout hideHeader>
+      <div className="w-full">
+        {/* Hero Section */}
+        <HeroSection />
+
+        {/* Converter Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="max-w-4xl mx-auto px-4 py-16"
+        >
           <ConverterForm className="w-full" />
-          
-          <div className="mt-8 md:mt-12 lg:mt-16 space-y-6 md:space-y-10">
-            <FeatureSection 
-              title="Transforme Dados em Resultados"
-              subtitle="Nossa ferramenta converte XML Promob em planilhas Excel formatadas com otimização automática de corte."
-            >
-              {mainFeatures}
-            </FeatureSection>
-            
-            <FeatureSection title="Recursos Poderosos">
-              {additionalFeatures}
-            </FeatureSection>
+        </motion.div>
+
+        {/* Main Features */}
+        <section className="max-w-7xl mx-auto px-4 py-20">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Recursos Principais
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Tecnologia de ponta para converter e otimizar seus projetos com máxima eficiência
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {mainFeatures.map((feature, index) => (
+              <FeatureCard3D
+                key={index}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                gradient={feature.gradient}
+                delay={index * 0.1}
+              />
+            ))}
           </div>
-        </div>
+        </section>
+
+        {/* Powerful Features Grid */}
+        <section className="max-w-7xl mx-auto px-4 py-20 bg-muted/30">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              Recursos Poderosos
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Ferramentas profissionais para elevar a qualidade dos seus projetos
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {powerfulFeatures.map((feature, index) => (
+              <FeatureCard3D
+                key={index}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+                gradient={feature.gradient}
+                delay={index * 0.05}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-5xl mx-auto px-4 py-20"
+        >
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-secondary to-accent p-12 text-center text-white">
+            <div className="relative z-10">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                Pronto para começar?
+              </h2>
+              <p className="text-lg mb-8 opacity-90">
+                Transforme seus projetos XML em planos de corte profissionais agora
+              </p>
+              <button className="bg-white text-primary px-8 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-all hover:scale-105 shadow-xl">
+                Começar Gratuitamente
+              </button>
+            </div>
+
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+          </div>
+        </motion.section>
+
+        {/* AI Assistant */}
+        <AIAssistant />
       </div>
     </AppLayout>
   );

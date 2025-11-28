@@ -19,8 +19,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				'sans': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+			},
 			colors: {
-				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
@@ -68,8 +70,9 @@ export default {
 				'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
 				'glass-sm': '0 2px 15px rgba(0, 0, 0, 0.05)',
 				'glass-lg': '0 8px 40px rgba(0, 0, 0, 0.15)',
-				'neo': '5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff',
-				'neo-sm': '3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff',
+				'glow': '0 0 40px hsl(var(--primary-glow) / 0.3)',
+				'deep': '0 20px 60px -10px rgba(0, 0, 0, 0.4)',
+				'soft': '0 8px 32px -8px rgba(0, 0, 0, 0.2)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -131,7 +134,8 @@ export default {
 				'slide-up': 'slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
 				'slide-down': 'slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
 				'bounce-light': 'bounce-light 2s ease-in-out infinite',
-				'pulse-light': 'pulse-light 2s ease-in-out infinite'
+				'pulse-light': 'pulse-light 2s ease-in-out infinite',
+				'gradient': 'gradient-shift 8s ease infinite',
 			},
 			transitionProperty: {
 				'height': 'height',
