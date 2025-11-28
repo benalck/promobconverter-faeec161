@@ -155,31 +155,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CTA Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="max-w-5xl mx-auto px-4 py-20"
-        >
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-secondary to-accent p-12 text-center text-white">
-            <div className="relative z-10">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4">
-                Pronto para começar?
-              </h2>
-              <p className="text-lg mb-8 opacity-90">
-                Transforme seus projetos XML em planos de corte profissionais agora
-              </p>
-              <button className="bg-white text-primary px-8 py-4 rounded-full font-semibold text-lg hover:bg-gray-100 transition-all hover:scale-105 shadow-xl">
-                Começar Gratuitamente
-              </button>
-            </div>
-
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
-          </div>
-        </motion.section>
 
       </div>
     </AppLayout>
