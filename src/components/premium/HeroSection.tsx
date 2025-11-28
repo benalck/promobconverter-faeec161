@@ -69,28 +69,6 @@ const HeroSection = () => {
         </motion.p>
 
 
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          className="mt-16 grid grid-cols-3 gap-8 max-w-3xl mx-auto"
-        >
-          {[
-            { value: "10k+", label: "Conversões" },
-            { value: "99.9%", label: "Precisão" },
-            { value: "<2s", label: "Velocidade" },
-          ].map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                {stat.value}
-              </div>
-              <div className="text-sm text-muted-foreground mt-1">
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </motion.div>
       </div>
     </section>
   );
