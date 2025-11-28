@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, LogOut, Menu, User, Home, Sparkles } from "lucide-react";
+import { ChevronDown, LogOut, Menu, User, Home, Sparkles, Wand2 } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -50,6 +50,18 @@ export default function Navbar() {
                 Início
               </Button>
             </Link>
+            
+            {user && (
+              <Link to="/render-ia">
+                <Button 
+                  variant="ghost" 
+                  className="rounded-full hover:bg-primary/10"
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Render IA
+                </Button>
+              </Link>
+            )}
             
             {user && (
               <DropdownMenu>
@@ -139,6 +151,13 @@ export default function Navbar() {
               <Button variant="ghost" className="w-full justify-start rounded-lg">
                 <Home className="h-4 w-4 mr-2" />
                 Início
+              </Button>
+            </Link>
+            
+            <Link to="/render-ia" onClick={() => setMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start rounded-lg">
+                <Wand2 className="h-4 w-4 mr-2" />
+                Render IA
               </Button>
             </Link>
             
