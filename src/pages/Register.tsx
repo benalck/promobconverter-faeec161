@@ -125,7 +125,7 @@ export default function Register() {
           title: "Login realizado com sucesso!",
           description: "Bem-vindo à nossa aplicação de conversão.",
         });
-        navigate("/dashboard");
+        navigate("/");
       } catch (error) {
         if (error instanceof Error && error.message.includes('banida')) {
           throw error;
