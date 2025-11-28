@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 
 const HeroSection = () => {
   return (
@@ -69,31 +68,6 @@ const HeroSection = () => {
           visualização profissional de planos de corte. Tudo em segundos.
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
-        >
-          <Button
-            size="lg"
-            className="group relative overflow-hidden bg-gradient-to-r from-primary to-secondary text-white text-lg px-8 py-6 rounded-xl hover:shadow-glow transition-all"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              Começar Agora
-              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-secondary to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-          </Button>
-          
-          <Button
-            size="lg"
-            variant="outline"
-            className="text-lg px-8 py-6 rounded-xl border-2 hover:bg-muted/50 backdrop-blur"
-          >
-            Ver Demo
-          </Button>
-        </motion.div>
 
         {/* Stats */}
         <motion.div

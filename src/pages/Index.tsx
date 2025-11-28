@@ -4,7 +4,7 @@ import AppLayout from "@/components/AppLayout";
 import ConverterForm from "@/components/ConverterForm";
 import HeroSection from "@/components/premium/HeroSection";
 import FeatureCard3D from "@/components/premium/FeatureCard3D";
-import AIAssistant from "@/components/premium/AIAssistant";
+
 import {
   Upload,
   FileSpreadsheet,
@@ -181,8 +181,6 @@ const Index = () => {
           </div>
         </motion.section>
 
-        {/* AI Assistant */}
-        <AIAssistant />
       </div>
     </AppLayout>
   );
