@@ -143,7 +143,7 @@ export default function RenderIA() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout hideHeader>
       <div className="max-w-6xl mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
