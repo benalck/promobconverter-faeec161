@@ -75,24 +75,28 @@ const HeroSection = () => {
           transition={{ duration: 0.8, delay: 0.6 }}
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <Button
-            size="lg"
-            className="group relative overflow-hidden bg-gradient-to-r from-primary to-secondary text-white text-lg px-8 py-6 rounded-xl hover:shadow-glow transition-all"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              Começar Agora
-              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-secondary to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-          </Button>
+          <a href="/register">
+            <Button
+              size="lg"
+              className="group relative overflow-hidden bg-gradient-to-r from-primary to-secondary text-white text-lg px-8 py-6 rounded-xl hover:shadow-glow transition-all"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                Começar Agora
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-secondary to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </Button>
+          </a>
           
-          <Button
-            size="lg"
-            variant="outline"
-            className="text-lg px-8 py-6 rounded-xl border-2 hover:bg-muted/50 backdrop-blur"
-          >
-            Ver Demo
-          </Button>
+          <a href="#recursos">
+            <Button
+              size="lg"
+              variant="outline"
+              className="text-lg px-8 py-6 rounded-xl border-2 hover:bg-muted/50 backdrop-blur"
+            >
+              Ver Demo
+            </Button>
+          </a>
         </motion.div>
 
         {/* Stats */}
