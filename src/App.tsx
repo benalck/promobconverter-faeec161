@@ -15,6 +15,8 @@ const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPassword"));
 const RenderIA = lazy(() => import("@/pages/RenderIA"));
 const RenderIAHistorico = lazy(() => import("@/pages/RenderIAHistorico"));
+const RenderIAInteriores = lazy(() => import("@/pages/RenderIAInteriores"));
+const RenderIAInterioresHistorico = lazy(() => import("@/pages/RenderIAInterioresHistorico"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -93,8 +95,10 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/render-ia" element={<ProtectedRoute><RenderIA /></ProtectedRoute>} />
-              <Route path="/render-ia/historico" element={<ProtectedRoute><RenderIAHistorico /></ProtectedRoute>} />
+            <Route path="/render-ia" element={<ProtectedRoute><RenderIA /></ProtectedRoute>} />
+            <Route path="/render-ia/historico" element={<ProtectedRoute><RenderIAHistorico /></ProtectedRoute>} />
+            <Route path="/render-ia/interiores" element={<ProtectedRoute><RenderIAInteriores /></ProtectedRoute>} />
+            <Route path="/render-ia/interiores/historico" element={<ProtectedRoute><RenderIAInterioresHistorico /></ProtectedRoute>} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Rotas para verificação de email - consolidadas */}
