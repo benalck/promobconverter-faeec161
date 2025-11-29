@@ -68,59 +68,76 @@ export default function RenderInterior() {
     try {
       const reader = new FileReader();
       reader.readAsDataURL(imageFile);
-      
+
       reader.onloadend = async () => {
-        const base64Image = reader.result as string;
+        try {
+          const base64Image = reader.result as string;
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          if (!session) {
+            toast({
+              title: "Erro",
+              description: "Você precisa estar logado para gerar renders.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          const { data, error } = await supabase.functions.invoke(
+            "ai-render-interior",
+            {
+              body: {
+                image: base64Image,
+                prompt,
+                style,
+                strength: strength[0],
+              },
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            }
+          );
+
+          if (error) {
+            console.error("Erro ao gerar render:", error);
+            toast({
+              title: "Erro",
+              description:
+                "Não foi possível gerar o render com IA. Tente novamente mais tarde.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (data?.success && data?.imageUrl) {
+            setGeneratedImage(data.imageUrl);
+            toast({
+              title: "Sucesso!",
+              description: "Render de interiores gerado com sucesso.",
+            });
+          } else {
+            console.error("Resposta da função:", data);
+            toast({
+              title: "Erro",
+              description:
+                data?.error || "Não foi possível gerar o render com IA.",
+              variant: "destructive",
+            });
+          }
+        } catch (err) {
+          console.error("Erro dentro do onloadend:", err);
           toast({
             title: "Erro",
-            description: "Você precisa estar logado para gerar renders.",
+            description: "Ocorreu um erro inesperado ao gerar o render.",
             variant: "destructive",
           });
+        } finally {
+          // garante que o loading SEMPRE para
           setIsGenerating(false);
-          return;
         }
-
-        const { data, error } = await supabase.functions.invoke("ai-render-interior", {
-          body: {
-            image: base64Image,
-            prompt: prompt,
-            style: style,
-            strength: strength[0],
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        if (error) {
-          console.error("Erro ao gerar render:", error);
-          toast({
-            title: "Erro",
-            description: "Não foi possível gerar o render com IA. Tente novamente mais tarde.",
-            variant: "destructive",
-          });
-          setIsGenerating(false);
-          return;
-        }
-
-        if (data?.success && data?.imageUrl) {
-          setGeneratedImage(data.imageUrl);
-          toast({
-            title: "Sucesso!",
-            description: "Render de interiores gerado com sucesso.",
-          });
-        } else {
-          toast({
-            title: "Erro",
-            description: data?.error || "Não foi possível gerar o render.",
-            variant: "destructive",
-          });
-        }
-
-        setIsGenerating(false);
       };
 
       reader.onerror = () => {
@@ -132,7 +149,7 @@ export default function RenderInterior() {
         setIsGenerating(false);
       };
     } catch (error) {
-      console.error("Erro:", error);
+      console.error("Erro fora do onload:", error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro inesperado. Tente novamente.",
