@@ -90,6 +90,9 @@ export default function RenderInterior() {
             style: style,
             strength: strength[0],
           },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
         });
 
         if (error) {
