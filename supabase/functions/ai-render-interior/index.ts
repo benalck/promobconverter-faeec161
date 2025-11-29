@@ -76,7 +76,7 @@ serve(async (req) => {
         Prefer: "wait",
       },
       body: JSON.stringify({
-        version: "roomdreamer/roomdreamer-v2:0f61bf9c95ac9071ec29862d68e8c3afdbb91d67be2e5a8a5c3e9eb6dfcb61f4",
+        version: "0f61bf9c95ac9071ec29862d68e8c3afdbb91d67be2e5a8a5c3e9eb6dfcb61f4",
         input: {
           image: image,
           prompt: finalPrompt,
