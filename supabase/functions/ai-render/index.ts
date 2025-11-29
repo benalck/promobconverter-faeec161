@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,205 +11,176 @@ serve(async (req) => {
   }
 
   try {
-    const REPLICATE_API_TOKEN = Deno.env.get("REPLICATE_API_TOKEN");
-    if (!REPLICATE_API_TOKEN) {
-      throw new Error("REPLICATE_API_TOKEN não está configurado");
-    }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { image, prompt, style } = await req.json();
 
-    if (!prompt) {
+    if (!image || !prompt) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Prompt é obrigatório" 
+        JSON.stringify({
+          success: false,
+          message: "Imagem e prompt são obrigatórios",
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    // Construir prompt final com base no estilo
-    let finalPrompt = prompt;
-    
+    console.log("Iniciando geração de render IA...");
+    console.log("Estilo selecionado:", style);
+    console.log("Prompt:", prompt);
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY não configurada");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Chave de API não configurada",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Construir prompt final baseado no estilo
+    let stylePrompt = "";
     switch (style) {
       case "fotorrealista":
-        finalPrompt = `${prompt}, fotorrealista, alta qualidade, iluminação profissional, detalhes realistas, 8k`;
+        stylePrompt = "Photorealistic render, ultra-realistic details, professional photography lighting, 8K quality. ";
         break;
       case "render-arquitetonico":
-        finalPrompt = `${prompt}, render arquitetônico profissional, vista detalhada, iluminação natural, materiais realistas`;
+        stylePrompt = "Professional architectural rendering, clean lines, perfect perspective, architectural visualization style. ";
         break;
       case "aquarela":
-        finalPrompt = `${prompt}, estilo aquarela artística, pinceladas suaves, cores vibrantes`;
+        stylePrompt = "Watercolor painting style, soft colors, artistic brush strokes, artistic interpretation. ";
         break;
       case "conceitual":
-        finalPrompt = `${prompt}, arte conceitual, estilo artístico, criativo`;
+        stylePrompt = "Conceptual art style, creative interpretation, artistic vision, modern design aesthetic. ";
         break;
       default:
-        finalPrompt = `${prompt}, alta qualidade`;
+        stylePrompt = "High quality architectural render. ";
     }
 
-    console.log("Gerando render com Replicate, prompt:", finalPrompt);
+    const finalPrompt = `${stylePrompt}${prompt}. Based on the provided reference image, create a detailed and professional render maintaining the original composition and structure.`;
 
-    // Preparar input para o Replicate
-    const replicateInput: any = {
-      prompt: finalPrompt,
-      go_fast: true,
-      num_outputs: 1,
-      aspect_ratio: "1:1",
-      output_format: "webp",
-      output_quality: 80,
-      num_inference_steps: 4,
-    };
+    console.log("Prompt final:", finalPrompt);
 
-    // Se houver imagem base, adicionar ao input
-    if (image) {
-      replicateInput.image = image;
-      replicateInput.prompt_strength = 0.8; // Força do prompt quando há imagem base
-    }
-
-    // Chamar API do Replicate
-    const replicateResponse = await fetch("https://api.replicate.com/v1/predictions", {
+    // Chamar Lovable AI Gateway para edição de imagem
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Token ${REPLICATE_API_TOKEN}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        version: "5599ed30703defd1d160a25a63321b4dec97101d98b4674bcc56e41f62f35637", // black-forest-labs/flux-schnell
-        input: replicateInput,
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: finalPrompt,
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: image,
+                },
+              },
+            ],
+          },
+        ],
+        modalities: ["image", "text"],
       }),
     });
 
-    if (!replicateResponse.ok) {
-      const errorText = await replicateResponse.text();
-      console.error("Erro na API do Replicate:", replicateResponse.status, errorText);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Erro ao gerar render: ${replicateResponse.status}` 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
-    }
-
-    const prediction = await replicateResponse.json();
-    console.log("Prediction inicial:", prediction.id, prediction.status);
-
-    // Fazer polling até a predição estar completa
-    let finalPrediction = prediction;
-    let attempts = 0;
-    const maxAttempts = 60; // 60 tentativas = ~2 minutos
-
-    while (
-      finalPrediction.status !== "succeeded" && 
-      finalPrediction.status !== "failed" &&
-      attempts < maxAttempts
-    ) {
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Aguardar 2 segundos
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("Erro na API de IA:", aiResponse.status, errorText);
       
-      const statusResponse = await fetch(
-        `https://api.replicate.com/v1/predictions/${prediction.id}`,
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Limite de requisições excedido. Tente novamente em alguns minutos.",
+          }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Créditos insuficientes. Por favor, adicione créditos ao seu workspace Lovable AI.",
+          }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Erro ao gerar render com IA",
+        }),
         {
-          headers: {
-            "Authorization": `Token ${REPLICATE_API_TOKEN}`,
-          },
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
-
-      finalPrediction = await statusResponse.json();
-      console.log("Status da prediction:", finalPrediction.status);
-      attempts++;
     }
 
-    if (finalPrediction.status === "failed") {
-      console.error("Render falhou:", finalPrediction.error);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Falha ao gerar render com IA" 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
-    }
+    const aiData = await aiResponse.json();
+    console.log("Resposta da IA recebida");
 
-    if (finalPrediction.status !== "succeeded") {
-      console.error("Timeout ao gerar render");
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Timeout ao gerar render. Tente novamente." 
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-      );
-    }
+    const generatedImageUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-    // Extrair URL da imagem gerada
-    const imageUrl = finalPrediction.output?.[0];
-    
-    if (!imageUrl) {
+    if (!generatedImageUrl) {
       console.error("URL da imagem não encontrada na resposta");
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Imagem não gerada corretamente" 
+        JSON.stringify({
+          success: false,
+          message: "Não foi possível extrair a imagem gerada",
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    // Obter user_id do token de autenticação
-    const authHeader = req.headers.get("authorization");
-    let userId = null;
-
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user } } = await supabase.auth.getUser(token);
-      userId = user?.id;
-    }
-
-    // Salvar no histórico se houver usuário autenticado
-    let renderId = null;
-    if (userId) {
-      const { data: renderData, error: renderError } = await supabase
-        .from("render_history")
-        .insert({
-          user_id: userId,
-          prompt: prompt,
-          style: style,
-          output_image_url: imageUrl,
-        })
-        .select()
-        .single();
-
-      if (renderError) {
-        console.error("Erro ao salvar no histórico:", renderError);
-      } else {
-        renderId = renderData?.id;
-      }
-    }
-
-    console.log("Render gerado com sucesso:", imageUrl);
+    console.log("Render gerado com sucesso");
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        imageUrl: imageUrl,
-        renderId: renderId,
+      JSON.stringify({
+        success: true,
+        imageUrl: generatedImageUrl,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   } catch (error) {
-    console.error("Erro na função ai-render:", error);
+    console.error("Erro no processamento:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Erro desconhecido" 
+      JSON.stringify({
+        success: false,
+        message: error instanceof Error ? error.message : "Erro interno do servidor",
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 });

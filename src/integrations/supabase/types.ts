@@ -654,36 +654,6 @@ export type Database = {
         }
         Relationships: []
       }
-      interior_render_history: {
-        Row: {
-          created_at: string | null
-          id: string
-          input_image_url: string | null
-          output_image_url: string
-          prompt: string
-          style: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          input_image_url?: string | null
-          output_image_url: string
-          prompt: string
-          style: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          input_image_url?: string | null
-          output_image_url?: string
-          prompt?: string
-          style?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       materials: {
         Row: {
           color: string | null
@@ -861,33 +831,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      render_history: {
-        Row: {
-          created_at: string
-          id: string
-          output_image_url: string
-          prompt: string
-          style: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          output_image_url: string
-          prompt: string
-          style: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          output_image_url?: string
-          prompt?: string
-          style?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       services: {
         Row: {

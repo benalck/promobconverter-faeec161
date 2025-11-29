@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, LogOut, Menu, User, Home, Sparkles, Wand2, History } from "lucide-react";
+import { ChevronDown, LogOut, Menu, User, Home, Sparkles, Wand2 } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -52,47 +52,15 @@ export default function Navbar() {
             </Link>
             
             {user && (
-              <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      className="rounded-full hover:bg-primary/10"
-                    >
-                      <Wand2 className="h-4 w-4 mr-2" />
-                      Render IA
-                      <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <DropdownMenuItem asChild>
-                      <Link to="/render-ia" className="cursor-pointer">
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Render Geral
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/render-ia/historico" className="cursor-pointer">
-                        <History className="h-4 w-4 mr-2" />
-                        Histórico Geral
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/render-ia/interiores" className="cursor-pointer">
-                        <Home className="h-4 w-4 mr-2" />
-                        Render de Interiores
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/render-ia/interiores/historico" className="cursor-pointer">
-                        <History className="h-4 w-4 mr-2" />
-                        Histórico Interiores
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+              <Link to="/render-ia">
+                <Button 
+                  variant="ghost" 
+                  className="rounded-full hover:bg-primary/10"
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Render IA
+                </Button>
+              </Link>
             )}
             
             {user && (
@@ -189,28 +157,7 @@ export default function Navbar() {
             <Link to="/render-ia" onClick={() => setMenuOpen(false)}>
               <Button variant="ghost" className="w-full justify-start rounded-lg">
                 <Wand2 className="h-4 w-4 mr-2" />
-                Render Geral
-              </Button>
-            </Link>
-            
-            <Link to="/render-ia/historico" onClick={() => setMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start rounded-lg pl-10">
-                <History className="h-4 w-4 mr-2" />
-                Histórico Geral
-              </Button>
-            </Link>
-            
-            <Link to="/render-ia/interiores" onClick={() => setMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start rounded-lg">
-                <Home className="h-4 w-4 mr-2" />
-                Render de Interiores
-              </Button>
-            </Link>
-            
-            <Link to="/render-ia/interiores/historico" onClick={() => setMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start rounded-lg pl-10">
-                <History className="h-4 w-4 mr-2" />
-                Histórico Interiores
+                Render IA
               </Button>
             </Link>
             

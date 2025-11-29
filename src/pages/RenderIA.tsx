@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Upload, Sparkles, Download, Loader2, History } from "lucide-react";
+import { Upload, Sparkles, Download, Loader2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 export default function RenderIA() {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [description, setDescription] = useState("");
@@ -156,22 +154,14 @@ export default function RenderIA() {
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-glow">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Renderização com IA
-            </h1>
-            <p className="text-muted-foreground">
-              Envie uma imagem base e uma descrição para gerar um render com Stable Diffusion via Replicate
-            </p>
-          </div>
-          <Button
-            onClick={() => navigate("/render-ia/historico")}
-            variant="outline"
-            className="gap-2"
-          >
-            <History className="w-4 h-4" />
-            Ver Histórico
-          </Button>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Renderização com IA
+              </h1>
+              <p className="text-muted-foreground">
+                Envie uma imagem base e uma descrição para gerar um render fotorrealista com IA
+              </p>
+            </div>
           </div>
         </motion.div>
 
