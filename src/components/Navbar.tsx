@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, LogOut, Menu, User, Home, Sparkles, Wand2 } from "lucide-react";
+import { ChevronDown, LogOut, Menu, User, Home, Sparkles, Wand2, Home as HomeIcon } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -52,15 +52,32 @@ export default function Navbar() {
             </Link>
             
             {user && (
-              <Link to="/render-ia">
-                <Button 
-                  variant="ghost" 
-                  className="rounded-full hover:bg-primary/10"
-                >
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Render IA
-                </Button>
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="rounded-full hover:bg-primary/10"
+                  >
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    Render IA
+                    <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="glass-premium border-primary/20">
+                  <DropdownMenuItem asChild>
+                    <Link to="/render-ia" className="w-full cursor-pointer">
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Render Básico
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/render-ia/interiores" className="w-full cursor-pointer">
+                      <HomeIcon className="h-4 w-4 mr-2" />
+                      Interiores (RoomDreamer)
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             
             {user && (
@@ -154,12 +171,25 @@ export default function Navbar() {
               </Button>
             </Link>
             
-            <Link to="/render-ia" onClick={() => setMenuOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start rounded-lg">
-                <Wand2 className="h-4 w-4 mr-2" />
-                Render IA
-              </Button>
-            </Link>
+            <div className="space-y-1">
+              <div className="text-xs font-semibold text-muted-foreground px-3 py-2">
+                RENDER IA
+              </div>
+              
+              <Link to="/render-ia" onClick={() => setMenuOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start rounded-lg">
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Render Básico
+                </Button>
+              </Link>
+              
+              <Link to="/render-ia/interiores" onClick={() => setMenuOpen(false)}>
+                <Button variant="ghost" className="w-full justify-start rounded-lg">
+                  <HomeIcon className="h-4 w-4 mr-2" />
+                  Interiores (RoomDreamer)
+                </Button>
+              </Link>
+            </div>
             
             {user.role === 'admin' && (
               <Link to="/admin" onClick={() => setMenuOpen(false)}>
