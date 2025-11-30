@@ -9,12 +9,6 @@ import {
   Upload,
   FileSpreadsheet,
   Download,
-  Package,
-  Scissors,
-  Layers,
-  Zap,
-  Shield,
-  TrendingUp,
 } from "lucide-react";
 
 const Index = () => {
@@ -39,44 +33,6 @@ const Index = () => {
     },
   ];
 
-  const powerfulFeatures = [
-    {
-      icon: Package,
-      title: "Otimização de Corte",
-      description: "Algoritmo inteligente calcula o número ideal de chapas minimizando desperdício.",
-      gradient: "bg-gradient-to-br from-emerald-500 to-emerald-600",
-    },
-    {
-      icon: Scissors,
-      title: "Cálculo de Fitas",
-      description: "Medição precisa de fitas de borda necessárias com detalhamento por material.",
-      gradient: "bg-gradient-to-br from-orange-500 to-orange-600",
-    },
-    {
-      icon: Layers,
-      title: "Resumo Completo",
-      description: "Dashboard interativo com visualização detalhada de materiais e custos.",
-      gradient: "bg-gradient-to-br from-pink-500 to-pink-600",
-    },
-    {
-      icon: Zap,
-      title: "Ultra Rápido",
-      description: "Processamento em menos de 2 segundos para arquivos de qualquer tamanho.",
-      gradient: "bg-gradient-to-br from-yellow-500 to-yellow-600",
-    },
-    {
-      icon: Shield,
-      title: "100% Seguro",
-      description: "Seus dados são processados com criptografia e nunca são armazenados.",
-      gradient: "bg-gradient-to-br from-indigo-500 to-indigo-600",
-    },
-    {
-      icon: TrendingUp,
-      title: "Analytics Avançado",
-      description: "Gráficos e métricas de desempenho para otimizar seus projetos.",
-      gradient: "bg-gradient-to-br from-rose-500 to-rose-600",
-    },
-  ];
 
   return (
     <AppLayout hideHeader>
@@ -125,35 +81,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Powerful Features Grid */}
-        <section className="max-w-7xl mx-auto px-4 py-20 bg-muted/30">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              Recursos Poderosos
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Ferramentas profissionais para elevar a qualidade dos seus projetos
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {powerfulFeatures.map((feature, index) => (
-              <FeatureCard3D
-                key={index}
-                icon={feature.icon}
-                title={feature.title}
-                description={feature.description}
-                gradient={feature.gradient}
-                delay={index * 0.05}
-              />
-            ))}
-          </div>
-        </section>
 
 
       </div>
