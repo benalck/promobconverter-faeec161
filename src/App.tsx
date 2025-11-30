@@ -23,6 +23,9 @@ const VerificadorIA = lazy(() => import("@/pages/VerificadorIA"));
 const CompararProjetos = lazy(() => import("@/pages/CompararProjetos"));
 const GerarPDF = lazy(() => import("@/pages/GerarPDF"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
+const CompararOrcamentos = lazy(() => import("@/pages/CompararOrcamentos"));
+const Estoque = lazy(() => import("@/pages/Estoque"));
+const TemplatesOrcamento = lazy(() => import("@/pages/TemplatesOrcamento"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -111,6 +114,9 @@ function App() {
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
               <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
+              <Route path="/comparar-orcamentos" element={<ProtectedRoute><CompararOrcamentos /></ProtectedRoute>} />
+              <Route path="/estoque" element={<ProtectedRoute><Estoque /></ProtectedRoute>} />
+              <Route path="/templates-orcamento" element={<ProtectedRoute><TemplatesOrcamento /></ProtectedRoute>} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Rotas para verificação de email - consolidadas */}

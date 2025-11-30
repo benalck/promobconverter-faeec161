@@ -57,7 +57,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   onSaveProject,
   onShareProject
 }) => {
-  console.log('Dashboard rendering...', { materials, projectName });
   const [activeTab, setActiveTab] = useState("summary");
   // const [currentSheetIndex, setCurrentSheetIndex] = useState(0); // Removido
   // const [scale, setScale] = useState(0.8); // Removido
@@ -147,11 +146,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-4 md:p-8">
-      {/* DEBUG: elemento de teste */}
-      <div className="fixed top-0 left-0 bg-red-500 text-white p-4 z-50">
-        DASHBOARD RENDERIZANDO
-      </div>
-      
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">

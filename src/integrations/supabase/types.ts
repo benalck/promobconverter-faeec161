@@ -86,6 +86,39 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_templates: {
+        Row: {
+          accent_color: string | null
+          created_at: string | null
+          footer_text: string | null
+          header_subtitle: string | null
+          header_title: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string | null
+          footer_text?: string | null
+          header_subtitle?: string | null
+          header_title?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string | null
+          footer_text?: string | null
+          header_subtitle?: string | null
+          header_title?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversions: {
         Row: {
           conversion_time: number | null
@@ -758,6 +791,39 @@ export type Database = {
           output_image_url?: string
           prompt?: string
           style?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      inventory_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          current_stock: number
+          id: string
+          min_stock: number
+          name: string
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          current_stock?: number
+          id?: string
+          min_stock?: number
+          name: string
+          unit?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          current_stock?: number
+          id?: string
+          min_stock?: number
+          name?: string
+          unit?: string
           user_id?: string
         }
         Relationships: []
