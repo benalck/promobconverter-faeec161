@@ -10,6 +10,7 @@ import {
   CheckCircle,
   FolderKanban,
   History,
+  ArrowLeft,
 } from "lucide-react";
 
 const Conversor = () => {
@@ -99,6 +100,15 @@ const Conversor = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
       <div className="max-w-7xl mx-auto space-y-8">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+        
         <div className="text-center space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Central de Conversões
