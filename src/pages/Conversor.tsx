@@ -14,14 +14,16 @@ import {
 
 const Conversor = () => {
   const navigate = useNavigate();
+  const enableNewModules = import.meta.env.VITE_ENABLE_NEW_MODULES === 'true';
 
-  const modules = [
+  const allModules = [
     {
       title: "Orçamento Automático",
       description: "Calcule automaticamente custos de materiais, mão de obra e lucro",
       icon: Calculator,
       path: "/orcamento-automatico",
       color: "from-blue-500 to-cyan-500",
+      isNew: true,
     },
     {
       title: "Otimização de Cortes",
@@ -29,6 +31,7 @@ const Conversor = () => {
       icon: Scissors,
       path: "/cortes-otimizados",
       color: "from-purple-500 to-pink-500",
+      isNew: true,
     },
     {
       title: "Lista de Materiais",
@@ -36,6 +39,7 @@ const Conversor = () => {
       icon: ListCheck,
       path: "/lista-materiais",
       color: "from-green-500 to-emerald-500",
+      isNew: true,
     },
     {
       title: "Verificador IA",
@@ -43,6 +47,7 @@ const Conversor = () => {
       icon: CheckCircle,
       path: "/verificador-ia",
       color: "from-orange-500 to-red-500",
+      isNew: true,
     },
     {
       title: "Comparar Projetos",
@@ -50,6 +55,7 @@ const Conversor = () => {
       icon: GitCompare,
       path: "/comparar-projetos",
       color: "from-indigo-500 to-purple-500",
+      isNew: true,
     },
     {
       title: "Gerar PDF",
@@ -57,6 +63,7 @@ const Conversor = () => {
       icon: FileText,
       path: "/gerar-pdf",
       color: "from-amber-500 to-yellow-500",
+      isNew: true,
     },
     {
       title: "Gestão de Projetos",
@@ -64,6 +71,7 @@ const Conversor = () => {
       icon: FolderKanban,
       path: "/projetos",
       color: "from-teal-500 to-cyan-500",
+      isNew: true,
     },
     {
       title: "Histórico Completo",
@@ -71,8 +79,14 @@ const Conversor = () => {
       icon: History,
       path: "/historico",
       color: "from-slate-500 to-gray-500",
+      isNew: true,
     },
   ];
+
+  // Filtra módulos baseado na flag de ambiente
+  const modules = enableNewModules 
+    ? allModules 
+    : allModules.filter(m => !m.isNew);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
