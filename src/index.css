@@ -95,7 +95,7 @@
     
     /* Glassmorphism */
     --glass-bg: 0 0 0 / 0.3;
-    --glass-border: 255 255 255 / 0.1);
+    --glass-border: 255 255 255 / 0.1;
     
     /* Shadows */
     --shadow-soft: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
