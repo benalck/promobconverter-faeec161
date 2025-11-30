@@ -1,7 +1,1 @@
 project_id = "npnkmbflfflqpjwhxbfu"
-
-[functions.ai-render]
-verify_jwt = true
-
-[functions.ai-render-interior]
-verify_jwt = true
