@@ -44,10 +44,15 @@ const CortesOtimizados = () => {
 
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       const { data, error } = await supabase.functions.invoke("optimize-cuts", {
         body: {
           xmlData,
           projectName,
+        },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
         },
       });
 

@@ -56,6 +56,8 @@ const OrcamentoAutomatico = () => {
 
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       const { data, error } = await supabase.functions.invoke("calculate-budget", {
         body: {
           xmlData,
@@ -65,6 +67,9 @@ const OrcamentoAutomatico = () => {
             laborCostPerHour: parseFloat(laborCostPerHour),
             markup: parseFloat(markup),
           },
+        },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
         },
       });
 
