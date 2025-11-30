@@ -1,5 +1,12 @@
 import jsPDF from 'jspdf';
 
+interface PDFBudgetTemplate {
+  headerTitle?: string;
+  headerSubtitle?: string;
+  footerText?: string;
+  accentColor?: string; // hex color
+}
+
 interface PDFBudgetData {
   projectName: string;
   clientName?: string;
@@ -15,19 +22,30 @@ interface PDFBudgetData {
     quantity?: number;
   }>;
   createdAt: string;
+  template?: PDFBudgetTemplate;
 }
+
+const hexToRgb = (hex: string): [number, number, number] => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+    : [59, 130, 246]; // fallback to primary color
+};
 
 export const generateBudgetPDF = (data: PDFBudgetData): Blob => {
   const doc = new jsPDF();
   
+  const accentColor = data.template?.accentColor || '#3b82f6';
+  const [r, g, b] = hexToRgb(accentColor);
+  
   // Header
   doc.setFontSize(20);
-  doc.setTextColor(59, 130, 246); // primary color
-  doc.text('PromobConverter Pro', 105, 20, { align: 'center' });
+  doc.setTextColor(r, g, b);
+  doc.text(data.template?.headerTitle || 'PromobConverter Pro', 105, 20, { align: 'center' });
   
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
-  doc.text('Orçamento Profissional', 105, 30, { align: 'center' });
+  doc.text(data.template?.headerSubtitle || 'Orçamento Profissional', 105, 30, { align: 'center' });
   
   // Divider
   doc.setDrawColor(200, 200, 200);
@@ -137,12 +155,16 @@ export const generateBudgetPDF = (data: PDFBudgetData): Blob => {
   
   // Footer
   const pageCount = doc.getNumberOfPages();
+  const footerText = data.template?.footerText 
+    ? `${data.template.footerText} - Página {page} de {total}`
+    : `Gerado por PromobConverter Pro - Página {page} de {total}`;
+  
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
     doc.text(
-      `Gerado por PromobConverter Pro - Página ${i} de ${pageCount}`,
+      footerText.replace('{page}', i.toString()).replace('{total}', pageCount.toString()),
       105,
       285,
       { align: 'center' }
