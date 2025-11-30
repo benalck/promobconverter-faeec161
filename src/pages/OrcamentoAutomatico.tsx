@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Upload, Calculator, DollarSign } from "lucide-react";
+import { Loader2, Upload, Calculator, DollarSign, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface BudgetResult {
@@ -18,6 +19,7 @@ interface BudgetResult {
 }
 
 const OrcamentoAutomatico = () => {
+  const navigate = useNavigate();
   const [xmlData, setXmlData] = useState("");
   const [projectName, setProjectName] = useState("");
   const [sheetCost, setSheetCost] = useState("120");
@@ -95,6 +97,15 @@ const OrcamentoAutomatico = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+        
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent flex items-center justify-center gap-2">
             <Calculator className="w-8 h-8" />
