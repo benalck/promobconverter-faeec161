@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { FileText, Download, Send, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateBudgetPDF, generateMaterialsPDF } from '@/utils/pdfGenerator';
+
+type BudgetTemplate = {
+  id: string;
+  name: string;
+  header_title?: string | null;
+  header_subtitle?: string | null;
+  footer_text?: string | null;
+  accent_color: string;
+  created_at: string;
+};
 
 const GerarPDF = () => {
   const navigate = useNavigate();
@@ -14,6 +25,38 @@ const GerarPDF = () => {
   const [loading, setLoading] = useState(false);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<BudgetTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data, error } = await supabase
+        .from("budget_templates")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setTemplates((data || []) as BudgetTemplate[]);
+    } catch (error: any) {
+      console.error("Erro ao carregar templates:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao carregar templates",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
 
   const loadBudgets = async () => {
     setLoading(true);
@@ -71,6 +114,8 @@ const GerarPDF = () => {
 
   const handleGenerateBudgetPDF = async (budget: any) => {
     try {
+      const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+
       const pdfBlob = generateBudgetPDF({
         projectName: budget.project_name,
         totalMateriais: budget.total_materials || 0,
@@ -79,6 +124,14 @@ const GerarPDF = () => {
         precoFinal: budget.final_price || 0,
         items: budget.items || [],
         createdAt: budget.created_at,
+        template: selectedTemplate
+          ? {
+              headerTitle: selectedTemplate.header_title || undefined,
+              headerSubtitle: selectedTemplate.header_subtitle || undefined,
+              footerText: selectedTemplate.footer_text || undefined,
+              accentColor: selectedTemplate.accent_color,
+            }
+          : undefined,
       });
 
       const url = URL.createObjectURL(pdfBlob);
@@ -169,6 +222,43 @@ const GerarPDF = () => {
           </TabsList>
 
           <TabsContent value="budget" className="space-y-4 mt-6">
+            {/* Seletor de template */}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold">Orçamentos</h2>
+                <p className="text-xs text-muted-foreground">
+                  Gere PDFs usando um template personalizado.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Template:</span>
+                <Select
+                  value={selectedTemplateId}
+                  onValueChange={setSelectedTemplateId}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue
+                      placeholder={
+                        loadingTemplates
+                          ? "Carregando..."
+                          : templates.length
+                          ? "Selecione um template"
+                          : "Sem templates"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {budgets.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">

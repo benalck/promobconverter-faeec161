@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ListCheck, Download, FileText, ArrowLeft } from "lucide-react";
+import { Loader2, ListCheck, Download, FileText, ArrowLeft, Package } from "lucide-react";
 import { exportMaterialsToExcel } from "@/utils/excelExporter";
 import { generateMaterialsPDF } from "@/utils/pdfGenerator";
 
@@ -126,6 +126,89 @@ const ListaMateriais = () => {
     }
   };
 
+  const handleApplyToInventory = async () => {
+    if (!materials.length || !projectName) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data: inventory, error: invError } = await supabase
+        .from("inventory_items")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (invError) throw invError;
+
+      const inventoryList = (inventory || []) as Array<{
+        id: string;
+        name: string;
+        unit: string;
+        current_stock: number;
+      }>;
+
+      type Mat = { name: string; unit: string; quantity: number | string };
+      const materialsList = materials as Mat[];
+
+      const updates: {
+        id: string;
+        newStock: number;
+        name: string;
+        quantityUsed: number;
+      }[] = [];
+
+      materialsList.forEach((mat) => {
+        const qty = Number((mat as any).quantity ?? 0) || 0;
+        if (!qty) return;
+
+        const item = inventoryList.find(
+          (i) =>
+            i.name.toLowerCase() === mat.name.toLowerCase() &&
+            i.unit === (mat.unit || "un")
+        );
+
+        if (item) {
+          updates.push({
+            id: item.id,
+            name: item.name,
+            quantityUsed: qty,
+            newStock: (item.current_stock || 0) - qty,
+          });
+        }
+      });
+
+      if (!updates.length) {
+        toast({
+          title: "Nenhum item encontrado no estoque",
+          description:
+            "Nenhum material da lista foi encontrado em inventory_items (por nome/unidade).",
+        });
+        return;
+      }
+
+      for (const u of updates) {
+        const { error } = await supabase
+          .from("inventory_items")
+          .update({ current_stock: u.newStock })
+          .eq("id", u.id);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Estoque atualizado",
+        description: `${updates.length} item(s) atualizados com base na lista de materiais.`,
+      });
+    } catch (error: any) {
+      console.error("Erro ao aplicar BOM no estoque:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao aplicar BOM no estoque",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -204,7 +287,7 @@ const ListaMateriais = () => {
                   <CardTitle>Lista de Materiais</CardTitle>
                   <CardDescription>Materiais necessários para o projeto</CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" onClick={handleExportExcel}>
                     <Download className="mr-2 h-4 w-4" />
                     Excel
@@ -212,6 +295,14 @@ const ListaMateriais = () => {
                   <Button variant="outline" size="sm" onClick={handleExportPDF}>
                     <FileText className="mr-2 h-4 w-4" />
                     PDF
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleApplyToInventory}
+                  >
+                    <Package className="mr-2 h-4 w-4" />
+                    Aplicar no Estoque
                   </Button>
                 </div>
               </div>
