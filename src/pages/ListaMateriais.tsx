@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ListCheck, Download } from "lucide-react";
+import { Loader2, ListCheck, Download, FileText } from "lucide-react";
+import { exportMaterialsToExcel } from "@/utils/excelExporter";
+import { generateMaterialsPDF } from "@/utils/pdfGenerator";
 
 const ListaMateriais = () => {
   const [xmlData, setXmlData] = useState("");
@@ -70,6 +72,54 @@ const ListaMateriais = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!materials.length || !projectName) return;
+    
+    try {
+      exportMaterialsToExcel(materials, projectName);
+      toast({
+        title: "Excel exportado!",
+        description: "Arquivo baixado com sucesso",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao exportar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (!materials.length || !projectName) return;
+    
+    try {
+      const pdfBlob = generateMaterialsPDF({
+        projectName,
+        materials: materials,
+        createdAt: new Date().toISOString(),
+      });
+      
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${projectName}_materiais.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "PDF exportado!",
+        description: "Arquivo baixado com sucesso",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao exportar",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -143,12 +193,12 @@ const ListaMateriais = () => {
                   <CardDescription>Materiais necessários para o projeto</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={handleExportExcel}>
                     <Download className="mr-2 h-4 w-4" />
                     Excel
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
+                  <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                    <FileText className="mr-2 h-4 w-4" />
                     PDF
                   </Button>
                 </div>

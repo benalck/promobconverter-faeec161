@@ -21,6 +21,8 @@ const Projetos = lazy(() => import("@/pages/Projetos"));
 const Historico = lazy(() => import("@/pages/Historico"));
 const VerificadorIA = lazy(() => import("@/pages/VerificadorIA"));
 const CompararProjetos = lazy(() => import("@/pages/CompararProjetos"));
+const GerarPDF = lazy(() => import("@/pages/GerarPDF"));
+const Analytics = lazy(() => import("@/pages/Analytics"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -105,6 +107,8 @@ function App() {
               <Route path="/lista-materiais" element={<ProtectedRoute><ListaMateriais /></ProtectedRoute>} />
               <Route path="/verificador-ia" element={<ProtectedRoute><VerificadorIA /></ProtectedRoute>} />
               <Route path="/comparar-projetos" element={<ProtectedRoute><CompararProjetos /></ProtectedRoute>} />
+              <Route path="/gerar-pdf" element={<ProtectedRoute><GerarPDF /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
               <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />

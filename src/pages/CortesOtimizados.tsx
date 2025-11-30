@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Scissors, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { exportCutsToExcel } from "@/utils/excelExporter";
 
 const CortesOtimizados = () => {
   const [xmlData, setXmlData] = useState("");
@@ -76,19 +77,26 @@ const CortesOtimizados = () => {
   };
 
   const exportData = (format: string) => {
-    if (!result) return;
+    if (!result || !projectName) return;
 
-    if (format === "csv") {
-      // Implementar export CSV
+    try {
+      if (format === "excel") {
+        exportCutsToExcel(
+          result.layouts || [],
+          projectName,
+          result.totalSheets || 0,
+          result.wastePercentage || 0
+        );
+        toast({
+          title: "Excel exportado!",
+          description: "Arquivo baixado com sucesso",
+        });
+      }
+    } catch (error: any) {
       toast({
-        title: "Exportando CSV",
-        description: "Funcionalidade em desenvolvimento",
-      });
-    } else if (format === "pdf") {
-      // Implementar export PDF
-      toast({
-        title: "Exportando PDF",
-        description: "Funcionalidade em desenvolvimento",
+        title: "Erro ao exportar",
+        description: error.message,
+        variant: "destructive",
       });
     }
   };
@@ -180,18 +188,10 @@ const CortesOtimizados = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => exportData("csv")}
+                        onClick={() => exportData("excel")}
                       >
                         <Download className="mr-2 h-4 w-4" />
-                        CSV
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => exportData("pdf")}
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        PDF
+                        Excel
                       </Button>
                     </div>
                   </div>

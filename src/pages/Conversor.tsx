@@ -74,11 +74,19 @@ const Conversor = () => {
       isNew: true,
     },
     {
+      title: "Analytics",
+      description: "Visualize métricas e performance dos seus projetos",
+      icon: History,
+      path: "/analytics",
+      color: "from-slate-500 to-gray-500",
+      isNew: true,
+    },
+    {
       title: "Histórico Completo",
       description: "Veja todo o histórico de conversões e operações",
       icon: History,
       path: "/historico",
-      color: "from-slate-500 to-gray-500",
+      color: "from-zinc-500 to-neutral-500",
       isNew: true,
     },
   ];
