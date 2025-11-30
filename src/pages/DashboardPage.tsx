@@ -5,6 +5,7 @@ import { MaterialSummary } from "@/components/OptimizationResults"; // Removido 
 import { useToast } from "@/hooks/use-toast";
 
 const DashboardPage: React.FC = () => {
+  console.log('DashboardPage rendering...');
   const { toast } = useToast();
 
   // Mock data for demonstration
