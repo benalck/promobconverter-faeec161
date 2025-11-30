@@ -42,10 +42,15 @@ const ListaMateriais = () => {
 
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       const { data, error } = await supabase.functions.invoke("generate-bom", {
         body: {
           xmlData,
           projectName,
+        },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
         },
       });
 
