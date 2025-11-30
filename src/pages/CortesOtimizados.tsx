@@ -93,6 +93,7 @@ const CortesOtimizados = () => {
         });
       }
     } catch (error: any) {
+      console.error('Erro ao exportar:', error);
       toast({
         title: "Erro ao exportar",
         description: error.message,

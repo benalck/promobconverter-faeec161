@@ -29,6 +29,7 @@ const GerarPDF = () => {
       if (error) throw error;
       setBudgets(data || []);
     } catch (error: any) {
+      console.error('Erro ao carregar budgets:', error);
       toast({
         title: 'Erro',
         description: error.message,
@@ -55,6 +56,7 @@ const GerarPDF = () => {
       if (error) throw error;
       setMaterials(data || []);
     } catch (error: any) {
+      console.error('Erro ao carregar materials:', error);
       toast({
         title: 'Erro',
         description: error.message,
@@ -89,6 +91,7 @@ const GerarPDF = () => {
         description: 'Download iniciado com sucesso.',
       });
     } catch (error: any) {
+      console.error('Erro ao gerar PDF do orçamento:', error);
       toast({
         title: 'Erro ao gerar PDF',
         description: error.message,
@@ -117,6 +120,7 @@ const GerarPDF = () => {
         description: 'Download iniciado com sucesso.',
       });
     } catch (error: any) {
+      console.error('Erro ao gerar PDF de materiais:', error);
       toast({
         title: 'Erro ao gerar PDF',
         description: error.message,
