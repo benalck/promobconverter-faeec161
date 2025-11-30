@@ -13,19 +13,6 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPassword"));
-const Conversor = lazy(() => import("@/pages/Conversor"));
-const OrcamentoAutomatico = lazy(() => import("@/pages/OrcamentoAutomatico"));
-const CortesOtimizados = lazy(() => import("@/pages/CortesOtimizados"));
-const ListaMateriais = lazy(() => import("@/pages/ListaMateriais"));
-const Projetos = lazy(() => import("@/pages/Projetos"));
-const Historico = lazy(() => import("@/pages/Historico"));
-const VerificadorIA = lazy(() => import("@/pages/VerificadorIA"));
-const CompararProjetos = lazy(() => import("@/pages/CompararProjetos"));
-const GerarPDF = lazy(() => import("@/pages/GerarPDF"));
-const Analytics = lazy(() => import("@/pages/Analytics"));
-const CompararOrcamentos = lazy(() => import("@/pages/CompararOrcamentos"));
-const Estoque = lazy(() => import("@/pages/Estoque"));
-const TemplatesOrcamento = lazy(() => import("@/pages/TemplatesOrcamento"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -104,19 +91,6 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/conversor" element={<ProtectedRoute><Conversor /></ProtectedRoute>} />
-              <Route path="/orcamento-automatico" element={<ProtectedRoute><OrcamentoAutomatico /></ProtectedRoute>} />
-              <Route path="/cortes-otimizados" element={<ProtectedRoute><CortesOtimizados /></ProtectedRoute>} />
-              <Route path="/lista-materiais" element={<ProtectedRoute><ListaMateriais /></ProtectedRoute>} />
-              <Route path="/verificador-ia" element={<ProtectedRoute><VerificadorIA /></ProtectedRoute>} />
-              <Route path="/comparar-projetos" element={<ProtectedRoute><CompararProjetos /></ProtectedRoute>} />
-              <Route path="/gerar-pdf" element={<ProtectedRoute><GerarPDF /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-              <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
-              <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
-              <Route path="/comparar-orcamentos" element={<ProtectedRoute><CompararOrcamentos /></ProtectedRoute>} />
-              <Route path="/estoque" element={<ProtectedRoute><Estoque /></ProtectedRoute>} />
-              <Route path="/templates-orcamento" element={<ProtectedRoute><TemplatesOrcamento /></ProtectedRoute>} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Rotas para verificação de email - consolidadas */}

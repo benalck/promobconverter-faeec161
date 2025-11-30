@@ -41,84 +41,6 @@ export type Database = {
         }
         Relationships: []
       }
-      budget_history: {
-        Row: {
-          config: Json
-          created_at: string | null
-          final_price: number
-          id: string
-          items: Json
-          profit: number
-          project_name: string
-          total_labor: number
-          total_materials: number
-          updated_at: string | null
-          user_id: string
-          xml_data: Json
-        }
-        Insert: {
-          config?: Json
-          created_at?: string | null
-          final_price?: number
-          id?: string
-          items?: Json
-          profit?: number
-          project_name: string
-          total_labor?: number
-          total_materials?: number
-          updated_at?: string | null
-          user_id: string
-          xml_data: Json
-        }
-        Update: {
-          config?: Json
-          created_at?: string | null
-          final_price?: number
-          id?: string
-          items?: Json
-          profit?: number
-          project_name?: string
-          total_labor?: number
-          total_materials?: number
-          updated_at?: string | null
-          user_id?: string
-          xml_data?: Json
-        }
-        Relationships: []
-      }
-      budget_templates: {
-        Row: {
-          accent_color: string | null
-          created_at: string | null
-          footer_text: string | null
-          header_subtitle: string | null
-          header_title: string | null
-          id: string
-          name: string
-          user_id: string
-        }
-        Insert: {
-          accent_color?: string | null
-          created_at?: string | null
-          footer_text?: string | null
-          header_subtitle?: string | null
-          header_title?: string | null
-          id?: string
-          name: string
-          user_id: string
-        }
-        Update: {
-          accent_color?: string | null
-          created_at?: string | null
-          footer_text?: string | null
-          header_subtitle?: string | null
-          header_title?: string | null
-          id?: string
-          name?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       conversions: {
         Row: {
           conversion_time: number | null
@@ -238,39 +160,6 @@ export type Database = {
           id?: string
           transaction_type?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      cut_optimizer_history: {
-        Row: {
-          created_at: string | null
-          id: string
-          layout_data: Json
-          project_name: string
-          total_sheets: number
-          user_id: string
-          waste_percentage: number
-          xml_data: Json
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          layout_data?: Json
-          project_name: string
-          total_sheets?: number
-          user_id: string
-          waste_percentage?: number
-          xml_data: Json
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          layout_data?: Json
-          project_name?: string
-          total_sheets?: number
-          user_id?: string
-          waste_percentage?: number
-          xml_data?: Json
         }
         Relationships: []
       }
@@ -795,39 +684,6 @@ export type Database = {
         }
         Relationships: []
       }
-      inventory_items: {
-        Row: {
-          category: string
-          created_at: string | null
-          current_stock: number
-          id: string
-          min_stock: number
-          name: string
-          unit: string
-          user_id: string
-        }
-        Insert: {
-          category: string
-          created_at?: string | null
-          current_stock?: number
-          id?: string
-          min_stock?: number
-          name: string
-          unit?: string
-          user_id: string
-        }
-        Update: {
-          category?: string
-          created_at?: string | null
-          current_stock?: number
-          id?: string
-          min_stock?: number
-          name?: string
-          unit?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       materials: {
         Row: {
           color: string | null
@@ -886,60 +742,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      materials_bom_history: {
-        Row: {
-          created_at: string | null
-          id: string
-          materials_list: Json
-          project_name: string
-          user_id: string
-          xml_data: Json
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          materials_list?: Json
-          project_name: string
-          user_id: string
-          xml_data: Json
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          materials_list?: Json
-          project_name?: string
-          user_id?: string
-          xml_data?: Json
-        }
-        Relationships: []
-      }
-      pdf_generation_history: {
-        Row: {
-          created_at: string | null
-          id: string
-          pdf_type: string
-          pdf_url: string | null
-          project_name: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          pdf_type: string
-          pdf_url?: string | null
-          project_name: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          pdf_type?: string
-          pdf_url?: string | null
-          project_name?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       plans: {
         Row: {
@@ -1059,69 +861,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      project_comparison_history: {
-        Row: {
-          created_at: string | null
-          differences: Json
-          id: string
-          project_name_v1: string
-          project_name_v2: string
-          user_id: string
-          xml_data_v1: Json
-          xml_data_v2: Json
-        }
-        Insert: {
-          created_at?: string | null
-          differences?: Json
-          id?: string
-          project_name_v1: string
-          project_name_v2: string
-          user_id: string
-          xml_data_v1: Json
-          xml_data_v2: Json
-        }
-        Update: {
-          created_at?: string | null
-          differences?: Json
-          id?: string
-          project_name_v1?: string
-          project_name_v2?: string
-          user_id?: string
-          xml_data_v1?: Json
-          xml_data_v2?: Json
-        }
-        Relationships: []
-      }
-      project_verification_history: {
-        Row: {
-          created_at: string | null
-          id: string
-          issues_found: Json
-          project_name: string
-          suggestions: Json
-          user_id: string
-          xml_data: Json
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          issues_found?: Json
-          project_name: string
-          suggestions?: Json
-          user_id: string
-          xml_data: Json
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          issues_found?: Json
-          project_name?: string
-          suggestions?: Json
-          user_id?: string
-          xml_data?: Json
-        }
-        Relationships: []
       }
       render_history: {
         Row: {
@@ -1255,93 +994,6 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      user_cost_settings: {
-        Row: {
-          created_at: string | null
-          edge_banding_cost_per_meter: number | null
-          hardware_cost_percentage: number | null
-          id: string
-          labor_cost_per_hour: number | null
-          markup: number | null
-          sheet_cost: number | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          edge_banding_cost_per_meter?: number | null
-          hardware_cost_percentage?: number | null
-          id?: string
-          labor_cost_per_hour?: number | null
-          markup?: number | null
-          sheet_cost?: number | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          edge_banding_cost_per_meter?: number | null
-          hardware_cost_percentage?: number | null
-          id?: string
-          labor_cost_per_hour?: number | null
-          markup?: number | null
-          sheet_cost?: number | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_projects: {
-        Row: {
-          client_email: string | null
-          client_name: string | null
-          client_phone: string | null
-          created_at: string | null
-          delivery_date: string | null
-          description: string | null
-          id: string
-          name: string
-          pdf_urls: Json | null
-          status: string
-          total_cost: number | null
-          updated_at: string | null
-          user_id: string
-          xml_data: Json | null
-        }
-        Insert: {
-          client_email?: string | null
-          client_name?: string | null
-          client_phone?: string | null
-          created_at?: string | null
-          delivery_date?: string | null
-          description?: string | null
-          id?: string
-          name: string
-          pdf_urls?: Json | null
-          status?: string
-          total_cost?: number | null
-          updated_at?: string | null
-          user_id: string
-          xml_data?: Json | null
-        }
-        Update: {
-          client_email?: string | null
-          client_name?: string | null
-          client_phone?: string | null
-          created_at?: string | null
-          delivery_date?: string | null
-          description?: string | null
-          id?: string
-          name?: string
-          pdf_urls?: Json | null
-          status?: string
-          total_cost?: number | null
-          updated_at?: string | null
-          user_id?: string
-          xml_data?: Json | null
         }
         Relationships: []
       }

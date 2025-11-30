@@ -1,16 +1,1 @@
 project_id = "npnkmbflfflqpjwhxbfu"
-
-[functions.calculate-budget]
-verify_jwt = true
-
-[functions.optimize-cuts]
-verify_jwt = true
-
-[functions.generate-bom]
-verify_jwt = true
-
-[functions.verify-project]
-verify_jwt = true
-
-[functions.compare-projects]
-verify_jwt = true
