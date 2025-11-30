@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 type BudgetHistory = {
   id: string;
@@ -17,6 +19,7 @@ type BudgetHistory = {
 };
 
 const CompararOrcamentos = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [budgets, setBudgets] = useState<BudgetHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +95,15 @@ const CompararOrcamentos = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 p-6">
+      <Button
+        variant="ghost"
+        onClick={() => navigate(-1)}
+        className="mb-4"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" />
+        Voltar
+      </Button>
+      
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Comparação de Orçamentos</h1>
         <p className="text-muted-foreground">
