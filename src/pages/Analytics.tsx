@@ -45,22 +45,37 @@ const Analytics = () => {
       if (!user) throw new Error('Usuário não autenticado');
 
       // Budget analytics
-      const { data: budgets } = await supabase
+      const { data: budgets, error: budgetsError } = await supabase
         .from('budget_history')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (budgetsError) {
+        console.error('Erro ao carregar budgets:', budgetsError);
+      }
 
       // Cut optimizer analytics
-      const { data: cuts } = await supabase
+      const { data: cuts, error: cutsError } = await supabase
         .from('cut_optimizer_history')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (cutsError) {
+        console.error('Erro ao carregar cuts:', cutsError);
+      }
 
       // Materials analytics
-      const { data: materials } = await supabase
+      const { data: materials, error: materialsError } = await supabase
         .from('materials_bom_history')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (materialsError) {
+        console.error('Erro ao carregar materials:', materialsError);
+      }
 
       // Calculate metrics
       const avgSheets = cuts?.length 
@@ -118,9 +133,10 @@ const Analytics = () => {
         materialDistribution,
       });
     } catch (error: any) {
+      console.error('Erro ao carregar analytics:', error);
       toast({
         title: 'Erro',
-        description: error.message,
+        description: error.message || 'Erro ao carregar analytics',
         variant: 'destructive',
       });
     } finally {

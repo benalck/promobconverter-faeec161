@@ -85,6 +85,7 @@ const ListaMateriais = () => {
         description: "Arquivo baixado com sucesso",
       });
     } catch (error: any) {
+      console.error('Erro ao exportar Excel:', error);
       toast({
         title: "Erro ao exportar",
         description: error.message,
