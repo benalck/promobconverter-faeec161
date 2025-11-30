@@ -13,6 +13,12 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPassword"));
+const Conversor = lazy(() => import("@/pages/Conversor"));
+const OrcamentoAutomatico = lazy(() => import("@/pages/OrcamentoAutomatico"));
+const CortesOtimizados = lazy(() => import("@/pages/CortesOtimizados"));
+const ListaMateriais = lazy(() => import("@/pages/ListaMateriais"));
+const Projetos = lazy(() => import("@/pages/Projetos"));
+const Historico = lazy(() => import("@/pages/Historico"));
 
 // Componente de fallback para Suspense
 const PageLoadingFallback = () => (
@@ -91,6 +97,12 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/conversor" element={<ProtectedRoute><Conversor /></ProtectedRoute>} />
+              <Route path="/orcamento-automatico" element={<ProtectedRoute><OrcamentoAutomatico /></ProtectedRoute>} />
+              <Route path="/cortes-otimizados" element={<ProtectedRoute><CortesOtimizados /></ProtectedRoute>} />
+              <Route path="/lista-materiais" element={<ProtectedRoute><ListaMateriais /></ProtectedRoute>} />
+              <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
+              <Route path="/historico" element={<ProtectedRoute><Historico /></ProtectedRoute>} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Rotas para verificação de email - consolidadas */}

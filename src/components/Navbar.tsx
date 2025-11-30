@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, LogOut, Menu, User, Home, Sparkles } from "lucide-react";
+import { ChevronDown, LogOut, Menu, User, Home, Sparkles, Grid, FolderKanban } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -50,6 +50,30 @@ export default function Navbar() {
                 Início
               </Button>
             </Link>
+            
+            {user && (
+              <>
+                <Link to="/conversor">
+                  <Button 
+                    variant="ghost" 
+                    className="rounded-full hover:bg-primary/10"
+                  >
+                    <Grid className="h-4 w-4 mr-2" />
+                    Módulos
+                  </Button>
+                </Link>
+                
+                <Link to="/projetos">
+                  <Button 
+                    variant="ghost" 
+                    className="rounded-full hover:bg-primary/10"
+                  >
+                    <FolderKanban className="h-4 w-4 mr-2" />
+                    Projetos
+                  </Button>
+                </Link>
+              </>
+            )}
             
             {user && (
               <DropdownMenu>
