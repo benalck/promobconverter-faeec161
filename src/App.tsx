@@ -13,6 +13,10 @@ const UserDashboard = lazy(() => import("@/pages/UserDashboard"));
 const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const FAQPage = lazy(() => import("@/pages/FAQPage"));
+const AboutPage = lazy(() => import("@/pages/AboutPage"));
+const TermsPage = lazy(() => import("@/pages/TermsPage"));
+const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
+const ContactPage = lazy(() => import("@/pages/ContactPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
@@ -95,6 +99,10 @@ function App() {
               <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
               <Route path="/faq" element={<FAQPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Rotas para verificação de email */}
