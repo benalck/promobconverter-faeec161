@@ -1500,11 +1500,7 @@ export type Database = {
       }
       get_user_metrics_secure:
         | {
-            Args: {
-              p_end_date?: string
-              p_start_date?: string
-              target_user_id?: string
-            }
+            Args: { target_user_id?: string }
             Returns: {
               average_response_time: number
               success_rate: number
@@ -1514,7 +1510,11 @@ export type Database = {
             }[]
           }
         | {
-            Args: { target_user_id?: string }
+            Args: {
+              p_end_date?: string
+              p_start_date?: string
+              target_user_id?: string
+            }
             Returns: {
               average_response_time: number
               success_rate: number
