@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import LoadingAnimation from "@/components/LoadingAnimation";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./App.css";
 
 // Lazy loading dos componentes
@@ -86,7 +87,7 @@ function App() {
   }, []);
 
   return (
-    <>
+    <ThemeProvider defaultTheme="light" storageKey="promobconverter-theme">
       {isLoading && <LoadingAnimation />}
       <BrowserRouter>
         <AuthProvider>
@@ -125,7 +126,7 @@ function App() {
           <Toaster />
         </AuthProvider>
       </BrowserRouter>
-    </>
+    </ThemeProvider>
   );
 }
 
