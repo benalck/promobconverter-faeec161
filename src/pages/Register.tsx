@@ -123,9 +123,9 @@ export default function Register() {
         await login(email, password);
         toast({
           title: "Login realizado com sucesso!",
-          description: "Bem-vindo à nossa aplicação de conversão.",
+          description: "Bem-vindo ao seu Dashboard.",
         });
-        navigate("/");
+        navigate("/dashboard");
       } catch (error) {
         if (error instanceof Error && error.message.includes('banida')) {
           throw error;
