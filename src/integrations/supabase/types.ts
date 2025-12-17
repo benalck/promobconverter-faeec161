@@ -1586,18 +1586,31 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
-      track_conversion: {
-        Args: {
-          p_conversion_time: number
-          p_error_message?: string
-          p_file_size: number
-          p_input_format?: string
-          p_output_format?: string
-          p_success: boolean
-          p_user_id: string
-        }
-        Returns: string
-      }
+      track_conversion:
+        | {
+            Args: {
+              p_conversion_time: number
+              p_error_message?: string
+              p_file_size: number
+              p_input_format?: string
+              p_output_format?: string
+              p_success: boolean
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_conversion_time: number
+              p_error_message?: string
+              p_file_size: number
+              p_input_format?: string
+              p_output_format?: string
+              p_success: boolean
+              p_user_id: string
+            }
+            Returns: string
+          }
       update_user_activity: { Args: never; Returns: undefined }
       user_metrics_calc: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
