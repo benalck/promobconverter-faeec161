@@ -9,6 +9,10 @@ import "./App.css";
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const Dashboard = lazy(() => import("@/pages/DashboardPage"));
+const UserDashboard = lazy(() => import("@/pages/UserDashboard"));
+const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const FAQPage = lazy(() => import("@/pages/FAQPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Index = lazy(() => import("@/pages/Index"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
@@ -53,7 +57,6 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     return <PageLoadingFallback />;
   }
 
-  // Allow access if user is admin or CEO
   if (!user || (user.role !== 'admin' && user.role !== 'ceo')) {
     return <Navigate to="/register" replace />;
   }
@@ -65,10 +68,8 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Precarregar os recursos mais importantes
     const preloadMainResources = async () => {
       try {
-        // Simular pré-carregamento de recursos essenciais
         await new Promise(resolve => setTimeout(resolve, 800));
         setIsLoading(false);
       } catch (error) {
@@ -90,10 +91,13 @@ function App() {
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
+              <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+              <Route path="/faq" element={<FAQPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               
-              {/* Rotas para verificação de email - consolidadas */}
+              {/* Rotas para verificação de email */}
               <Route path="/verify" element={<VerifyEmail />} />
               <Route path="/auth/confirm" element={<VerifyEmail />} />
               <Route path="/register/verify" element={<VerifyEmail />} />
